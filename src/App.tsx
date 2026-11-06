@@ -1,10 +1,14 @@
+import { LoginForm } from './features/auth/LoginForm'
+import { useSession } from './features/auth/useSession'
+import { HomeScreen } from './features/workout/HomeScreen'
+
 function App() {
-  return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4">
-      <h1 className="text-2xl font-semibold text-neutral-100">LiftLog</h1>
-      <p className="mt-2 text-neutral-400">Grundgerüst läuft.</p>
-    </main>
-  )
+  const session = useSession()
+
+  if (session === undefined) return null
+  if (session === null) return <LoginForm />
+  // key: Ein Wechsel des Users setzt den Zustand der Ansicht vollständig zurück.
+  return <HomeScreen key={session.user.id} session={session} />
 }
 
 export default App
