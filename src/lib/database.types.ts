@@ -135,7 +135,12 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "seed_default_plan":
+            "last_performance":
+{ Args: { "before_date": string }; Returns: {
+              "duration_seconds": number,"exercise_id": string,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
+            }[]
+                           },
+"seed_default_plan":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            }
           }
