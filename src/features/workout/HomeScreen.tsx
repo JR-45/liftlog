@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { localDateString } from '../../domain/sets'
 import { supabase } from '../../lib/supabase'
+import { ExportCard } from '../stats/ExportCard'
 import { StatsScreen } from '../stats/StatsScreen'
 import { loadPlanDays, type PlanDay } from './api'
 import { DayView } from './DayView'
@@ -166,11 +167,14 @@ export function HomeScreen({ session }: { session: Session }) {
 
           {/* Wird bei jedem Öffnen neu geladen und zeigt so auch gerade gespeicherte Sätze. */}
           {tab === 'stats' && (
-            <StatsScreen
-              today={today}
-              startDate={localDateString(new Date(session.user.created_at))}
-              planDays={planDays}
-            />
+            <>
+              <StatsScreen
+                today={today}
+                startDate={localDateString(new Date(session.user.created_at))}
+                planDays={planDays}
+              />
+              <ExportCard today={today} />
+            </>
           )}
 
           <div className="fixed inset-x-0 bottom-0 z-20">
