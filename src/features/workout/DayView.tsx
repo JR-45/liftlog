@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { dayProgress } from '../../domain/dayProgress'
-import { countLoggedSets, setKey, type SetValues } from '../../domain/sets'
+import { countLoggedSets, formatRange, setKey, type SetValues } from '../../domain/sets'
+import { isCardioExercise } from '../../domain/cardio'
 import { summarizeWorkout } from '../../domain/summary'
 import { estimateMinutes, formatElapsed } from '../../domain/motivation'
 import { StopwatchIcon, TrophyIcon } from '../../lib/icons'
@@ -306,8 +307,11 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
 
   const nextId = finished ? null : nextOpenEntry(day.entries, savedSets, -1, skipped)
   const plannedSets = day.entries
-    .filter((entry) => !skipped.has(entry.id))
+    .filter((entry) => !skipped.has(entry.id) && !(entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name)))
     .reduce((sum, entry) => sum + setCountFor(entry, savedSets), 0)
+  const cardioEntries = day.entries.filter(entry => !skipped.has(entry.id) && entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name))
+  const cardioTarget = cardioEntries.every(entry => entry.duration_min !== null && entry.duration_max !== null)
+    ? formatRange(cardioEntries.reduce((sum, entry) => sum + entry.duration_min! / 60, 0), cardioEntries.reduce((sum, entry) => sum + entry.duration_max! / 60, 0)) : null
 
   /**
    * Öffnet die nächste offene Übung, scrollt zu ihr und lässt sie kurz aufleuchten.
@@ -425,7 +429,9 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
         {stopwatch}
       </div>
       <p className="mt-1.5 text-sm font-medium text-muted">
-        {total} Übungen · {plannedSets} Sätze · ca. {estimateMinutes(plannedSets, restSeconds)} Min.
+        {cardioEntries.length > 0
+          ? <>{total} {total === 1 ? 'Übung' : 'Übungen'}{plannedSets > 0 ? ` · ${plannedSets} Sätze` : ''} · {plannedSets > 0 ? 'Cardio nach Plan' : cardioTarget ? `${cardioTarget} Min.` : 'Minuten frei'}</>
+          : <>{total} Übungen · {plannedSets} Sätze · ca. {estimateMinutes(plannedSets, restSeconds)} Min.</>}
       </p>
       <div className="mt-4">
         {finished ? (

@@ -25,6 +25,7 @@ type ExportQueryRow = {
   weight_kg: number | null
   reps: number | null
   duration_seconds: number | null
+  distance_km: number | null
   is_assisted: boolean
   exercise: { name: string }
   workout: { performed_on: string; plan_day: { name: string } | null }
@@ -37,7 +38,7 @@ export async function loadExportRows(): Promise<ExportRow[]> {
     const { data, error } = await supabase
       .from('sets')
       .select(
-        `set_number, weight_kg, reps, duration_seconds, is_assisted,
+        `set_number, weight_kg, reps, duration_seconds, distance_km, is_assisted,
          exercise:exercises!sets_exercise_id_user_id_fkey(name),
          workout:workouts!sets_workout_id_user_id_fkey(performed_on, plan_day:plan_days!workouts_plan_day_id_user_id_fkey(name))`,
       )
@@ -57,6 +58,7 @@ export async function loadExportRows(): Promise<ExportRow[]> {
         is_assisted: row.is_assisted,
         reps: row.reps,
         duration_seconds: row.duration_seconds,
+        distance_km: row.distance_km,
       })
     }
     if (page.length < PAGE_SIZE) return rows
