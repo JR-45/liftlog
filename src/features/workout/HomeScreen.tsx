@@ -108,6 +108,16 @@ export function HomeScreen({ session }: { session: Session }) {
 
   // Eine installierte App bleibt oft tagelang geöffnet. Bei der Rückkehr gilt der aktuelle Tag.
   useEffect(() => {
+    let midnightTimer: ReturnType<typeof setTimeout>
+    function scheduleMidnight() {
+      const now = new Date()
+      const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+      midnightTimer = setTimeout(() => {
+        setToday(localDateString())
+        scheduleMidnight()
+      }, midnight.getTime() - now.getTime())
+    }
+    scheduleMidnight()
     function handleVisibility() {
       if (document.visibilityState !== 'visible') return
       const now = localDateString()
@@ -116,7 +126,10 @@ export function HomeScreen({ session }: { session: Session }) {
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
+    return () => {
+      clearTimeout(midnightTimer)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [today])
 
   // Datierte Entwürfe bleiben beim Wechsel zwischen Trainingswochen erhalten.
