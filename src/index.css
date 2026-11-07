@@ -120,6 +120,13 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
 .attendance-segment { transition: stroke-dasharray .7s ease-out, translate .25s ease-out; }
 .attendance-infographic { box-shadow: 0 2px 8px rgb(0 0 0 / .03); }
 .attendance-interactive-segment { pointer-events: visibleStroke; }
+.number-wheel-dialog::backdrop { background: rgb(0 0 0 / .55); }
+.number-wheel-dialog { max-height: 90dvh; overflow-y: auto; }
+.number-wheel { position: relative; }
+.number-wheel::before { content: ''; position: absolute; inset-inline: 0; top: 88px; height: 44px; background: var(--color-control); border-radius: .75rem; pointer-events: none; }
+.number-wheel-column { position: relative; width: 100%; height: 220px; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y mandatory; padding-block: 88px; scrollbar-width: none; mask-image: linear-gradient(transparent, black 25%, black 75%, transparent); }
+.number-wheel-column::-webkit-scrollbar { display: none; }
+.number-wheel-digit { display: block; width: 100%; height: 44px; flex-shrink: 0; scroll-snap-align: center; font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .attendance-interactive-segment:hover {
     /* Der Kreis ist um 90 Grad gedreht: rechts entspricht hier oben. */
