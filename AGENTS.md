@@ -91,6 +91,7 @@ Diese Regeln gelten für alle im Team (Jeton, Murat, Osman) und für jeden Agent
 - Danach `bunx supabase db reset`, Tests in `supabase/tests/` ergänzen, `bun run test:db`, Typen neu erzeugen und mitcommitten.
 - Neue Tabellen: RLS mit Owner-Policy auf `user_id`, Verweise über zusammengesetzte Foreign Keys mit `user_id`.
 - Im Pull Request deutlich schreiben, dass eine Migration dabei ist. Online einspielen darf nur der Projekt-Owner, und zwar vor dem Merge. Ein Agent spielt nie etwas in die Online-Datenbank ein.
+- Ein Pull Request mit neuer Migration bleibt rot (Check „Migration online eingespielt“, `.github/workflows/migration-check.yml`), bis der Owner sie mit `bunx supabase db push --remote` eingespielt und das Label `migration-online` gesetzt hat. Ist die Migration älter datiert als die neueste auf `main`, braucht es `--include-all`; der Check nennt den passenden Befehl. Kommt nach dem Label noch eine Migration dazu, Label entfernen und neu prüfen.
 
 ### Secrets
 - In `VITE_`-Variablen gehört nur der `sb_publishable_`-Key, alles mit `VITE_` landet öffentlich im Browser.
