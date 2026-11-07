@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { countLoggedSets, setKey, type SetValues } from '../../domain/sets'
 import { summarizeWorkout } from '../../domain/summary'
 import { TrophyIcon } from '../../lib/icons'
+import { trainingSetCount } from '../../domain/planEditing'
+import { readSetCount, writeSetCount } from './drafts'
 import { DESKTOP_QUERY, useMediaQuery } from '../../lib/useMediaQuery'
 import { AddExerciseForm } from './AddExerciseForm'
 import { type DayData, ensureWorkout, type Exercise, loadDay, type PlanEntry } from './api'
@@ -15,14 +17,14 @@ function entryIds(entry: PlanEntry): string[] {
   return entry.alternative ? [entry.exercise.id, entry.alternative.id] : [entry.exercise.id]
 }
 
-function isDone(entry: PlanEntry, saved: SavedSets): boolean {
-  return countLoggedSets(saved, entryIds(entry)) >= entry.sets_min
+function isDone(entry: PlanEntry, saved: SavedSets, targets: Record<string, number>): boolean {
+  return countLoggedSets(saved, entryIds(entry)) >= (targets[entry.id] ?? 3)
 }
 
 /** Nächste offene Übung nach der angegebenen Position, sonst die erste offene überhaupt. */
-function nextOpenEntry(entries: PlanEntry[], saved: SavedSets, afterIndex: number): string | null {
+function nextOpenEntry(entries: PlanEntry[], saved: SavedSets, afterIndex: number, targets: Record<string, number>): string | null {
   const ordered = [...entries.slice(afterIndex + 1), ...entries.slice(0, afterIndex + 1)]
-  return ordered.find((entry) => !isDone(entry, saved))?.id ?? null
+  return ordered.find((entry) => !isDone(entry, saved, targets))?.id ?? null
 }
 
 /** Wurde heute schon die Alternative trainiert, startet die Übung direkt mit ihr. */
@@ -37,6 +39,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [day, setDay] = useState<DayData | null>(null)
   const [savedSets, setSavedSets] = useState<SavedSets>({})
+  const [setCounts, setSetCounts] = useState<Record<string, number>>({})
   // Liegen hier statt in der Karte, damit Liste und Detail am Laptop denselben Stand zeigen.
   const [exercises, setExercises] = useState<Record<string, Exercise>>({})
   const [activeIds, setActiveIds] = useState<Record<string, string>>({})
@@ -58,9 +61,14 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         workoutId.current = data.workoutId
         latestSaved.current = saved
         setSavedSets(saved)
+        const counts = Object.fromEntries(data.entries.map((entry) => [entry.id, trainingSetCount(
+          readSetCount(userId, today, entry.id),
+          data.todaySets.filter((set) => entryIds(entry).includes(set.exercise_id)).map((set) => set.set_number),
+        )]))
+        setSetCounts(counts)
         setExercises(Object.fromEntries(all.map((exercise) => [exercise.id, exercise])))
         setActiveIds(Object.fromEntries(data.entries.map((entry) => [entry.id, initialActiveId(entry, saved)])))
-        setOpenId(nextOpenEntry(data.entries, saved, -1))
+        setOpenId(nextOpenEntry(data.entries, saved, -1, counts))
         setDay(data)
       })
       .catch(() => {
@@ -69,7 +77,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     return () => {
       cancelled = true
     }
-  }, [planDayId, today, attempt])
+  }, [planDayId, userId, today, attempt])
 
   // Das Workout entsteht erst mit dem ersten gespeicherten Satz. Bloßes Ansehen legt nichts an.
   async function getWorkoutId(): Promise<string> {
@@ -116,14 +124,14 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     // damit die Frage „Geschafft?“ direkt zu sehen ist.
     const ids = entryIds(entry)
     const finishedEntry =
-      countLoggedSets(next, ids) >= entry.sets_max && countLoggedSets(previous, ids) < entry.sets_max
+      countLoggedSets(next, ids) >= (setCounts[entry.id] ?? 3) && countLoggedSets(previous, ids) < (setCounts[entry.id] ?? 3)
     if (finishedEntry) {
-      setOpenId(nextOpenEntry(day.entries, next, index))
+      setOpenId(nextOpenEntry(day.entries, next, index, setCounts))
       scrollTo(entry.id)
     }
 
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.
-    const trainingDone = day.entries.every((current) => isDone(current, next))
+    const trainingDone = day.entries.every((current) => isDone(current, next, setCounts))
     if (!(key in previous) && !trainingDone) onSetLogged()
   }
 
@@ -148,7 +156,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   if (day === null) return <p className="mt-6 text-sm text-[#8E8E93]">Übungen werden geladen …</p>
 
   const total = day.entries.length
-  const done = day.entries.filter((entry) => isDone(entry, savedSets)).length
+  const done = day.entries.filter((entry) => isDone(entry, savedSets, setCounts)).length
   const openEntry = day.entries.find((entry) => entry.id === openId)
   const finished = total > 0 && done === total
 
@@ -171,6 +179,9 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   })
 
   function handleEntryAdded(entry: PlanEntry) {
+    const count = trainingSetCount(entry.sets_max, [])
+    setSetCounts((current) => ({ ...current, [entry.id]: count }))
+    writeSetCount(userId, today, entry.id, count)
     setExercises((current) => ({ ...current, [entry.exercise.id]: entry.exercise }))
     setActiveIds((current) => ({ ...current, [entry.id]: entry.exercise.id }))
     setDay((current) => (current ? { ...current, entries: [...current.entries, entry] } : current))
@@ -224,6 +235,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         open={openId === entry.id}
         scrollRequest={layout === 'stacked' && scrollTarget?.id === entry.id ? scrollTarget.request : null}
         savedSets={savedSets}
+        setCount={setCounts[entry.id] ?? 3}
+        onSetCountChange={(count) => {
+          setSetCounts((current) => ({ ...current, [entry.id]: count }))
+          writeSetCount(userId, today, entry.id, count)
+        }}
         lastSets={day?.lastSets ?? []}
         getWorkoutId={getWorkoutId}
         onToggle={() => handleToggle(entry.id)}

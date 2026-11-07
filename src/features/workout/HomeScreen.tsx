@@ -1,24 +1,21 @@
 import type { Session } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { localDateString } from '../../domain/sets'
-import { StatsIcon, TrainingIcon } from '../../lib/icons'
+import { PlanIcon, StatsIcon, TrainingIcon } from '../../lib/icons'
 import { supabase } from '../../lib/supabase'
 import { ExportCard } from '../stats/ExportCard'
 import { StatsScreen } from '../stats/StatsScreen'
+import { PlanEditor } from '../plan/PlanEditor'
 import { loadPlanDays, type PlanDay } from './api'
-import { DayView } from './DayView'
+import { WeekPlanning } from './WeekPlanning'
+import { TrainingDays } from './TrainingDays'
 import { clearDrafts } from './drafts'
 import { RestTimerBar } from './RestTimerBar'
 import { useRestTimer } from './useRestTimer'
 
-const WEEKDAY_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 
-type Tab = 'training' | 'stats'
-
-function weekdayOf(date: string): number {
-  return new Date(`${date}T12:00:00`).getDay()
-}
+type Tab = 'training' | 'stats' | 'plan'
 
 /** bottom: untere Leiste auf Handy und Tablet. side: Seitenleiste am Laptop. */
 function TabButton(props: {
@@ -54,8 +51,9 @@ export function HomeScreen({ session }: { session: Session }) {
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [today, setToday] = useState(() => localDateString())
-  const [pickedWeekday, setPickedWeekday] = useState<number | null>(null)
+  const [planMode, setPlanMode] = useState<'weekly' | 'template'>('weekly')
   const [tab, setTab] = useState<Tab>('training')
+  const [planVersion, setPlanVersion] = useState(0)
   // Liegt hier und nicht beim Tag, damit die Pause beim Wechsel von Tag oder Tab weiterläuft.
   const restTimer = useRestTimer()
 
@@ -80,17 +78,16 @@ export function HomeScreen({ session }: { session: Session }) {
       const now = localDateString()
       if (now !== today) {
         setToday(now)
-        setPickedWeekday(null)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [today])
 
-  // Entwürfe gelten nur für den jeweiligen Tag.
+  // Datierte Entwürfe bleiben beim Wechsel zwischen Trainingswochen erhalten.
   useEffect(() => {
-    clearDrafts({ userId, date: today })
-  }, [userId, today])
+    clearDrafts({ userId })
+  }, [userId])
 
   function handleSignOut() {
     clearDrafts()
@@ -98,10 +95,10 @@ export function HomeScreen({ session }: { session: Session }) {
     void supabase.auth.signOut()
   }
 
-  const selectedWeekday = pickedWeekday ?? weekdayOf(today)
-  const selectedDay = planDays?.find((day) => day.weekday === selectedWeekday)
   const timerRunning = restTimer.endsAt !== null
-  const showTimer = planDays !== null && (timerRunning || (tab === 'training' && selectedDay !== undefined))
+  const showTimer = planDays !== null && (timerRunning || (tab === 'training' && planDays.length > 0))
+  const planArea = tab === 'plan' || (tab === 'training' && planDays?.length === 0)
+  const editingPlan = planArea && (planDays?.length === 0 || planMode === 'template')
 
   const dateLabel = DATE_FORMAT.format(new Date(`${today}T12:00:00`))
 
@@ -118,11 +115,14 @@ export function HomeScreen({ session }: { session: Session }) {
         </div>
         {planDays !== null && (
           <nav className="mt-6 space-y-1" aria-label="Hauptmenü">
-            <TabButton label="Training" variant="side" active={tab === 'training'} onClick={() => setTab('training')}>
+            <TabButton label="Training" variant="side" active={tab === 'training' && !planArea} onClick={() => setTab('training')}>
               <TrainingIcon />
             </TabButton>
             <TabButton label="Statistik" variant="side" active={tab === 'stats'} onClick={() => setTab('stats')}>
               <StatsIcon />
+            </TabButton>
+            <TabButton label="Trainingsplan" variant="side" active={planArea} onClick={() => setTab('plan')}>
+              <PlanIcon />
             </TabButton>
           </nav>
         )}
@@ -138,7 +138,7 @@ export function HomeScreen({ session }: { session: Session }) {
         </div>
       </aside>
 
-      <main className="mx-auto min-h-dvh max-w-md px-4 pb-[calc(11rem+env(safe-area-inset-bottom))] pt-5 md:max-w-2xl md:px-6 lg:max-w-5xl lg:px-8 lg:pb-10 lg:pt-8">
+      <main className="page-shell mx-auto min-h-dvh max-w-xl px-4 pb-[calc(11rem+env(safe-area-inset-bottom))] pt-6 md:max-w-4xl md:px-6 lg:max-w-7xl lg:px-8 lg:pb-10 lg:pt-8">
         <header className="flex items-start justify-between lg:hidden">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">{dateLabel}</p>
@@ -171,50 +171,35 @@ export function HomeScreen({ session }: { session: Session }) {
           <p className="mt-6 text-sm text-[#8E8E93]">Plan wird geladen …</p>
         ) : (
           <>
+            {tab === 'plan' && planDays.length > 0 && <nav className="mt-4 grid max-w-xl grid-cols-2 gap-2" aria-label="Trainingsplan-Bereich">
+              <button type="button" className={`min-h-14 rounded-lg px-2 py-2 text-sm ${planMode === 'weekly' ? 'bg-yellow-400 font-semibold text-neutral-950' : 'bg-neutral-800'}`}
+                aria-pressed={planMode === 'weekly'} onClick={() => setPlanMode('weekly')}>Wochenplanung</button>
+              <button type="button" className={`min-h-14 rounded-lg px-2 py-2 text-sm ${planMode === 'template' ? 'bg-yellow-400 font-semibold text-neutral-950' : 'bg-neutral-800'}`}
+                aria-pressed={planMode === 'template'} onClick={() => setPlanMode('template')}>Wochenvorlage bearbeiten</button>
+            </nav>}
+            {editingPlan && (
+              <PlanEditor
+                key={planVersion}
+                hasPlan={planDays.length > 0}
+                onCancel={() => setPlanMode('weekly')}
+                onSaved={() => {
+                  restTimer.stop()
+                  clearDrafts()
+                  setPlanDays(null)
+                  setPlanMode('weekly')
+                  setTab('plan')
+                  setPlanVersion((value) => value + 1)
+                  setAttempt((value) => value + 1)
+                }}
+              />
+            )}
             {/* Bleibt beim Tab-Wechsel erhalten, damit Eingaben und offene Übung nicht verloren gehen. */}
-            <div className={tab === 'training' ? '' : 'hidden'}>
-              <nav
-                className="mt-4 flex gap-1 rounded-2xl border border-white/[0.06] bg-[#1C1C1E] p-1 lg:mt-0 lg:max-w-xl"
-                aria-label="Trainingstag"
-              >
-                {planDays.map((day) => (
-                  <button
-                    key={day.id}
-                    className={`relative h-11 flex-1 rounded-xl text-sm transition-all duration-200 active:scale-95 ${
-                      day.weekday === selectedWeekday
-                        ? 'bg-[#FFD60A] font-semibold text-black shadow-sm'
-                        : 'text-[#EBEBF5]/75 hover:text-white'
-                    }`}
-                    type="button"
-                    aria-pressed={day.weekday === selectedWeekday}
-                    onClick={() => setPickedWeekday(day.weekday)}
-                  >
-                    {WEEKDAY_SHORT[day.weekday]}
-                    {day.weekday === weekdayOf(today) && day.weekday !== selectedWeekday && (
-                      <span className="absolute bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#FFD60A]" />
-                    )}
-                  </button>
-                ))}
-              </nav>
-
-              {selectedDay ? (
-                <>
-                  <h2 className="mt-5 text-xl font-bold tracking-tight text-white">{selectedDay.name}</h2>
-                  <DayView
-                    key={`${selectedDay.id}:${today}`}
-                    planDayId={selectedDay.id}
-                    userId={userId}
-                    today={today}
-                    onSetLogged={restTimer.start}
-                  />
-                </>
-              ) : (
-                <div className="mt-12 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] px-6 py-12 text-center">
-                  <p className="text-lg font-semibold text-white">Heute ist Ruhetag</p>
-                  <p className="mt-1 text-sm text-[#8E8E93]">Oben kannst du trotzdem einen Trainingstag wählen.</p>
-                </div>
-              )}
-            </div>
+            {planDays.length > 0 && <div className={tab === 'training' ? '' : 'hidden'}>
+              <TrainingDays key={planVersion} today={today} userId={userId} planDays={planDays} onSetLogged={restTimer.start} />
+            </div>}
+            {planDays.length > 0 && <div className={tab === 'plan' && planMode === 'weekly' ? '' : 'hidden'}>
+              <WeekPlanning key={planVersion} today={today} planDays={planDays} active={tab === 'plan' && planMode === 'weekly'} />
+            </div>}
 
             {/* Wird bei jedem Öffnen neu geladen und zeigt so auch gerade gespeicherte Sätze. */}
             {tab === 'stats' && (
@@ -229,15 +214,18 @@ export function HomeScreen({ session }: { session: Session }) {
             )}
 
             {/* Handy und Tablet: Pause und Menü unten. Am Laptop übernimmt das die Seitenleiste. */}
-            <div className="fixed inset-x-0 bottom-0 z-20 lg:hidden">
+            <div className="mobile-dock fixed inset-x-0 bottom-0 z-20 lg:hidden">
               {showTimer && <RestTimerBar timer={restTimer} variant="bar" />}
               <nav className="apple-glass border-t border-white/[0.08] pb-[env(safe-area-inset-bottom)]" aria-label="Hauptmenü">
                 <div className="mx-auto flex max-w-md md:max-w-2xl">
-                  <TabButton label="Training" variant="bottom" active={tab === 'training'} onClick={() => setTab('training')}>
+                  <TabButton label="Training" variant="bottom" active={tab === 'training' && !planArea} onClick={() => setTab('training')}>
                     <TrainingIcon />
                   </TabButton>
                   <TabButton label="Statistik" variant="bottom" active={tab === 'stats'} onClick={() => setTab('stats')}>
                     <StatsIcon />
+                  </TabButton>
+                  <TabButton label="Trainingsplan" variant="bottom" active={planArea} onClick={() => setTab('plan')}>
+                    <PlanIcon />
                   </TabButton>
                 </div>
               </nav>

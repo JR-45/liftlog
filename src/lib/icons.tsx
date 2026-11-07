@@ -102,3 +102,11 @@ export function StatsIcon({ className }: IconProps) {
     </SvgIcon>
   )
 }
+
+export function PlanIcon({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M4 4h16v17H4zM8 2v4M16 2v4M8 11h8M8 16h8" />
+    </SvgIcon>
+  )
+}

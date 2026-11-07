@@ -123,6 +123,40 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"training_plan_settings": {
+                  Row: {
+                    "method": string,"split": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "method": string,"split": string,"user_id"?: string
+                  }
+                  Update: {
+                    "method"?: string,"split"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"training_schedule": {
+                  Row: {
+                    "day_date": string,"is_rest_day": boolean,"plan_day_id": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "day_date": string,"is_rest_day"?: boolean,"plan_day_id"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "day_date"?: string,"is_rest_day"?: boolean,"plan_day_id"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "training_schedule_plan_day_id_user_id_fkey"
+      columns: ["plan_day_id","user_id"]
+isOneToOne: false
+      referencedRelation: "plan_days"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"workouts": {
                   Row: {
                     "created_at": string,"finished_at": string | null,"id": string,"performed_on": string,"plan_day_id": string | null,"user_id": string
@@ -153,6 +187,15 @@ isOneToOne: false
 { Args: { "before_date": string }; Returns: {
               "duration_seconds": number,"exercise_id": string,"is_assisted": boolean,"next_weight_kg": number,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
             }[]
+                           },
+"save_training_plan":
+{ Args: { "days": Json }; Returns: undefined
+                           },
+"save_training_plan_config":
+{ Args: { "chosen_method": string,"chosen_split": string,"days": Json }; Returns: undefined
+                           },
+"save_training_week":
+{ Args: { "days": Json,"week_start": string }; Returns: undefined
                            },
 "seed_default_plan":
 { Args: Record<PropertyKey, never>; Returns: undefined

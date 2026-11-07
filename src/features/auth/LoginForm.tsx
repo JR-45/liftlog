@@ -28,8 +28,18 @@ export function LoginForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <div className="rounded-3xl border border-white/[0.08] bg-[#1C1C1E] p-6 shadow-2xl">
+    <main className="login-shell mx-auto min-h-dvh px-4">
+      <aside className="login-intro">
+        <p className="text-sm font-medium uppercase tracking-widest text-yellow-300">Dein Training. Dein Fortschritt.</p>
+        <h2>Mehr Überblick.<br />Mehr aus deinem Training.</h2>
+        <p>Plane deine Woche, halte deine Sätze fest und sieh, wie du stärker wirst.</p>
+        <div className="login-preview" aria-hidden="true">
+          <span>DEINE TRAININGSWOCHE</span>
+          <div><b>Mo</b><b>Di</b><b>Mi</b><b>Do</b><b>Fr</b><b>Sa</b><b>So</b></div>
+          <p>Planen · Trainieren · Fortschritte sehen</p>
+        </div>
+      </aside>
+      <div className="login-panel rounded-3xl border border-white/[0.08] bg-[#1C1C1E] p-6 shadow-2xl">
         <img className="h-14 w-14 rounded-2xl shadow-md ring-1 ring-white/10" src="/icons/icon-192.png" alt="" />
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-white">LiftLog</h1>
         <p className="mt-1 text-sm text-[#8E8E93]">Melde dich an, um dein Training zu starten.</p>

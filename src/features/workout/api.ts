@@ -1,7 +1,39 @@
 import type { SetValues, TrackingType } from '../../domain/sets'
 import { supabase } from '../../lib/supabase'
+import type { ScheduledDay } from '../../domain/week'
 
 export type PlanDay = { id: string; weekday: number; name: string }
+export type WeekWorkout = { id: string; performed_on: string; plan_day_id: string | null; name: string }
+
+export async function loadScheduledDays(from: string, to: string): Promise<ScheduledDay[]> {
+  const { data, error } = await supabase.from('training_schedule')
+    .select('day_date, plan_day_id, is_rest_day').gte('day_date', from).lte('day_date', to).order('day_date')
+  if (error) throw error
+  return data
+}
+
+export async function saveTrainingWeek(start: string, days: ScheduledDay[]): Promise<void> {
+  const { error } = await supabase.rpc('save_training_week', { week_start: start, days })
+  if (error) throw error
+}
+
+export async function loadWeekWorkouts(from: string, to: string): Promise<WeekWorkout[]> {
+  const { data, error } = await supabase.from('workouts')
+    .select('id, performed_on, plan_day_id, plan_day:plan_days!workouts_plan_day_id_user_id_fkey(name), sets!inner(id)')
+    .gte('performed_on', from).lte('performed_on', to).limit(1, { foreignTable: 'sets' })
+  if (error) throw error
+  const rows = data as unknown as { id: string; performed_on: string; plan_day_id: string | null; plan_day: { name: string } | null }[]
+  return rows.map(({ plan_day, ...workout }) => ({ ...workout, name: plan_day?.name ?? 'Früheres Training' }))
+}
+
+export async function loadWorkoutHistory(workoutId: string): Promise<(LoggedSet & { name: string })[]> {
+  const { data, error } = await supabase.from('sets')
+    .select('exercise_id, set_number, weight_kg, reps, duration_seconds, is_assisted, exercise:exercises!sets_exercise_id_user_id_fkey(name)')
+    .eq('workout_id', workoutId).order('exercise_id').order('set_number')
+  if (error) throw error
+  const rows = data as unknown as (LoggedSet & { exercise: { name: string } })[]
+  return rows.map(({ exercise, ...set }) => ({ ...set, name: exercise.name }))
+}
 
 export type Exercise = {
   id: string
@@ -35,12 +67,8 @@ export type DayData = {
 
 const EXERCISE_COLUMNS = 'id, name, tracking_type, current_weight_kg, weight_step_kg'
 
-/** Legt beim ersten Login den Plan an und lädt danach die Trainingstage. */
+/** Lädt die Trainingstage. Ein fehlender Plan öffnet die Erstellung. */
 export async function loadPlanDays(): Promise<PlanDay[]> {
-  // Mehrfachaufruf ist sicher, die Funktion überschreibt keinen vorhandenen Plan.
-  const { error: seedError } = await supabase.rpc('seed_default_plan')
-  if (seedError) throw seedError
-
   const { data, error } = await supabase.from('plan_days').select('id, weekday, name').order('weekday')
   if (error) throw error
   return data
