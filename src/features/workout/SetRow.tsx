@@ -10,10 +10,11 @@ import {
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
-  'h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-800 px-2 text-center text-base text-neutral-100 outline-none focus:border-neutral-400'
+  'h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-900 px-2 text-center text-base tabular-nums text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-emerald-400'
 
 type Props = {
   label: string
+  rowNumber: number
   userId: string
   date: string
   exerciseId: string
@@ -23,6 +24,8 @@ type Props = {
   workingWeight: number | null
   saved: SetValues | null
   initialDraft: SetDraft | null
+  /** Wert vom letzten Training als Orientierung. Er wird nicht gespeichert. */
+  placeholder: string
   onSave: (setNumber: number, values: SetValues | null) => Promise<void>
 }
 
@@ -36,7 +39,21 @@ function draftFromSaved(saved: SetValues, unit: DurationUnit): SetDraft {
 }
 
 export function SetRow(props: Props) {
-  const { label, userId, date, exerciseId, setNumber, tracking, unit, workingWeight, saved, initialDraft, onSave } = props
+  const {
+    label,
+    rowNumber,
+    userId,
+    date,
+    exerciseId,
+    setNumber,
+    tracking,
+    unit,
+    workingWeight,
+    saved,
+    initialDraft,
+    placeholder,
+    onSave,
+  } = props
 
   // weight === null: Das Feld folgt dem Arbeitsgewicht, bis der Satz abweicht oder gespeichert ist.
   const [draft, setDraft] = useState<{ weight: string | null; reps: string; duration: string }>(() => {
@@ -76,9 +93,9 @@ export function SetRow(props: Props) {
     setError(null)
     try {
       await onSave(setNumber, parsed.kind === 'ok' ? parsed.values : null)
+      removeDraft(userId, date, exerciseId, setNumber)
       setDraft((current) => ({ ...current, weight: parsed.kind === 'ok' ? shownWeight : null }))
       setDirty(false)
-      removeDraft(userId, date, exerciseId, setNumber)
     } catch {
       setError('Nicht gespeichert. Deine Eingabe bleibt erhalten, tippe noch einmal auf den Haken.')
       writeDraft(userId, date, exerciseId, setNumber, { weight: shownWeight, reps: draft.reps, duration: draft.duration })
@@ -92,49 +109,42 @@ export function SetRow(props: Props) {
   return (
     <li className="mt-2">
       <div className="flex items-center gap-2">
-        <span className="w-14 shrink-0 text-sm text-neutral-400">{label}</span>
+        <span className="w-6 shrink-0 text-center text-sm tabular-nums text-neutral-500">{rowNumber}</span>
 
         {tracking === 'duration' ? (
-          <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-neutral-400">
-            <input
-              className={inputClass}
-              aria-label={`${label} Dauer in ${unit === 'minutes' ? 'Minuten' : 'Sekunden'}`}
-              inputMode="decimal"
-              value={draft.duration}
-              onChange={(event) => change({ duration: event.target.value })}
-            />
-            {unit === 'minutes' ? 'Min.' : 'Sek.'}
-          </label>
+          <input
+            className={inputClass}
+            aria-label={`${label} Dauer in ${unit === 'minutes' ? 'Minuten' : 'Sekunden'}`}
+            inputMode="decimal"
+            placeholder={placeholder}
+            value={draft.duration}
+            onChange={(event) => change({ duration: event.target.value })}
+          />
         ) : (
           <>
             {usesWeight(tracking) && (
-              <label className="flex min-w-0 flex-1 items-center gap-1 text-sm text-neutral-400">
-                <input
-                  className={inputClass}
-                  aria-label={`${label} ${tracking === 'assisted_reps' ? 'Gewichtshilfe' : 'Gewicht'} in kg`}
-                  inputMode="decimal"
-                  value={shownWeight}
-                  onChange={(event) => change({ weight: event.target.value })}
-                />
-                kg
-              </label>
-            )}
-            <label className="flex min-w-0 flex-1 items-center gap-1 text-sm text-neutral-400">
               <input
                 className={inputClass}
-                aria-label={`${label} Wiederholungen`}
-                inputMode="numeric"
-                value={draft.reps}
-                onChange={(event) => change({ reps: event.target.value })}
+                aria-label={`${label} ${tracking === 'assisted_reps' ? 'Gewichtshilfe' : 'Gewicht'} in kg`}
+                inputMode="decimal"
+                value={shownWeight}
+                onChange={(event) => change({ weight: event.target.value })}
               />
-              Wdh.
-            </label>
+            )}
+            <input
+              className={inputClass}
+              aria-label={`${label} Wiederholungen`}
+              inputMode="numeric"
+              placeholder={placeholder}
+              value={draft.reps}
+              onChange={(event) => change({ reps: event.target.value })}
+            />
           </>
         )}
 
         <button
-          className={`h-11 w-11 shrink-0 rounded-lg border text-lg disabled:opacity-50 ${
-            isSaved ? 'border-neutral-300 bg-neutral-200 text-neutral-900' : 'border-neutral-700 text-neutral-300'
+          className={`h-11 w-11 shrink-0 rounded-lg border text-lg transition-colors disabled:opacity-50 ${
+            isSaved ? 'border-emerald-400 bg-emerald-400 text-neutral-950' : 'border-neutral-700 text-neutral-400'
           }`}
           type="button"
           aria-label={isSaved ? `${label} gespeichert, erneut speichern` : `${label} speichern`}

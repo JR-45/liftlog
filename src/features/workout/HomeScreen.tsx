@@ -7,6 +7,7 @@ import { DayView } from './DayView'
 import { clearDrafts } from './drafts'
 
 const WEEKDAY_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 
 function weekdayOf(date: string): number {
   return new Date(`${date}T12:00:00`).getDay()
@@ -62,10 +63,13 @@ export function HomeScreen({ session }: { session: Session }) {
   const selectedDay = planDays?.find((day) => day.weekday === selectedWeekday)
 
   return (
-    <main className="mx-auto min-h-dvh max-w-md px-4 py-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-neutral-100">LiftLog</h1>
-        <button className="py-2 text-sm text-neutral-400" type="button" onClick={handleSignOut}>
+    <main className="mx-auto min-h-dvh max-w-md px-4 pb-10 pt-6">
+      <header className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-neutral-100">LiftLog</h1>
+          <p className="text-sm text-neutral-500">{DATE_FORMAT.format(new Date(`${today}T12:00:00`))}</p>
+        </div>
+        <button className="py-2 text-sm text-neutral-500" type="button" onClick={handleSignOut}>
           Abmelden
         </button>
       </header>
@@ -92,25 +96,33 @@ export function HomeScreen({ session }: { session: Session }) {
             {planDays.map((day) => (
               <button
                 key={day.id}
-                className={`h-11 flex-1 rounded-lg text-sm ${
-                  day.weekday === selectedWeekday ? 'bg-neutral-200 font-medium text-neutral-900' : 'bg-neutral-800 text-neutral-300'
+                className={`relative h-11 flex-1 rounded-lg text-sm transition-colors ${
+                  day.weekday === selectedWeekday
+                    ? 'bg-emerald-400 font-semibold text-neutral-950'
+                    : 'bg-neutral-800 text-neutral-300'
                 }`}
                 type="button"
                 aria-pressed={day.weekday === selectedWeekday}
                 onClick={() => setPickedWeekday(day.weekday)}
               >
                 {WEEKDAY_SHORT[day.weekday]}
+                {day.weekday === weekdayOf(today) && day.weekday !== selectedWeekday && (
+                  <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-emerald-400" />
+                )}
               </button>
             ))}
           </nav>
 
           {selectedDay ? (
             <>
-              <p className="mt-4 text-sm text-neutral-400">{selectedDay.name}</p>
+              <h2 className="mt-5 text-lg font-medium text-neutral-100">{selectedDay.name}</h2>
               <DayView key={`${selectedDay.id}:${today}`} planDayId={selectedDay.id} userId={userId} today={today} />
             </>
           ) : (
-            <p className="mt-6 text-neutral-300">Heute ist Ruhetag. Oben kannst du trotzdem einen Trainingstag wählen.</p>
+            <div className="mt-16 text-center">
+              <p className="text-lg font-medium text-neutral-100">Heute ist Ruhetag</p>
+              <p className="mt-1 text-sm text-neutral-400">Oben kannst du trotzdem einen Trainingstag wählen.</p>
+            </div>
           )}
         </>
       )}

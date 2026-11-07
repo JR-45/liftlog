@@ -3,7 +3,7 @@ import { type FormEvent, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 const inputClass =
-  'mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-3 text-base text-neutral-100 outline-none focus:border-neutral-400'
+  'mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-3 text-base text-neutral-100 outline-none focus:border-emerald-400'
 
 function loginErrorMessage(error: AuthError): string {
   if (error.status === 429) return 'Zu viele Versuche. Warte kurz und versuch es noch einmal.'
@@ -29,7 +29,8 @@ export function LoginForm() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4">
-      <h1 className="text-2xl font-semibold text-neutral-100">LiftLog</h1>
+      <img className="h-14 w-14 rounded-2xl" src="/icons/icon-192.png" alt="" />
+      <h1 className="mt-4 text-2xl font-semibold text-neutral-100">LiftLog</h1>
 
       <form className="mt-6" onSubmit={handleSubmit}>
         <label className="block text-sm text-neutral-300">
@@ -56,7 +57,7 @@ export function LoginForm() {
         </label>
         {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
         <button
-          className="mt-4 w-full rounded-lg bg-neutral-200 px-4 py-3 font-medium text-neutral-900 disabled:opacity-50"
+          className="mt-4 w-full rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-neutral-950 disabled:opacity-50"
           type="submit"
           disabled={busy}
         >

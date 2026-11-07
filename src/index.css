@@ -6,4 +6,7 @@
 
 body {
   background-color: var(--color-neutral-900);
+  -webkit-tap-highlight-color: transparent;
+  /* Verhindert das Zoomen durch doppeltes Tippen auf Buttons. */
+  touch-action: manipulation;
 }

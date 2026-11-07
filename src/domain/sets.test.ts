@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { formatPerformance, localDateString, parseSetDraft, parseWeightStep, type SetValues, stepWeight } from './sets'
+import {
+  countLoggedSets,
+  formatPerformance,
+  localDateString,
+  parseSetDraft,
+  parseWeightStep,
+  setKey,
+  type SetValues,
+  stepWeight,
+} from './sets'
 
 const draft = (changes: Partial<{ weight: string; reps: string; duration: string }>) => ({
   weight: '',
@@ -118,6 +127,22 @@ describe('formatPerformance', () => {
     })
     expect(formatPerformance([duration(45)], 'seconds')).toBe('45 Sek.')
     expect(formatPerformance([duration(1800)], 'minutes')).toBe('30 Min.')
+  })
+})
+
+describe('countLoggedSets', () => {
+  const saved = { [setKey('a', 1)]: {}, [setKey('a', 2)]: {}, [setKey('b', 1)]: {}, [setKey('ab', 1)]: {} }
+
+  it('zählt nur die Sätze der Übung', () => {
+    expect(countLoggedSets(saved, ['a'])).toBe(2)
+  })
+
+  it('nimmt bei einer Alternative die Übung mit den meisten Sätzen', () => {
+    expect(countLoggedSets(saved, ['b', 'a'])).toBe(2)
+  })
+
+  it('liefert 0 ohne Sätze', () => {
+    expect(countLoggedSets({}, ['a'])).toBe(0)
   })
 })
 

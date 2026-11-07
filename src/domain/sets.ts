@@ -62,6 +62,16 @@ export function parseSetDraft(draft: SetDraft, tracking: TrackingType, unit: Dur
   }
 }
 
+export function setKey(exerciseId: string, setNumber: number): string {
+  return `${exerciseId}:${setNumber}`
+}
+
+/** Anzahl gespeicherter Sätze. Bei einer Alternative zählt die Übung mit den meisten Sätzen. */
+export function countLoggedSets(saved: Record<string, unknown>, exerciseIds: string[]): number {
+  const keys = Object.keys(saved)
+  return Math.max(0, ...exerciseIds.map((id) => keys.filter((key) => key.startsWith(`${id}:`)).length))
+}
+
 /** Gewicht und Gewichtshilfe werden gleich erfasst, nur ihre Bedeutung unterscheidet sich. */
 export function usesWeight(tracking: TrackingType): boolean {
   return tracking === 'weight_reps' || tracking === 'assisted_reps'
