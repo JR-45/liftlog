@@ -1,8 +1,8 @@
 import type { TrackingType } from './sets'
 
-export type CatalogExercise = { name: string; group: string; tracking_type: TrackingType }
+export type CatalogExercise = { name: string; group: string; tracking_type: TrackingType; gps?: boolean }
 
-const groups: { group: string; tracking_type: TrackingType; names: string[] }[] = [
+const groups: { group: string; tracking_type: TrackingType; names: string[]; gps?: boolean }[] = [
   { group: 'Brust', tracking_type: 'weight_reps', names: [
     'Bankdrücken', 'Bankdrücken (Kurzhanteln)', 'Schrägbankdrücken', 'Schrägbankpresse',
     'Brustpresse', 'Butterfly', 'Butterfly am Kabelzug', 'Fliegende (Kurzhanteln)', 'Überzüge (Kurzhantel)',
@@ -32,7 +32,8 @@ const groups: { group: string; tracking_type: TrackingType; names: string[] }[] 
   { group: 'Bauch & Rumpf', tracking_type: 'weight_reps', names: [
     'Crunches am Kabelzug', 'Bauchmaschine', 'Russian Twists (mit Gewicht)', 'Pallof Press', 'Woodchoppers',
   ] },
-  { group: 'Körpergewicht', tracking_type: 'reps', names: [
+  { group: 'Calisthenics & Körpergewicht', tracking_type: 'reps', names: [
+    'Klimmzüge (Körpergewicht)', 'Chin-ups', 'Muscle-ups', 'Pike Push-ups', 'Pistol Squats',
     'Liegestütze', 'Dips', 'Kniebeugen (Körpergewicht)', 'Ausfallschritte (Körpergewicht)',
     'Crunches', 'Situps (Schrägbank)', 'Beinheben hängend', 'Beinheben liegend', 'Hyperextensions',
     'Glute Bridge', 'Burpees', 'Mountain Climbers', 'Rudern am Schlingentrainer',
@@ -42,15 +43,22 @@ const groups: { group: string; tracking_type: TrackingType; names: string[] }[] 
   { group: 'Funktionelles Training', tracking_type: 'weight_reps', names: [
     'Kettlebell Swings', 'Kettlebell Complex', 'Kettlebell Clean', 'Kettlebell Press', 'Thrusters', 'Medizinball-Slams',
   ] },
-  { group: 'Ausdauer & Halteübungen', tracking_type: 'duration', names: [
+  { group: 'Cardio & Ausdauer', tracking_type: 'duration', gps: true, names: [
+    'Joggen', 'Laufen (Outdoor)', 'Gehen / Walking', 'Radfahren (Outdoor)',
+    'Fahrrad fahren', 'Wandern', 'Nordic Walking', 'Inlineskaten',
+  ] },
+  { group: 'Cardio & Ausdauer', tracking_type: 'duration', names: [
     'Laufband', 'Fahrradergometer', 'Liegeergometer', 'Spinning-Bike', 'Crosstrainer', 'Ruderergometer',
-    'Stairmaster', 'Air Bike', 'SkiErg', 'Seilspringen', 'Battle Ropes', 'Plank', 'Side Plank',
+    'Stairmaster', 'Air Bike', 'SkiErg', 'Seilspringen', 'Battle Ropes',
+  ] },
+  { group: 'Ausdauer & Halteübungen', tracking_type: 'duration', names: [
+    'Plank', 'Side Plank', 'Hollow Hold', 'Handstand halten', 'L-Sit',
     'Wandsitzen', 'Farmer’s Walk', 'Schlitten schieben', 'Mobilität & Dehnen',
   ] },
 ]
 
-export const EXERCISE_CATALOG: CatalogExercise[] = groups.flatMap(({ group, tracking_type, names }) =>
-  names.map((name) => ({ name, group, tracking_type })),
+export const EXERCISE_CATALOG: CatalogExercise[] = groups.flatMap(({ group, tracking_type, names, gps }) =>
+  names.map((name) => ({ name, group, tracking_type, ...(gps ? { gps: true } : {}) })),
 )
 
 function normalize(value: string): string {
