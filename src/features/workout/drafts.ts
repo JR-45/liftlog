@@ -4,20 +4,22 @@ import type { SetDraft } from '../../domain/sets'
 // Der Speicher kann blockiert sein, z. B. im privaten Modus. Die App läuft dann ohne Entwürfe weiter.
 const PREFIX = 'liftlog:draft:'
 
-export function readSetCount(userId: string, date: string, entryId: string): number | null {
+/** Heute übersprungene Übungen. Gilt nur für diesen Tag und dieses Gerät, der Plan bleibt unverändert. */
+export function readSkippedEntries(userId: string, date: string): Set<string> {
   try {
-    const raw = localStorage.getItem(`${PREFIX}${userId}:${date}:rows:${entryId}`)
-    return raw === null ? null : Number(raw)
+    const raw = localStorage.getItem(`${PREFIX}${userId}:${date}:skipped`)
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [])
   } catch {
-    return null
+    return new Set()
   }
 }
 
-export function writeSetCount(userId: string, date: string, entryId: string, count: number): void {
+export function writeSkippedEntries(userId: string, date: string, entryIds: ReadonlySet<string>): void {
   try {
-    localStorage.setItem(`${PREFIX}${userId}:${date}:rows:${entryId}`, String(count))
+    localStorage.setItem(`${PREFIX}${userId}:${date}:skipped`, JSON.stringify([...entryIds]))
   } catch {
-    // Ohne Speicher bleibt die Satzanzahl nur für die aktuelle Ansicht erhalten.
+    // Ohne Speicher gilt das Überspringen nur bis zum Schließen der App.
   }
 }
 

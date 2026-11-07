@@ -269,22 +269,21 @@ export function HomeScreen({ session }: { session: Session }) {
                 {nameHint}
               </div>
             )}
-            {tab === 'plan' && planDays.length > 0 && <nav className="mt-4 grid max-w-xl grid-cols-2 gap-2" aria-label="Trainingsplan-Bereich">
-              <button type="button" className={`min-h-14 rounded-lg px-2 py-2 text-sm ${planMode === 'weekly' ? 'bg-yellow-400 font-semibold text-neutral-950' : 'bg-neutral-800'}`}
+            {tab === 'plan' && planDays.length > 0 && <nav className="mt-4 flex max-w-xl gap-1 rounded-2xl bg-[#1C1C1E] p-1 ring-1 ring-white/[0.06]" aria-label="Trainingsplan-Bereich">
+              <button type="button" className={`min-h-11 flex-1 rounded-xl px-2 text-sm transition-all ${planMode === 'weekly' ? 'bg-neon font-semibold text-black' : 'text-[#8E8E93]'}`}
                 aria-pressed={planMode === 'weekly'} onClick={() => setPlanMode('weekly')}>Wochenplanung</button>
-              <button type="button" className={`min-h-14 rounded-lg px-2 py-2 text-sm ${planMode === 'template' ? 'bg-yellow-400 font-semibold text-neutral-950' : 'bg-neutral-800'}`}
-                aria-pressed={planMode === 'template'} onClick={() => setPlanMode('template')}>Wochenvorlage bearbeiten</button>
+              <button type="button" className={`min-h-11 flex-1 rounded-xl px-2 text-sm transition-all ${planMode === 'template' ? 'bg-neon font-semibold text-black' : 'text-[#8E8E93]'}`}
+                aria-pressed={planMode === 'template'} onClick={() => setPlanMode('template')}>Vorlage</button>
             </nav>}
             {editingPlan && (
               <PlanEditor
                 key={planVersion}
                 hasPlan={planDays.length > 0}
-                onCancel={() => setPlanMode('weekly')}
                 onSaved={() => {
-                  restTimer.stop()
-                  clearDrafts()
+                  // Bleibt in der Vorlage, damit sich mehrere Tage nacheinander bearbeiten lassen.
+                  // Pause und noch nicht gespeicherte Trainingseingaben laufen weiter.
                   setPlanDays(null)
-                  setPlanMode('weekly')
+                  setPlanMode('template')
                   setTab('plan')
                   setPlanVersion((value) => value + 1)
                   setAttempt((value) => value + 1)

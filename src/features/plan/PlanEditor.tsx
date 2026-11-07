@@ -1,14 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { validatePlanDraft } from '../../domain/planEditing'
+import { useEffect, useState } from 'react'
 import { loadPlan, loadPlanSettings, savePlan, type PlanDayDraft } from './api'
 import { TemplateWeekdays } from './TemplateWeekdays'
 
-const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
-const BUTTON = 'rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-200 disabled:opacity-50'
+const BUTTON = 'min-h-11 rounded-xl bg-[#2C2C2E] px-3 py-2 text-sm font-medium text-white disabled:opacity-50'
 
-export function PlanEditor({ hasPlan, onSaved, onCancel }: {
-  hasPlan: boolean; onSaved: () => void; onCancel: () => void
-}) {
+export function PlanEditor({ hasPlan, onSaved }: { hasPlan: boolean; onSaved: () => void }) {
   const [days, setDays] = useState<PlanDayDraft[]>([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -31,58 +27,43 @@ export function PlanEditor({ hasPlan, onSaved, onCancel }: {
     return () => { cancelled = true }
   }, [attempt])
 
-
-
-  async function persist(nextDays: PlanDayDraft[]) {
+  /** Speichert den ganzen Plan und meldet einen Fehlertext zurück, statt zu werfen. */
+  async function persist(nextDays: PlanDayDraft[]): Promise<string | null> {
     setBusy(true)
     setError(null)
     try {
       await savePlan(nextDays, method, split)
       onSaved()
+      return null
     } catch (cause) {
-      const message = cause && typeof cause === 'object' && 'code' in cause && cause.code === '22023' && 'message' in cause
-        ? String(cause.message) : 'Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten. Bitte erneut versuchen.'
-      setError(message)
       setBusy(false)
+      return cause && typeof cause === 'object' && 'code' in cause && cause.code === '22023' && 'message' in cause
+        ? String(cause.message) : 'Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten. Bitte erneut versuchen.'
     }
   }
 
-  function submit(event: FormEvent) {
-    event.preventDefault()
-    const invalid = validatePlanDraft(days)
-    if (invalid) {
-      setError(`${WEEKDAYS[days[invalid.day]?.weekday ?? 1]}${invalid.exercise === undefined ? '' : `, Übung ${invalid.exercise + 1}`}: ${invalid.message}`)
-      return
-    }
-    void persist(days)
+  async function deletePlan() {
+    const message = await persist([])
+    if (message) setError(message)
   }
 
   return (
-    <section className="plan-editor mt-6">
-      <h2 className="text-xl font-semibold">{hasPlan ? 'Trainingsplan bearbeiten' : 'Dein erster Trainingsplan'}</h2>
-      <p className="mt-2 text-sm text-neutral-400">Lege deine Trainingstage und Übungen fest. Deinen Plan kannst du jederzeit ändern.</p>
-      {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
-      {loading ? <p className="mt-4 text-neutral-400">Plan wird geladen …</p> : loadFailed ? null : (
-        <form onSubmit={submit} noValidate>
-          <fieldset disabled={busy} className="plan-fields disabled:opacity-60">
-            <div className="plan-days-area min-w-0 xl:col-span-2">
-            <h3 className="mt-6 text-lg font-medium">Trainingstage & Übungen</h3>
-            <TemplateWeekdays days={days} onChange={setDays} />
-            <button className="mt-5 w-full rounded-lg bg-yellow-400 px-4 py-3 font-semibold text-neutral-950 disabled:opacity-50"
-              type="submit" disabled={days.length === 0 || loading}>{busy ? 'Wird gespeichert …' : 'Trainingsplan speichern'}</button>
-            {hasPlan && <button className={`${BUTTON} mt-3 w-full`} type="button" onClick={onCancel}>Abbrechen</button>}
-            {hasPlan && !confirmDelete && <button className="mt-6 w-full py-2 text-sm text-red-300" type="button"
-              onClick={() => setConfirmDelete(true)}>Trainingsplan löschen</button>}
-            {hasPlan && confirmDelete && <div className="mt-4 rounded-lg border border-red-900 p-3">
-              <p className="text-sm">Trainingsplan wirklich löschen? Deine bisherigen Trainingsdaten bleiben erhalten.</p>
-              <div className="mt-3 flex gap-2">
-                <button className={`${BUTTON} text-red-300`} type="button" onClick={() => void persist([])}>Ja, Plan löschen</button>
-                <button className={BUTTON} type="button" onClick={() => setConfirmDelete(false)}>Behalten</button>
-              </div>
-            </div>}
+    <section className="mt-4">
+      {!hasPlan && <h2 className="text-xl font-bold tracking-tight text-white">Dein erster Trainingsplan</h2>}
+      {error && <p role="alert" className="mt-4 text-sm text-[#FF453A]">{error}</p>}
+      {loading ? <p className="mt-4 text-sm text-[#8E8E93]">Plan wird geladen …</p> : loadFailed ? null : (
+        <>
+          <TemplateWeekdays days={days} onSave={persist} />
+          {hasPlan && !confirmDelete && <button className="mt-6 min-h-11 w-full text-sm font-medium text-[#FF453A]" type="button" disabled={busy}
+            onClick={() => setConfirmDelete(true)}>Trainingsplan löschen</button>}
+          {hasPlan && confirmDelete && <div className="mt-4 rounded-2xl bg-[#1C1C1E] p-3.5 ring-1 ring-[#FF453A]/40">
+            <p className="text-sm text-white">Trainingsplan wirklich löschen? Deine bisherigen Trainingsdaten bleiben erhalten.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button className={`${BUTTON} text-[#FF453A]`} type="button" disabled={busy} onClick={() => void deletePlan()}>Ja, Plan löschen</button>
+              <button className={BUTTON} type="button" disabled={busy} onClick={() => setConfirmDelete(false)}>Behalten</button>
             </div>
-          </fieldset>
-        </form>
+          </div>}
+        </>
       )}
       {loadFailed && <button className={`${BUTTON} mt-3`} type="button" onClick={() => {
         setError(null); setLoadFailed(false); setLoading(true); setAttempt((value) => value + 1)
