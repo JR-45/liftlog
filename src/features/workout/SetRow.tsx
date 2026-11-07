@@ -9,12 +9,13 @@ import {
   type TrackingType,
   usesWeight,
 } from '../../domain/sets'
+import { CheckIcon } from '../../lib/icons'
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
-  'h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-900 px-1 text-center text-base tabular-nums text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-yellow-400'
+  'h-11 w-full min-w-0 rounded-xl border border-transparent bg-[#2C2C2E] px-1 text-center text-base font-medium tabular-nums text-white outline-none transition-colors placeholder:text-[#8E8E93]/60 focus:border-[#FFD60A] focus:bg-[#3A3A3C]'
 const stepClass =
-  'h-11 w-9 shrink-0 rounded-lg border border-neutral-700 bg-neutral-900 text-lg text-neutral-100 disabled:opacity-40'
+  'h-11 w-11 shrink-0 rounded-xl bg-[#2C2C2E] text-lg font-medium text-white transition-all active:scale-95 active:bg-[#3A3A3C] disabled:opacity-35 disabled:active:scale-100'
 
 type Props = {
   label: string
@@ -160,8 +161,18 @@ export function SetRow(props: Props) {
 
   return (
     <li className="mt-2">
-      <div className="flex items-center gap-1.5">
-        <span className="w-4 shrink-0 text-center text-sm tabular-nums text-neutral-500">{rowNumber}</span>
+      <div
+        className={`flex items-center gap-1.5 rounded-xl p-1 -mx-1 transition-colors ${
+          isSaved ? 'bg-[#30D158]/10' : ''
+        }`}
+      >
+        <span
+          className={`w-4 shrink-0 text-center text-xs font-semibold tabular-nums ${
+            isSaved ? 'text-[#30D158]' : 'text-[#8E8E93]'
+          }`}
+        >
+          {rowNumber}
+        </span>
 
         {tracking === 'duration' ? (
           <input
@@ -216,8 +227,10 @@ export function SetRow(props: Props) {
         )}
 
         <button
-          className={`h-11 w-10 shrink-0 rounded-lg border text-lg transition-colors disabled:opacity-50 ${
-            isSaved ? 'border-yellow-400 bg-yellow-400 text-neutral-950' : 'border-neutral-700 text-neutral-400'
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 disabled:opacity-50 ${
+            isSaved
+              ? 'bg-[#30D158] text-black shadow-sm shadow-[#30D158]/20'
+              : 'bg-[#2C2C2E] text-[#8E8E93] hover:text-white'
           }`}
           type="button"
           aria-label={isSaved ? `${label} gespeichert, Haken entfernen` : `${label} speichern`}
@@ -225,10 +238,10 @@ export function SetRow(props: Props) {
           disabled={busy}
           onClick={() => void (isSaved ? handleUncheck() : handleSave())}
         >
-          ✓
+          <CheckIcon className="h-5 w-5 stroke-[2.5]" />
         </button>
       </div>
-      {error && <p role="alert" className="mt-1 text-sm text-red-300">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-sm text-[#FF453A]">{error}</p>}
     </li>
   )
 }

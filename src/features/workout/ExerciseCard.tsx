@@ -14,12 +14,23 @@ import {
   type TrackingType,
   usesWeight,
 } from '../../domain/sets'
-import { deleteExerciseSets, deleteSet, type Exercise, type LoggedSet, type PlanEntry, saveSet, updateExercise, updateNextWeights } from './api'
+import {
+  deleteExerciseSets,
+  deletePlanEntry,
+  deleteSet,
+  type Exercise,
+  type LoggedSet,
+  type PlanEntry,
+  saveSet,
+  updateExercise,
+  updateNextWeights,
+} from './api'
+import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
 import { readDraft, removeDraft } from './drafts'
 import { SetRow } from './SetRow'
 
 const fieldClass =
-  'h-11 rounded-lg border border-neutral-700 bg-neutral-900 px-2 text-base text-neutral-100 outline-none focus:border-yellow-400 disabled:opacity-50'
+  'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
 const OPEN_ANIMATION_MS = 300
 
 /**
@@ -48,6 +59,7 @@ type Props = {
   onSetChange: (exerciseId: string, setNumber: number, values: SetValues | null) => void
   onExerciseChange: (exerciseId: string, changes: Partial<Exercise>) => void
   onActiveChange: (exerciseId: string) => void
+  onRemoveEntry?: () => void
 }
 
 export function ExerciseCard(props: Props) {
@@ -67,6 +79,7 @@ export function ExerciseCard(props: Props) {
     onSetChange,
     onExerciseChange,
     onActiveChange,
+    onRemoveEntry,
   } = props
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -257,18 +270,20 @@ export function ExerciseCard(props: Props) {
 
   const statusIcon = (
     <span
-      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm ${
-        done ? 'bg-yellow-400 font-bold text-neutral-950' : 'border border-neutral-700'
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${
+        done
+          ? 'bg-[#30D158] text-black shadow-sm shadow-[#30D158]/25'
+          : 'border-2 border-[#3A3A3C] bg-[#2C2C2E]/40'
       }`}
       aria-hidden="true"
     >
-      {done ? '✓' : ''}
+      {done && <CheckIcon className="h-3.5 w-3.5 stroke-[3]" />}
     </span>
   )
 
   const subtitle = (
     <span
-      className={`block truncate text-sm tabular-nums ${hint && !done ? 'text-yellow-300' : 'text-neutral-500'}`}
+      className={`block truncate text-sm tabular-nums ${hint && !done ? 'font-medium text-[#FFD60A]' : 'text-[#8E8E93]'}`}
     >
       {logged.length > 0 ? formatPerformance(logged, unit) : hint && !bodyVisible ? hintText : target}
     </span>
@@ -276,24 +291,24 @@ export function ExerciseCard(props: Props) {
 
   const settingsButton = showSettingsButton && (
     <button
-      className={`mr-2 h-11 w-11 shrink-0 rounded-lg text-lg ${
-        showSettings ? 'bg-neutral-700 text-neutral-100' : 'text-neutral-500'
+      className={`mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors active:scale-95 ${
+        showSettings ? 'bg-[#2C2C2E] text-white' : 'text-[#8E8E93] hover:text-white'
       }`}
       type="button"
       aria-label={`Einstellungen für ${exercise.name}`}
       aria-expanded={showSettings}
       onClick={() => setShowSettings((current) => !current)}
     >
-      {'⚙︎'}
+      <SettingsIcon className="h-5 w-5" />
     </button>
   )
 
   const header = isDetail ? (
     <div className="flex items-center">
-      <div className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2">
+      <div className="flex min-h-16 min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 pr-2">
         {statusIcon}
         <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-medium text-neutral-100">{exercise.name}</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-white">{exercise.name}</h3>
           {subtitle}
         </div>
       </div>
@@ -302,7 +317,7 @@ export function ExerciseCard(props: Props) {
   ) : (
     <div className="flex items-center">
       <button
-        className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 text-left"
+        className="flex min-h-16 min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 pr-2 text-left transition-opacity active:opacity-75"
         type="button"
         aria-label={
           layout === 'summary' ? `${exercise.name} anzeigen` : `${exercise.name} ${open ? 'schließen' : 'öffnen'}`
@@ -314,36 +329,33 @@ export function ExerciseCard(props: Props) {
         {statusIcon}
         <span className="min-w-0 flex-1">
           <span
-            className={`block font-medium ${bodyVisible ? '' : 'truncate'} ${
-              done && !open ? 'text-neutral-400' : 'text-neutral-100'
+            className={`block font-semibold tracking-tight ${bodyVisible ? '' : 'truncate'} ${
+              done && !open ? 'text-[#8E8E93]' : 'text-white'
             }`}
           >
             {exercise.name}
           </span>
           {subtitle}
         </span>
-        <span
-          className={`shrink-0 text-xl text-neutral-500 transition-transform duration-300 motion-reduce:transition-none ${
-            layout === 'stacked' && open ? 'rotate-90' : ''
+        <ChevronRightIcon
+          className={`h-5 w-5 shrink-0 text-[#8E8E93] transition-transform duration-300 motion-reduce:transition-none ${
+            layout === 'stacked' && open ? 'rotate-90 text-white' : ''
           }`}
-          aria-hidden="true"
-        >
-          ›
-        </span>
+        />
       </button>
       {settingsButton}
     </div>
   )
 
   const answer = showAnswer && (
-    <div className="px-4 pb-3">
+    <div className="px-4 pb-3.5">
       {answered ? (
-        <div className="flex items-center justify-between gap-2">
-          <p className="min-w-0 text-sm text-neutral-300">
-            Nächstes Mal: <span className="font-medium tabular-nums text-neutral-100">{formatPlanned(logged)}</span>
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-[#2C2C2E]/70 px-3 py-2">
+          <p className="min-w-0 text-sm text-[#EBEBF5]/80">
+            Nächstes Mal: <span className="font-semibold tabular-nums text-white">{formatPlanned(logged)}</span>
           </p>
           <button
-            className="min-h-11 shrink-0 px-2 text-sm text-neutral-400 underline disabled:opacity-50"
+            className="min-h-11 shrink-0 px-2 text-sm font-medium text-[#FFD60A] disabled:opacity-50"
             type="button"
             disabled={busy}
             onClick={() => void applyAnswer(() => null)}
@@ -352,14 +364,14 @@ export function ExerciseCard(props: Props) {
           </button>
         </div>
       ) : (
-        <>
-          <p className="text-sm font-medium text-neutral-100">
+        <div className="rounded-xl bg-[#2C2C2E]/60 p-3">
+          <p className="text-sm font-semibold text-white">
             Geschafft?
-            {recommended && <span className="ml-2 font-normal text-yellow-300">Erhöhen empfohlen</span>}
+            {recommended && <span className="ml-2 font-medium text-[#FFD60A]">Erhöhen empfohlen</span>}
           </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
             <button
-              className="min-h-11 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-2 text-sm text-neutral-200 disabled:opacity-50"
+              className="min-h-11 rounded-xl bg-[#3A3A3C] px-2 py-2 text-sm font-medium text-white transition-transform active:scale-95 disabled:opacity-50"
               type="button"
               disabled={busy}
               onClick={() => void applyAnswer((set) => set.weight_kg)}
@@ -367,7 +379,7 @@ export function ExerciseCard(props: Props) {
               {noLabel}
             </button>
             <button
-              className="min-h-11 rounded-lg bg-yellow-400 px-2 py-2 text-sm font-semibold tabular-nums text-neutral-950 disabled:opacity-50"
+              className="min-h-11 rounded-xl bg-[#FFD60A] px-2 py-2 text-sm font-semibold tabular-nums text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
               type="button"
               disabled={busy}
               onClick={() =>
@@ -379,18 +391,18 @@ export function ExerciseCard(props: Props) {
               {yesLabel}
             </button>
           </div>
-        </>
+        </div>
       )}
-      {error && !bodyVisible && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
+      {error && !bodyVisible && <p role="alert" className="mt-2 text-sm text-[#FF453A]">{error}</p>}
     </div>
   )
 
   const body = (
-    <div className="px-4 pb-4">
+    <div className="border-t border-white/[0.06] px-4 pb-4 pt-3">
       {showSettings && (
-        <div className="mb-3 space-y-2 rounded-lg bg-neutral-900/60 p-3">
+        <div className="mb-3.5 space-y-2.5 rounded-2xl bg-[#141416] p-3.5 ring-1 ring-white/[0.06]">
           {exercise.tracking_type !== 'duration' && (
-            <label className="flex items-center justify-between gap-3 text-sm text-neutral-300">
+            <label className="flex items-center justify-between gap-3 text-sm font-medium text-[#EBEBF5]/85">
               Erfassung
               <select
                 className={fieldClass}
@@ -405,11 +417,11 @@ export function ExerciseCard(props: Props) {
             </label>
           )}
           {weighted && (
-            <label className="flex items-center justify-between gap-3 text-sm text-neutral-300">
+            <label className="flex items-center justify-between gap-3 text-sm font-medium text-[#EBEBF5]/85">
               Schrittweite
-              <span className="flex items-center gap-2 text-neutral-400">
+              <span className="flex items-center gap-2 text-[#8E8E93]">
                 <input
-                  className={`${fieldClass} w-20 text-center`}
+                  className={`${fieldClass} w-20 text-center tabular-nums`}
                   aria-label="Schrittweite in kg"
                   inputMode="decimal"
                   value={stepText ?? String(exercise.weight_step_kg).replace('.', ',')}
@@ -422,7 +434,7 @@ export function ExerciseCard(props: Props) {
           )}
           {entry.alternative && (
             <button
-              className="min-h-11 text-sm text-neutral-300 underline"
+              className="min-h-11 text-sm font-medium text-[#FFD60A]"
               type="button"
               onClick={() => {
                 const alternative = entry.alternative as Exercise
@@ -438,23 +450,44 @@ export function ExerciseCard(props: Props) {
             </button>
           )}
           {exercise.tracking_type === 'duration' && !entry.alternative && (
-            <p className="text-sm text-neutral-500">Diese Übung wird über die Dauer erfasst.</p>
+            <p className="text-sm text-[#8E8E93]">Diese Übung wird über die Dauer erfasst.</p>
+          )}
+          {onRemoveEntry && (
+            <div className="border-t border-white/[0.06] pt-2">
+              <button
+                className="min-h-11 text-sm font-medium text-[#FF453A] disabled:opacity-50"
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true)
+                  setError(null)
+                  deletePlanEntry(entry.id)
+                    .then(() => onRemoveEntry())
+                    .catch(() => setError('Übung konnte nicht aus dem Tag entfernt werden.'))
+                    .finally(() => setBusy(false))
+                }}
+              >
+                Übung aus diesem Tag entfernen
+              </button>
+            </div>
           )}
         </div>
       )}
 
-      <p className="text-sm tabular-nums text-neutral-400">
-        {logged.length > 0 && <span className="mr-2 text-neutral-500">Vorgabe {target} ·</span>}
+      <p className="text-sm tabular-nums text-[#8E8E93]">
+        {logged.length > 0 && <span className="mr-2 text-[#8E8E93]/75">Vorgabe {target} ·</span>}
         {last.length > 0 ? `Letztes Mal: ${formatPerformance(last, unit)}` : 'Noch kein letztes Training'}
       </p>
 
       {hint && !done && (
-        <p className="mt-2 rounded-lg bg-yellow-400/10 px-3 py-2 text-sm font-medium text-yellow-300">{hintText}</p>
+        <p className="mt-2.5 rounded-xl bg-[#FFD60A]/12 px-3 py-2 text-sm font-medium text-[#FFD60A] ring-1 ring-[#FFD60A]/25">
+          {hintText}
+        </p>
       )}
 
-      {error && bodyVisible && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
+      {error && bodyVisible && <p role="alert" className="mt-2 text-sm text-[#FF453A]">{error}</p>}
 
-      <div className="mt-3 flex gap-1.5 text-center text-xs text-neutral-500" aria-hidden="true">
+      <div className="mt-3.5 flex gap-1.5 text-center text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]" aria-hidden="true">
         <span className="w-4 shrink-0">{isRounds ? 'R' : '#'}</span>
         {exercise.tracking_type === 'duration' ? (
           <span className="flex-1">{unit === 'minutes' ? 'Minuten' : 'Sekunden'}</span>
@@ -464,7 +497,7 @@ export function ExerciseCard(props: Props) {
             <span className="flex-1">Wdh.</span>
           </>
         )}
-        <span className="w-10 shrink-0" />
+        <span className="w-11 shrink-0" />
       </div>
 
       <ul>
@@ -540,7 +573,7 @@ export function ExerciseCard(props: Props) {
 
   if (isDetail) {
     return (
-      <section aria-label={exercise.name} className="rounded-xl border border-neutral-700 bg-neutral-800/70">
+      <section aria-label={exercise.name} className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] shadow-lg">
         {header}
         {answer}
         {body}
@@ -549,13 +582,16 @@ export function ExerciseCard(props: Props) {
   }
 
   // In der Laptop-Liste markiert ein gelber Rand die Übung, die rechts offen ist.
-  const openStyle = layout === 'summary' ? 'border-yellow-400/60 bg-neutral-800/70' : 'border-neutral-700 bg-neutral-800/70'
+  const openStyle =
+    layout === 'summary'
+      ? 'border-[#FFD60A]/60 bg-[#242426]'
+      : 'border-white/[0.12] bg-[#1C1C1E] shadow-md'
   return (
     <li
       ref={cardRef}
       aria-label={exercise.name}
-      className={`scroll-mt-16 rounded-xl border transition-colors duration-300 motion-reduce:transition-none ${
-        open ? openStyle : 'border-neutral-800 bg-neutral-800/30'
+      className={`scroll-mt-16 rounded-2xl border transition-colors duration-300 motion-reduce:transition-none ${
+        open ? openStyle : 'border-white/[0.06] bg-[#1C1C1E]/80'
       }`}
     >
       {header}

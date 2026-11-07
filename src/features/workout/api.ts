@@ -161,3 +161,70 @@ export async function updateExercise(
   const { error } = await supabase.from('exercises').update(changes).eq('id', exerciseId)
   if (error) throw error
 }
+
+export async function updatePlanEntry(
+  entryId: string,
+  changes: { sets_min: number; sets_max: number; reps_min: number | null; reps_max: number | null },
+): Promise<void> {
+  const { error } = await supabase.from('plan_exercises').update(changes).eq('id', entryId)
+  if (error) throw error
+}
+
+export async function deletePlanEntry(entryId: string): Promise<void> {
+  const { error } = await supabase.from('plan_exercises').delete().eq('id', entryId)
+  if (error) throw error
+}
+
+export async function addExerciseToPlanDay(input: {
+  planDayId: string
+  name: string
+  trackingType: TrackingType
+  sets: number
+  repsMin: number | null
+  repsMax: number | null
+  durationSeconds: number | null
+  position: number
+}): Promise<PlanEntry> {
+  const trimmed = input.name.trim()
+  const { data: existing, error: findError } = await supabase
+    .from('exercises')
+    .select(EXERCISE_COLUMNS)
+    .ilike('name', trimmed)
+    .maybeSingle()
+  if (findError) throw findError
+
+  let exercise = existing as Exercise | null
+  if (!exercise) {
+    const { data: created, error: createError } = await supabase
+      .from('exercises')
+      .insert({ name: trimmed, tracking_type: input.trackingType })
+      .select(EXERCISE_COLUMNS)
+      .single()
+    if (createError) throw createError
+    exercise = created as Exercise
+  }
+
+  const isDuration = input.trackingType === 'duration'
+  const { data: entry, error: entryError } = await supabase
+    .from('plan_exercises')
+    .insert({
+      plan_day_id: input.planDayId,
+      exercise_id: exercise.id,
+      position: input.position,
+      sets_min: input.sets,
+      sets_max: input.sets,
+      reps_min: isDuration ? null : input.repsMin,
+      reps_max: isDuration ? null : input.repsMax,
+      duration_min: isDuration ? input.durationSeconds : null,
+      duration_max: isDuration ? input.durationSeconds : null,
+    })
+    .select('id, position, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max')
+    .single()
+  if (entryError) throw entryError
+
+  return {
+    ...entry,
+    exercise,
+    alternative: null,
+  }
+}

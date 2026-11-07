@@ -68,20 +68,20 @@ export function ExportCard({ today }: { today: string }) {
   }
 
   return (
-    <section className="mt-5">
-      <h2 className="text-lg font-medium text-neutral-100">Backup</h2>
-      <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-800/40 p-3">
-        <p className="text-sm text-neutral-400">
+    <section className="mt-6">
+      <h2 className="text-xl font-bold tracking-tight text-white">Backup</h2>
+      <div className="mt-3 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
+        <p className="text-sm leading-relaxed text-[#8E8E93]">
           Alle deine Sätze als CSV-Datei, z. B. für iCloud Drive oder Excel. Einspielen lässt sich die Datei in der App
           bisher nicht.
         </p>
         {prepared ? (
           <>
-            <p className="mt-3 text-sm text-neutral-200" role="status">
+            <p className="mt-3 text-sm font-medium text-white" role="status">
               {prepared.setCount === 1 ? '1 Satz' : `${prepared.setCount} Sätze`} bereit
             </p>
             <button
-              className="mt-2 min-h-11 w-full rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-neutral-950"
+              className="mt-2.5 min-h-11 w-full rounded-xl bg-[#FFD60A] px-3 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99]"
               type="button"
               onClick={() => void handleSave()}
             >
@@ -90,7 +90,7 @@ export function ExportCard({ today }: { today: string }) {
           </>
         ) : (
           <button
-            className="mt-3 min-h-11 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-medium text-neutral-100 disabled:opacity-50"
+            className="mt-3.5 min-h-11 w-full rounded-xl bg-[#2C2C2E] px-3 py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.99] active:bg-[#3A3A3C] disabled:opacity-50"
             type="button"
             disabled={busy}
             onClick={() => void handlePrepare()}
@@ -98,8 +98,8 @@ export function ExportCard({ today }: { today: string }) {
             {busy ? 'Daten werden geladen …' : 'Daten exportieren'}
           </button>
         )}
-        {message && <p className="mt-2 text-sm text-neutral-400" role="status">{message}</p>}
-        {error && <p className="mt-2 text-sm text-red-300" role="alert">{error}</p>}
+        {message && <p className="mt-2.5 text-sm text-[#8E8E93]" role="status">{message}</p>}
+        {error && <p className="mt-2.5 text-sm text-[#FF453A]" role="alert">{error}</p>}
       </div>
     </section>
   )
