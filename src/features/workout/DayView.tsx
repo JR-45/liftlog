@@ -24,6 +24,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   const [day, setDay] = useState<DayData | null>(null)
   const [savedSets, setSavedSets] = useState<SavedSets>({})
   const [openId, setOpenId] = useState<string | null>(null)
+  const [scrollTarget, setScrollTarget] = useState<{ id: string; request: number } | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const workoutId = useRef<string | null>(null)
@@ -56,6 +57,19 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     return workoutId.current
   }
 
+  function scrollTo(id: string) {
+    setScrollTarget((current) => ({ id, request: (current?.request ?? 0) + 1 }))
+  }
+
+  function handleToggle(id: string) {
+    if (openId === id) {
+      setOpenId(null)
+    } else {
+      setOpenId(id)
+      scrollTo(id)
+    }
+  }
+
   function handleSetChange(exerciseId: string, setNumber: number, values: SetValues | null) {
     const previous = latestSaved.current
     const key = setKey(exerciseId, setNumber)
@@ -70,11 +84,15 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     const entry = day.entries[index]
     if (!entry) return
 
-    // Mit dem letzten Satz öffnet sich die nächste Übung.
+    // Mit dem letzten Satz öffnet sich die nächste Übung. Die fertige bleibt oben im Bild,
+    // damit der Knopf zum Erhöhen direkt zu sehen ist.
     const ids = entryIds(entry)
     const finishedEntry =
       countLoggedSets(next, ids) >= entry.sets_max && countLoggedSets(previous, ids) < entry.sets_max
-    if (finishedEntry) setOpenId(nextOpenEntry(day.entries, next, index))
+    if (finishedEntry) {
+      setOpenId(nextOpenEntry(day.entries, next, index))
+      scrollTo(entry.id)
+    }
 
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.
     const trainingDone = day.entries.every((current) => isDone(current, next))
@@ -133,10 +151,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
             userId={userId}
             today={today}
             open={openId === entry.id}
+            scrollRequest={scrollTarget?.id === entry.id ? scrollTarget.request : null}
             savedSets={savedSets}
             lastSets={day.lastSets}
             getWorkoutId={getWorkoutId}
-            onToggle={() => setOpenId((current) => (current === entry.id ? null : entry.id))}
+            onToggle={() => handleToggle(entry.id)}
             onSetChange={handleSetChange}
           />
         ))}

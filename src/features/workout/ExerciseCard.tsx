@@ -29,6 +29,8 @@ type Props = {
   userId: string
   today: string
   open: boolean
+  /** Ändert sich der Wert, scrollt die Karte an den oberen Rand. */
+  scrollRequest: number | null
   savedSets: Record<string, SetValues>
   lastSets: LoggedSet[]
   getWorkoutId: () => Promise<string>
@@ -37,7 +39,7 @@ type Props = {
 }
 
 export function ExerciseCard(props: Props) {
-  const { entry, userId, today, open, savedSets, lastSets, getWorkoutId, onToggle, onSetChange } = props
+  const { entry, userId, today, open, scrollRequest, savedSets, lastSets, getWorkoutId, onToggle, onSetChange } = props
   const [exercises, setExercises] = useState<Record<string, Exercise>>(() => {
     const all = entry.alternative ? [entry.exercise, entry.alternative] : [entry.exercise]
     return Object.fromEntries(all.map((exercise) => [exercise.id, exercise]))
@@ -57,18 +59,15 @@ export function ExerciseCard(props: Props) {
   // Zuletzt eingetipptes Gewicht: Ausgangswert für + und −, solange es kein Arbeitsgewicht gibt.
   const [typedWeight, setTypedWeight] = useState<number | null>(null)
   const cardRef = useRef<HTMLLIElement>(null)
-  const wasOpen = useRef(open)
 
-  // Schließt sich gleichzeitig eine Karte darüber, würde die neue sonst aus dem Bild rutschen.
+  // Erst nach der Animation scrollen, sonst verschiebt die sich schließende Karte das Ziel.
   useEffect(() => {
-    const justOpened = open && !wasOpen.current
-    wasOpen.current = open
-    if (!justOpened) return
+    if (scrollRequest === null) return
     const timeout = setTimeout(() => {
       cardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
     }, OPEN_ANIMATION_MS)
     return () => clearTimeout(timeout)
-  }, [open])
+  }, [scrollRequest])
 
   const exercise = exercises[activeId]
   const weighted = usesWeight(exercise.tracking_type)
@@ -101,6 +100,20 @@ export function ExerciseCard(props: Props) {
   })
   const done = logged.length >= entry.sets_min
   const baseWeight = exercise.current_weight_kg ?? typedWeight
+  const assisted = exercise.tracking_type === 'assisted_reps'
+  // Heute alle Sätze an der oberen Grenze: Dieselbe Regel wie beim Hinweis, nur mit den heutigen Sätzen.
+  const goalReached =
+    done &&
+    progressionHint({
+      tracking: exercise.tracking_type,
+      currentWeight: exercise.current_weight_kg,
+      setsMin: entry.sets_min,
+      repsMin: entry.reps_min,
+      repsMax: entry.reps_max,
+      lastSets: logged,
+    }) !== null
+  const goalDirection = assisted ? -1 : 1
+  const goalWeight = formatWeight(stepWeight(exercise.current_weight_kg, exercise.weight_step_kg, goalDirection))
 
   function handleWeightStep(direction: 1 | -1) {
     setTypedWeight(null)
@@ -151,9 +164,12 @@ export function ExerciseCard(props: Props) {
       await deleteSet(workoutId, activeId, setNumber)
     }
     onSetChange(activeId, setNumber, values)
-    // Das erste eingetragene Gewicht wird zum Arbeitsgewicht, damit niemand bis 60 kg klicken muss.
-    if (values?.weight_kg != null && exercise.current_weight_kg === null) {
-      await applyExerciseChange({ current_weight_kg: values.weight_kg })
+    // Das erste Gewicht wird zum Arbeitsgewicht, damit niemand bis 60 kg klicken muss. Danach zieht es bei
+    // einem schwereren Satz nach. Ein leichterer Satz, z. B. ein Absenken am Ende, ändert es nicht.
+    const weight = values?.weight_kg
+    const current = exercise.current_weight_kg
+    if (weight != null && (current === null || (assisted ? weight < current : weight > current))) {
+      await applyExerciseChange({ current_weight_kg: weight })
     }
   }
 
@@ -218,6 +234,49 @@ export function ExerciseCard(props: Props) {
           </button>
         )}
       </div>
+
+      {done && weighted && (
+        <div className="px-4 pb-3">
+          {goalReached ? (
+            <button
+              className="min-h-11 w-full rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50"
+              type="button"
+              disabled={busy}
+              onClick={() => handleWeightStep(goalDirection)}
+            >
+              Geschafft! {assisted ? `Hilfe auf ${goalWeight} senken` : `Auf ${goalWeight} erhöhen`}
+            </button>
+          ) : (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-neutral-300">Nächstes Mal</span>
+              <div className="flex items-center gap-1">
+                <button
+                  className={stepButtonClass}
+                  type="button"
+                  aria-label={`${weightName} um ${exercise.weight_step_kg} kg senken`}
+                  disabled={busy || !baseWeight}
+                  onClick={() => handleWeightStep(-1)}
+                >
+                  −
+                </button>
+                <span className="w-20 text-center font-medium tabular-nums text-neutral-100" aria-live="polite">
+                  {formatWeight(exercise.current_weight_kg)}
+                </span>
+                <button
+                  className={stepButtonClass}
+                  type="button"
+                  aria-label={`${weightName} um ${exercise.weight_step_kg} kg erhöhen`}
+                  disabled={busy}
+                  onClick={() => handleWeightStep(1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+          {error && !open && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
+        </div>
+      )}
 
       {/* Die Höhe von 0fr auf 1fr animiert das Aufklappen ohne feste Pixelwerte. */}
       <div
@@ -287,13 +346,13 @@ export function ExerciseCard(props: Props) {
               {last.length > 0 ? `Letztes Mal: ${formatPerformance(last, unit)}` : 'Noch kein letztes Training'}
             </p>
 
-            {hint && (
+            {hint && !done && (
               <p className="mt-2 rounded-lg bg-yellow-400/10 px-3 py-2 text-sm font-medium text-yellow-300">
                 {hintText}
               </p>
             )}
 
-            {weighted && (
+            {weighted && !done && (
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-sm text-neutral-300">{weightName}</span>
                 <div className="flex items-center gap-1">
