@@ -211,7 +211,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "last_performance":
+            "delete_own_account":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"last_performance":
 { Args: { "before_date": string }; Returns: {
               "distance_km": number,"duration_seconds": number,"exercise_id": string,"is_assisted": boolean,"next_weight_kg": number,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
             }[]
