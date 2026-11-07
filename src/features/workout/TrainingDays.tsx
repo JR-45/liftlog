@@ -16,9 +16,11 @@ export function TrainingDays({ today, userId, planDays, restSeconds, onSetLogged
   const weekdays = Array.from({ length: 7 }, (_, offset) => (currentWeekday + offset) % 7)
   const plan = planDays.find((day) => day.weekday === selected)
   // Nur heute wird trainiert. Ein anderer Tag bleibt Vorschau, bis er bewusst für heute übernommen wird.
-  const [takenOver, setTakenOver] = useState<string | null>(null)
-  const takeOver = useCallback((planDayId: string) => setTakenOver(`${planDayId}:${today}`), [today])
-  const canTrain = plan && (selected === currentWeekday || takenOver === `${plan.id}:${today}`)
+  const [choice, setChoice] = useState<{ key: string; train: boolean } | null>(null)
+  const key = plan ? `${plan.id}:${today}` : ''
+  const takeOver = useCallback((planDayId: string) => setChoice({ key: `${planDayId}:${today}`, train: true }), [today])
+  const isToday = selected === currentWeekday
+  const canTrain = plan && (isToday || (choice?.key === key && choice.train))
   return <>
     <nav className="mt-4 flex gap-1 rounded-2xl border border-line/[0.06] bg-surface p-1 lg:mt-0 lg:max-w-xl" aria-label="Trainingstag">
       {weekdays.map((weekday) => <button key={weekday} type="button" aria-pressed={selected === weekday}
@@ -29,14 +31,17 @@ export function TrainingDays({ today, userId, planDays, restSeconds, onSetLogged
         {weekday === currentWeekday && weekday !== selected && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-neon" />}
       </button>)}
     </nav>
-    {plan && !canTrain && <DayPreview key={`${plan.id}:${today}`} planDayId={plan.id} today={today} dayName={plan.name}
-      dayLabel={WEEKDAY_NAMES[selected]} onTakeOver={takeOver} />}
+    {plan && !canTrain && <DayPreview key={key} planDayId={plan.id} today={today} dayName={plan.name}
+      dayLabel={WEEKDAY_NAMES[selected]} resume={choice?.key !== key} onTakeOver={takeOver} />}
     {plan && canTrain && <>
+      {!isToday && <button type="button" className="mt-3 min-h-11 text-sm font-medium text-neon" onClick={() => setChoice({ key, train: false })}>
+        ‹ Zurück zur Vorschau
+      </button>}
       <DayView key={`${plan.id}:${today}`} planDayId={plan.id} userId={userId} today={today} dayName={plan.name}
-        dayLabel={selected === currentWeekday ? 'Heute' : WEEKDAY_NAMES[selected]} restSeconds={restSeconds} onSetLogged={onSetLogged} />
+        dayLabel={isToday ? 'Heute' : WEEKDAY_NAMES[selected]} restSeconds={restSeconds} onSetLogged={onSetLogged} />
     </>}
     {!plan && <div className="mt-12 rounded-2xl border border-line/[0.08] bg-surface px-6 py-12 text-center">
-      <p className="text-lg font-semibold text-foreground">{selected === currentWeekday ? 'Heute ist Ruhetag' : 'An diesem Tag ist Ruhetag'}</p>
+      <p className="text-lg font-semibold text-foreground">{isToday ? 'Heute ist Ruhetag' : 'An diesem Tag ist Ruhetag'}</p>
       <p className="mt-1 text-sm text-muted">Oben kannst du dir die anderen Trainingstage ansehen.</p>
     </div>}
   </>

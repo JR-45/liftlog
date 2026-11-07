@@ -11,8 +11,10 @@ function target(entry: PlanEntry): string {
 }
 
 /** Zeigt einen anderen Trainingstag nur an. Hier wird nichts gespeichert. */
-export function DayPreview({ planDayId, today, dayName, dayLabel, onTakeOver }: {
-  planDayId: string; today: string; dayName: string; dayLabel: string; onTakeOver: (planDayId: string) => void
+export function DayPreview({ planDayId, today, dayName, dayLabel, resume, onTakeOver }: {
+  planDayId: string; today: string; dayName: string; dayLabel: string
+  /** Ob ein heute schon begonnener Tag direkt geöffnet wird. Aus, wenn bewusst zur Vorschau gewechselt wurde. */
+  resume: boolean; onTakeOver: (planDayId: string) => void
 }) {
   const [entries, setEntries] = useState<PlanEntry[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -21,12 +23,12 @@ export function DayPreview({ planDayId, today, dayName, dayLabel, onTakeOver }: 
     let cancelled = false
     loadDay(planDayId, today).then((data) => {
       if (cancelled) return
-      // Wurde dieser Tag heute schon angefangen, geht es direkt weiter.
-      if (data.workoutId) onTakeOver(planDayId)
+      // Mit heute gespeicherten Sätzen geht es direkt weiter. Ein nur gestartetes Training zählt nicht.
+      if (resume && data.todaySets.length > 0) onTakeOver(planDayId)
       else setEntries(data.entries)
     }).catch(() => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
-  }, [planDayId, today, onTakeOver])
+  }, [planDayId, today, resume, onTakeOver])
 
   if (failed) return <p role="alert" className="mt-6 text-sm text-danger">Der Tag konnte nicht geladen werden.</p>
   if (!entries) return <p className="mt-6 text-sm text-muted">Wird geladen …</p>
