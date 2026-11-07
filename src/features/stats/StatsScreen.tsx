@@ -7,6 +7,7 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '../../l
 import { loadScheduledDays, loadTrainedDates, type PlanDay } from '../workout/api'
 import { deleteDayMark, loadDayMarks, loadExportRows, saveDayMark } from './api'
 import { ExerciseProgressCard } from './ExerciseProgressCard'
+import { AttendanceChart } from './AttendanceChart'
 
 const WEEKDAY_HEADERS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const MONTH_FORMAT = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' })
@@ -331,6 +332,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                 </p>
               </div>
             </div>
+            <AttendanceChart key={shownIndex} trained={calendar.trained} missed={calendar.missed} />
             {calendar.marked > 0 && (
               <p className="mt-3 text-sm font-medium text-muted" data-testid="marked-count">
                 {calendar.marked === 1 ? '1 Tag markiert' : `${calendar.marked} Tage markiert`}

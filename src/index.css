@@ -112,6 +112,15 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
 .template-day-body { overscroll-behavior: contain; scrollbar-gutter: stable; }
 .template-day-actions { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 .exercise-book { perspective: 80rem; }
+.attendance-segment { transition: stroke-dasharray .7s ease-out, translate .25s ease-out; }
+.attendance-infographic { box-shadow: 0 2px 8px rgb(0 0 0 / .03); }
+.attendance-interactive-segment { pointer-events: visibleStroke; }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .attendance-interactive-segment:hover {
+    /* Der Kreis ist um 90 Grad gedreht: rechts entspricht hier oben. */
+    translate: 4px 0;
+  }
+}
 .exercise-page { transform-origin: left center; animation: turn-exercise-page .22s ease-out; }
 @keyframes turn-exercise-page {
   from { opacity: .6; transform: rotateY(-6deg) translateX(.5rem); }
