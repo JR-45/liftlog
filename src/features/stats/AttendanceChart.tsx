@@ -45,28 +45,28 @@ export function AttendanceChart({ trained, missed }: { trained: number; missed: 
               <stop offset="1" stopColor="var(--color-surface-inset)" />
             </radialGradient>
           </defs>
-          <circle cx="160" cy="130" r="87" fill="none" stroke="var(--color-line)" strokeOpacity=".12"
+          <circle cx="160" cy="130" r="99" fill="none" stroke="var(--color-line)" strokeOpacity=".12"
             strokeDasharray="1 6" strokeLinecap="round" />
-          <circle cx="160" cy="133" r="64" fill="none" stroke="var(--color-line)" strokeOpacity=".06" strokeWidth="33" />
-          <circle cx="160" cy="130" r="46" fill={`url(#${id}-center)`} stroke="var(--color-line)" strokeOpacity=".05" />
+          <circle cx="160" cy="133" r="76" fill="none" stroke="var(--color-line)" strokeOpacity=".06" strokeWidth="33" />
+          <circle cx="160" cy="130" r="58" fill={`url(#${id}-center)`} stroke="var(--color-line)" strokeOpacity=".05" />
           <g transform="rotate(-90 160 130)">
-            <circle cx="160" cy="130" r="64" fill="none" stroke="var(--color-control)" strokeWidth="32" />
-            <circle cx="160" cy="130" r="64" fill="none" stroke={`url(#${id}-red)`} strokeWidth="32"
+            <circle cx="160" cy="130" r="76" fill="none" stroke="var(--color-control)" strokeWidth="32" />
+            <circle cx="160" cy="130" r="76" fill="none" stroke={`url(#${id}-red)`} strokeWidth="32"
               pathLength="100" strokeDasharray={`${visible && total > 0 ? missed / total * 100 : 0} 100`}
               strokeDashoffset={-share * 100}
               className="attendance-segment attendance-interactive-segment" />
-            <circle cx="160" cy="130" r="64" fill="none" stroke={`url(#${id}-green)`} strokeWidth="32"
+            <circle cx="160" cy="130" r="76" fill="none" stroke={`url(#${id}-green)`} strokeWidth="32"
               pathLength="100" strokeDasharray={`${visible && total > 0 ? share * 100 : 0} 100`}
               className="attendance-segment attendance-interactive-segment" />
           </g>
           <g pointerEvents="none" textAnchor="middle" fill="var(--color-foreground)">
-            <text x="160" y="110" fontSize="8" letterSpacing="1.5" fill="var(--color-accent-ink)">DEINE QUOTE</text>
+            <text x="160" y="107" fontSize="8" letterSpacing="1.5" fill="var(--color-accent-ink)">DEINE QUOTE</text>
             <text x="160" y="137" fontSize="29" fontWeight="700" letterSpacing="-1">{total === 0 ? '–' : `${percentage} %`}</text>
-            <text x="160" y="155" fontSize="10" fill="var(--color-muted)">{total === 0 ? 'Keine Trainings' : 'absolviert'}</text>
+            <text x="160" y="160" fontSize="10" fill="var(--color-muted)">{total === 0 ? 'Keine Trainings' : 'absolviert'}</text>
           </g>
           {total > 0 && annotations.filter(item => item.count > 0).map(item => {
-            const x = 160 + Math.cos(item.angle) * 82
-            const y = 130 + Math.sin(item.angle) * 82
+            const x = 160 + Math.cos(item.angle) * 94
+            const y = 130 + Math.sin(item.angle) * 94
             const right = x >= 160
             const end = right ? 302 : 18
             return <g key={item.label} pointerEvents="none">
