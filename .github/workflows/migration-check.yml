@@ -1,0 +1,31 @@
+# Blockiert den Merge eines Pull Requests mit neuer Migration, bis der Projekt-Owner bestätigt,
+# dass sie online eingespielt ist (Label „migration-online“). Braucht keine Zugangsdaten und
+# berührt die Online-Datenbank nicht.
+name: Migration-Prüfung
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Migration online eingespielt
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Neue Migrationen prüfen
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABEL_SET: ${{ contains(github.event.pull_request.labels.*.name, 'migration-online') }}
+        run: .github/scripts/migration-check.sh
