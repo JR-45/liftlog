@@ -8,7 +8,7 @@ Project skills live in `.agents/skills/<name>/SKILL.md` (frontmatter `name` + `d
 
 ## Project
 
-LiftLog is a personal workout tracker: a mobile-first PWA (installed on an iPhone) with a React 19 + TypeScript + Vite + Tailwind 4 frontend and Supabase (Auth + Postgres) as the only backend. There is no custom server. UI text, code comments, SQL comments and CI step names are all written in **German**; keep it that way. Commit messages are English Conventional Commits (`feat(workout): …`, `fix(…)`, `ci:`, `docs:`).
+LiftLog is a workout tracker: a mobile-first PWA (used as an installed app on phones, with tablet and laptop layouts) with a React 19 + TypeScript + Vite + Tailwind 4 frontend and Supabase (Auth + Postgres) as the only backend. There is no custom server. UI text, code comments, SQL comments and CI step names are all written in **German**; keep it that way. Commit messages are English Conventional Commits (`feat(workout): …`, `fix(…)`, `ci:`, `docs:`).
 
 ## Commands
 
@@ -59,15 +59,18 @@ Diagrams: `docs/database.puml` / `docs/database.png` and `docs/code-dependencies
 
 ## Regeln
 
+Diese Regeln gelten für alle im Team (Jeton, Murat, Osman) und für jeden Agenten, mit dem sie arbeiten. „Der Entwickler“ ist immer die Person, die gerade mit dem Agenten arbeitet.
+
 ### Git und Zusammenarbeit
 - Keine `Co-Authored-By`-Zeile, keine Agent-Signatur und kein „Generated with …“ in Commits oder PRs. Kein Agent (Claude, Codex, Gemini, …) wird als Autor oder Co-Autor eingetragen.
 - Vor jedem `git push` immer zuerst `git pull --rebase` ausführen. Bei Konflikten anhalten und nachfragen, nicht selbst auflösen.
 - Nie force-pushen, ohne vorher ausdrücklich zu fragen. Falls doch freigegeben: nur `--force-with-lease`, und vorher prüfen, ob schon jemand auf den umzuschreibenden Commits weitergearbeitet hat.
+- `main` ist auf GitHub geschützt: Direkte Pushes werden abgelehnt, Änderungen kommen nur per Pull Request mit grüner CI rein.
 - Nicht direkt auf `main` arbeiten: eigener Branch (`feature/kurzer-name`), pushen, Pull Request. Gemergt wird erst, wenn die CI grün ist und jemand anderes drübergeschaut hat.
 - Nach dem Merge den Branch lokal und auf GitHub löschen (`git branch -d …`, `git push origin --delete …`), danach `main` pullen.
 - Commits: englische Conventional Commits (`feat(workout): …`, `fix(…)`, `ci:`, `docs:`, `chore:`), klein und in sich abgeschlossen.
-- Nur committen oder pushen, wenn der User es verlangt.
-- UI-Änderungen vor dem Commit zeigen: lokale Supabase und `bun run dev --host` starten, dem User die Links für Laptop (`http://localhost:5173`) und Handy (Netzwerk-Adresse aus der Vite-Ausgabe, gleiches WLAN) geben und erst nach seinem OK committen und pushen.
+- Nur committen oder pushen, wenn der Entwickler es verlangt.
+- UI-Änderungen vor dem Commit zeigen: lokale Supabase und `bun run dev --host` starten, dem Entwickler die Links für Laptop (`http://localhost:5173`) und Handy (Netzwerk-Adresse aus der Vite-Ausgabe, gleiches WLAN) geben und erst nach dessen OK committen und pushen.
 
 ### Datenbank
 - Neue Migration mit `bunx supabase migration new kurzer_name`. Bereits gemergte Migrationen nie ändern.
