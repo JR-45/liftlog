@@ -29,7 +29,7 @@ const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-
 const MEMBER_SINCE_FORMAT = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' })
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 text-base text-white placeholder-[#8E8E93]/60 outline-none transition-colors focus:border-neon focus:bg-[#3A3A3C] disabled:opacity-50'
+  'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
 
 type Props = {
   user: User
@@ -201,7 +201,7 @@ function ProfileView({
   return (
     <section className="mt-5 space-y-5">
       {/* 1. Athleten-Header mit Profilbild-Upload */}
-      <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4 shadow-lg">
+      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
@@ -214,7 +214,7 @@ function ProfileView({
               ) : (
                 <div
                   aria-hidden="true"
-                  className="flex h-22 w-22 items-center justify-center rounded-full bg-gradient-to-br from-neon to-[#FF9F0A] text-2xl font-bold tracking-tight text-black shadow-md"
+                  className="flex h-22 w-22 items-center justify-center rounded-full bg-gradient-to-br from-neon to-neon/60 text-2xl font-bold tracking-tight text-black shadow-md"
                 >
                   {initials}
                 </div>
@@ -231,7 +231,7 @@ function ProfileView({
                 type="button"
                 aria-label="Profilbild ändern"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#1C1C1E] bg-[#2C2C2E] text-neon shadow-md transition-transform hover:bg-[#3A3A3C] active:scale-95"
+                className="absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-surface bg-control text-accent-ink shadow-md transition-transform hover:bg-control-hover active:scale-95"
               >
                 <CameraIcon className="h-5 w-5" />
               </button>
@@ -239,17 +239,17 @@ function ProfileView({
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-xl font-bold tracking-tight text-white">{profile.displayName}</h2>
-                <span className="rounded-full bg-neon/15 px-2.5 py-0.5 text-xs font-semibold text-neon ring-1 ring-neon/30">
+                <h2 className="truncate text-xl font-bold tracking-tight text-foreground">{profile.displayName}</h2>
+                <span className="rounded-full bg-neon/15 px-2.5 py-0.5 text-xs font-semibold text-accent-ink ring-1 ring-neon/30">
                   {GOAL_LABELS[profile.goal]}
                 </span>
               </div>
               {profile.bio ? (
-                <p className="mt-1 text-sm text-[#EBEBF5]/85">{profile.bio}</p>
+                <p className="mt-1 text-sm text-foreground/85">{profile.bio}</p>
               ) : (
-                <p className="mt-1 text-sm text-[#8E8E93]">{user.email}</p>
+                <p className="mt-1 text-sm text-muted">{user.email}</p>
               )}
-              <p className="mt-1 text-xs text-[#8E8E93]">Mitglied seit {memberSince}</p>
+              <p className="mt-1 text-xs text-muted">Mitglied seit {memberSince}</p>
             </div>
           </div>
 
@@ -263,7 +263,7 @@ function ProfileView({
                 setWeeklyDraft(profile.weeklyTarget)
                 setEditingProfile((current) => !current)
               }}
-              className="min-h-11 rounded-xl bg-[#2C2C2E] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#3A3A3C] active:scale-95"
+              className="min-h-11 rounded-xl bg-control px-4 text-sm font-semibold text-foreground transition-colors hover:bg-control-hover active:scale-95"
             >
               {editingProfile ? 'Schließen' : 'Profil bearbeiten'}
             </button>
@@ -272,7 +272,7 @@ function ProfileView({
                 type="button"
                 aria-label="Profilbild entfernen"
                 onClick={() => void handleRemoveAvatar()}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2C2C2E] text-[#FF453A] transition-colors hover:bg-[#FF453A]/15 active:scale-95"
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-control text-danger transition-colors hover:bg-danger/15 active:scale-95"
               >
                 <TrashIcon className="h-4 w-4" />
               </button>
@@ -281,21 +281,21 @@ function ProfileView({
         </div>
 
         {feedback && (
-          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#30D158]">
+          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-success">
             <CheckIcon className="h-4 w-4" />
             {feedback}
           </p>
         )}
         {error && (
-          <p role="alert" className="mt-3 text-sm text-[#FF453A]">
+          <p role="alert" className="mt-3 text-sm text-danger">
             {error}
           </p>
         )}
 
         {editingProfile && (
-          <form onSubmit={(event) => void handleSaveIdentity(event)} className="mt-4 space-y-3 border-t border-white/[0.08] pt-4">
+          <form onSubmit={(event) => void handleSaveIdentity(event)} className="mt-4 space-y-3 border-t border-line/[0.08] pt-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-[#EBEBF5]/85">
+              <label className="block text-sm font-medium text-foreground/85">
                 Anzeigename
                 <input
                   className={`${fieldClass} mt-1`}
@@ -305,7 +305,7 @@ function ProfileView({
                   placeholder="Dein Name"
                 />
               </label>
-              <label className="block text-sm font-medium text-[#EBEBF5]/85">
+              <label className="block text-sm font-medium text-foreground/85">
                 Trainingsziel
                 <select
                   className={`${fieldClass} mt-1`}
@@ -321,7 +321,7 @@ function ProfileView({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-[1fr_11rem]">
-              <label className="block text-sm font-medium text-[#EBEBF5]/85">
+              <label className="block text-sm font-medium text-foreground/85">
                 Motto / Trainings-Split
                 <input
                   className={`${fieldClass} mt-1`}
@@ -331,7 +331,7 @@ function ProfileView({
                   placeholder="z. B. Push / Pull / Beine · Fokus Progression"
                 />
               </label>
-              <label className="block text-sm font-medium text-[#EBEBF5]/85">
+              <label className="block text-sm font-medium text-foreground/85">
                 Wochenziel (Tage)
                 <select
                   className={`${fieldClass} mt-1`}
@@ -351,7 +351,7 @@ function ProfileView({
               <button
                 type="button"
                 onClick={() => setEditingProfile(false)}
-                className="min-h-11 rounded-xl bg-[#2C2C2E] px-4 text-sm font-medium text-[#8E8E93]"
+                className="min-h-11 rounded-xl bg-control px-4 text-sm font-medium text-muted"
               >
                 Abbrechen
               </button>
@@ -369,42 +369,42 @@ function ProfileView({
 
       {/* 2. Athleten-Übersicht & Wochenziel */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4 sm:col-span-2 lg:col-span-1">
+        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">Wochenziel</span>
-            <span className="rounded-full bg-[#30D158]/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-[#30D158]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">Wochenziel</span>
+            <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-success">
               {stats.activeWeeksStreak} {stats.activeWeeksStreak === 1 ? 'Woche' : 'Wochen'} Serie
             </span>
           </div>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-white">
-            {stats.thisWeekWorkouts} <span className="text-base font-medium text-[#8E8E93]">/ {profile.weeklyTarget} Trainings</span>
+          <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+            {stats.thisWeekWorkouts} <span className="text-base font-medium text-muted">/ {profile.weeklyTarget} Trainings</span>
           </p>
-          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#2C2C2E]">
+          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-control">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                stats.weekProgress >= 1 ? 'bg-[#30D158]' : 'bg-neon'
+                stats.weekProgress >= 1 ? 'bg-success' : 'bg-neon'
               }`}
               style={{ width: `${Math.round(stats.weekProgress * 100)}%` }}
             />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">Trainings gesamt</p>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-white">{stats.totalWorkouts}</p>
-          <p className="mt-0.5 text-xs text-[#8E8E93]">Absolvierte Einheiten</p>
+        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Trainings gesamt</p>
+          <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{stats.totalWorkouts}</p>
+          <p className="mt-0.5 text-xs text-muted">Absolvierte Einheiten</p>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">Sätze gesamt</p>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-white">{stats.totalSets}</p>
-          <p className="mt-0.5 text-xs text-[#8E8E93]">Geloggte Arbeitssätze</p>
+        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Sätze gesamt</p>
+          <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{stats.totalSets}</p>
+          <p className="mt-0.5 text-xs text-muted">Geloggte Arbeitssätze</p>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">Gesamtvolumen</p>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-neon">{formatVolume(stats.totalVolumeKg)}</p>
-          <p className="mt-0.5 text-xs text-[#8E8E93]">Bewegtes Gewicht</p>
+        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Gesamtvolumen</p>
+          <p className="mt-1.5 text-2xl font-bold tabular-nums text-accent-ink">{formatVolume(stats.totalVolumeKg)}</p>
+          <p className="mt-0.5 text-xs text-muted">Bewegtes Gewicht</p>
         </div>
       </div>
 
@@ -413,48 +413,48 @@ function ProfileView({
 
       {/* 4. Persönliche Rekorde (PRs & 1RM) */}
       <div>
-        <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
+        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neon/15 text-neon">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neon/15 text-accent-ink">
                 <TrophyIcon className="h-4 w-4" />
               </span>
               <div>
-                <h3 className="text-base font-bold tracking-tight text-white">Persönliche Rekorde (PRs)</h3>
-                <p className="text-xs text-[#8E8E93]">Schwerster Satz & geschätztes 1RM je Übung</p>
+                <h3 className="text-base font-bold tracking-tight text-foreground">Persönliche Rekorde (PRs)</h3>
+                <p className="text-xs text-muted">Schwerster Satz & geschätztes 1RM je Übung</p>
               </div>
             </div>
           </div>
 
           {stats.personalRecords.length === 0 ? (
-            <p className="py-12 text-center text-sm text-[#8E8E93]">
+            <p className="py-12 text-center text-sm text-muted">
               Sobald du deine ersten Sätze speicherst, erscheinen hier deine Bestleistungen.
             </p>
           ) : (
             <>
-              <ul className="mt-3 divide-y divide-white/[0.06]">
+              <ul className="mt-3 divide-y divide-line/[0.06]">
                 {visiblePrs.map((pr) => (
                   <li key={pr.name} className="flex items-center justify-between gap-3 py-2.5">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">{pr.name}</p>
-                      <p className="text-xs tabular-nums text-[#8E8E93]">
+                      <p className="truncate text-sm font-semibold text-foreground">{pr.name}</p>
+                      <p className="text-xs tabular-nums text-muted">
                         {SHORT_DATE.format(new Date(`${pr.date}T12:00:00`))}
                       </p>
                     </div>
                     <div className="shrink-0 text-right tabular-nums">
                       {pr.maxWeightKg !== null ? (
                         <>
-                          <p className="text-sm font-bold text-[#30D158]">
+                          <p className="text-sm font-bold text-success">
                             {formatWeight(pr.maxWeightKg)} × {pr.bestSetReps}
                           </p>
                           {pr.estimated1RmKg !== null && (
-                            <p className="text-xs font-medium text-neon">
+                            <p className="text-xs font-medium text-accent-ink">
                               1RM ~ {formatWeight(pr.estimated1RmKg)}
                             </p>
                           )}
                         </>
                       ) : (
-                        <p className="text-sm font-bold text-[#30D158]">{pr.maxRepsOnly} Wdh.</p>
+                        <p className="text-sm font-bold text-success">{pr.maxRepsOnly} Wdh.</p>
                       )}
                     </div>
                   </li>
@@ -464,7 +464,7 @@ function ProfileView({
                 <button
                   type="button"
                   onClick={() => setShowAllPrs((current) => !current)}
-                  className="mt-2 min-h-11 w-full rounded-xl bg-[#2C2C2E] text-sm font-medium text-neon"
+                  className="mt-2 min-h-11 w-full rounded-xl bg-control text-sm font-medium text-accent-ink"
                 >
                   {showAllPrs ? 'Weniger anzeigen' : `Alle ${stats.personalRecords.length} Rekorde anzeigen`}
                 </button>
@@ -475,14 +475,14 @@ function ProfileView({
       </div>
 
       {/* 5. Trainings-Einstellungen & Datenexport */}
-      <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
-        <h3 className="text-base font-bold tracking-tight text-white">Trainings-Einstellungen</h3>
+      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
+        <h3 className="text-base font-bold tracking-tight text-foreground">Trainings-Einstellungen</h3>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-white">Standard-Pausenzeit</p>
-            <p className="text-xs text-[#8E8E93]">Wird automatisch nach jedem neuen Arbeitssatz gestartet</p>
+            <p className="text-sm font-medium text-foreground">Standard-Pausenzeit</p>
+            <p className="text-xs text-muted">Wird automatisch nach jedem neuen Arbeitssatz gestartet</p>
           </div>
-          <div className="flex rounded-xl bg-[#2C2C2E] p-0.5" role="group" aria-label="Standard-Pausenzeit">
+          <div className="flex rounded-xl bg-control p-0.5" role="group" aria-label="Standard-Pausenzeit">
             {REST_OPTIONS.map((seconds) => (
               <button
                 key={seconds}
@@ -492,7 +492,7 @@ function ProfileView({
                 className={`h-11 min-w-14 rounded-[10px] px-3 text-sm tabular-nums transition-all ${
                   restTimer.duration === seconds
                     ? 'bg-neon font-semibold text-black shadow-sm'
-                    : 'text-[#8E8E93] hover:text-white'
+                    : 'text-muted hover:text-foreground'
                 }`}
               >
                 {seconds} s
@@ -504,16 +504,16 @@ function ProfileView({
 
       <ExportCard today={today} />
 
-      <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
+      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">{user.email}</p>
-            <p className="text-xs text-[#8E8E93]">Angemeldetes Konto</p>
+            <p className="truncate text-sm font-medium text-foreground">{user.email}</p>
+            <p className="text-xs text-muted">Angemeldetes Konto</p>
           </div>
           <button
             type="button"
             onClick={onSignOut}
-            className="min-h-11 shrink-0 rounded-xl bg-[#FF453A]/15 px-4 text-sm font-semibold text-[#FF453A] transition-colors hover:bg-[#FF453A]/25 active:scale-95"
+            className="min-h-11 shrink-0 rounded-xl bg-danger/15 px-4 text-sm font-semibold text-danger transition-colors hover:bg-danger/25 active:scale-95"
           >
             Abmelden
           </button>

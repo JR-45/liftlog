@@ -174,10 +174,10 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
 
   if (failed) {
     return (
-      <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
-        <p role="alert" className="text-sm text-[#FF453A]">Der Trainingstag konnte nicht geladen werden.</p>
+      <div className="mt-6 rounded-2xl border border-line/[0.08] bg-surface p-4">
+        <p role="alert" className="text-sm text-danger">Der Trainingstag konnte nicht geladen werden.</p>
         <button
-          className="mt-2 min-h-11 py-2 text-sm font-medium text-neon"
+          className="mt-2 min-h-11 py-2 text-sm font-medium text-accent-ink"
           type="button"
           onClick={() => {
             setFailed(false)
@@ -190,7 +190,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     )
   }
 
-  if (day === null) return <p className="mt-6 text-sm text-[#8E8E93]">Übungen werden geladen …</p>
+  if (day === null) return <p className="mt-6 text-sm text-muted">Übungen werden geladen …</p>
 
   const { done, total, finished } = dayProgress(
     day.entries.map((entry) => ({ done: isDone(entry, savedSets), skipped: skipped.has(entry.id) })),
@@ -242,11 +242,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   }
 
   const progress = (
-    <div className="apple-glass sticky top-0 z-10 -mx-4 mt-2 border-b border-white/[0.06] px-4 py-2.5 md:-mx-6 md:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:bg-[#1C1C1E] lg:px-4">
+    <div className="apple-glass sticky top-0 z-10 -mx-4 mt-2 border-b border-line/[0.06] px-4 py-2.5 md:-mx-6 md:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:bg-surface lg:px-4">
       <div className="flex items-center justify-between">
         <span
           className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider ${
-            finished ? 'text-[#30D158]' : 'text-[#8E8E93]'
+            finished ? 'text-success' : 'text-muted'
           }`}
         >
           {finished ? (
@@ -255,19 +255,19 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
               <TrophyIcon className="h-4 w-4 shrink-0" />
             </>
           ) : (
-            <span className="font-display text-2xl font-extrabold uppercase leading-none tracking-wide text-white">
+            <span className="font-display text-2xl font-extrabold uppercase leading-none tracking-wide text-foreground">
               {done}
-              <span className="text-[#8E8E93]">/{total}</span>
-              <span className="ml-1.5 text-base text-[#8E8E93]">Übungen</span>
+              <span className="text-muted">/{total}</span>
+              <span className="ml-1.5 text-base text-muted">Übungen</span>
             </span>
           )}
         </span>
-        <span className="text-xs font-semibold tabular-nums text-[#8E8E93]">
+        <span className="text-xs font-semibold tabular-nums text-muted">
           {total === 0 ? '0%' : `${Math.round((done / total) * 100)}%`}
         </span>
       </div>
       <div
-        className="mt-2 h-3 overflow-hidden rounded-full bg-[#2C2C2E]"
+        className="mt-2 h-3 overflow-hidden rounded-full bg-control"
         role="progressbar"
         aria-label="Fortschritt im Training"
         aria-valuemin={0}
@@ -276,7 +276,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       >
         <div
           className={`h-full rounded-full transition-all duration-300 ${
-            finished ? 'bg-[#30D158]' : 'neon-bar bg-neon'
+            finished ? 'bg-success' : 'neon-bar bg-neon'
           }`}
           style={{ width: `${total === 0 ? 0 : (done / total) * 100}%` }}
         />
@@ -295,8 +295,8 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
           {openEntry ? (
             card(openEntry, 'detail')
           ) : !finished ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] px-6 py-16 text-center">
-              <p className="inline-flex items-center justify-center gap-2 text-lg font-semibold text-white">
+            <div className="rounded-2xl border border-line/[0.08] bg-surface px-6 py-16 text-center">
+              <p className="inline-flex items-center justify-center gap-2 text-lg font-semibold text-foreground">
                 Wähle links eine Übung
               </p>
             </div>

@@ -22,9 +22,9 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
   if (exercises.length === 0 || !progress) {
     return (
       <section className="mt-6">
-        <h2 className="text-xl font-bold tracking-tight text-white">Fortschritt pro Übung</h2>
-        <div className="mt-3 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
-          <p className="text-sm text-[#8E8E93]">
+        <h2 className="text-xl font-bold tracking-tight text-foreground">Fortschritt pro Übung</h2>
+        <div className="mt-3 rounded-2xl border border-line/[0.08] bg-surface p-4">
+          <p className="text-sm text-muted">
             Sobald du erste Sätze im Training abhakst, erscheint hier deine Kraft- und Fortschrittskurve.
           </p>
         </div>
@@ -57,10 +57,10 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
   return (
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-bold tracking-tight text-white">Fortschritt pro Übung</h2>
+        <h2 className="text-xl font-bold tracking-tight text-foreground">Fortschritt pro Übung</h2>
         <select
           aria-label="Übung für Fortschritts-Diagramm wählen"
-          className="h-11 rounded-xl border border-white/[0.08] bg-[#1C1C1E] px-3 text-sm font-medium text-white outline-none focus:border-neon"
+          className="h-11 rounded-xl border border-line/[0.08] bg-surface px-3 text-sm font-medium text-foreground outline-none focus:border-neon"
           value={currentExercise ?? ''}
           onChange={(event) => {
             setSelected(event.target.value)
@@ -75,30 +75,30 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
         </select>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
+      <div className="mt-3 rounded-2xl border border-line/[0.08] bg-surface p-4">
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-xl bg-[#2C2C2E]/70 p-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Letztes Mal</p>
-            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-white">{progress.latestLabel}</p>
+          <div className="rounded-xl bg-control/70 p-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Letztes Mal</p>
+            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-foreground">{progress.latestLabel}</p>
           </div>
-          <div className="rounded-xl bg-[#2C2C2E]/70 p-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Bestwert</p>
-            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-neon">{progress.bestLabel}</p>
+          <div className="rounded-xl bg-control/70 p-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Bestwert</p>
+            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-accent-ink">{progress.bestLabel}</p>
           </div>
-          <div className="rounded-xl bg-[#2C2C2E]/70 p-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Entwicklung</p>
-            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-[#30D158]">
+          <div className="rounded-xl bg-control/70 p-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Entwicklung</p>
+            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-success">
               {progress.deltaLabel ?? '1 Training'}
             </p>
           </div>
         </div>
 
         <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-[#8E8E93]">
+          <div className="flex items-center justify-between text-xs text-muted">
             <span>
-              Ausgewählt: <strong className="font-semibold text-white">{formatShortDate(inspected.date)}</strong>
+              Ausgewählt: <strong className="font-semibold text-foreground">{formatShortDate(inspected.date)}</strong>
             </span>
-            <span className="font-semibold tabular-nums text-[#30D158]">{inspected.label}</span>
+            <span className="font-semibold tabular-nums text-success">{inspected.label}</span>
           </div>
 
           <svg
@@ -109,8 +109,8 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
           >
             <defs>
               <linearGradient id="progressFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#30D158" stopOpacity="0.32" />
-                <stop offset="100%" stopColor="#30D158" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="var(--color-success)" stopOpacity="0.32" />
+                <stop offset="100%" stopColor="var(--color-success)" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -119,7 +119,7 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
               y1={padY}
               x2={width - padX}
               y2={padY}
-              stroke="rgba(255,255,255,0.06)"
+              stroke="var(--chart-grid)"
               strokeDasharray="3 3"
             />
             <line
@@ -127,7 +127,7 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
               y1={height / 2}
               x2={width - padX}
               y2={height / 2}
-              stroke="rgba(255,255,255,0.06)"
+              stroke="var(--chart-grid)"
               strokeDasharray="3 3"
             />
             <line
@@ -135,7 +135,7 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
               y1={height - padY}
               x2={width - padX}
               y2={height - padY}
-              stroke="rgba(255,255,255,0.08)"
+              stroke="var(--chart-grid)"
             />
 
             {areaPath && <path d={areaPath} fill="url(#progressFill)" />}
@@ -143,7 +143,7 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
               <path
                 d={linePath}
                 fill="none"
-                stroke="#30D158"
+                stroke="var(--color-success)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -163,8 +163,8 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
                     cx={pt.cx}
                     cy={pt.cy}
                     r={isSelected ? 5.5 : 4}
-                    fill={isSelected ? '#18E0FF' : '#30D158'}
-                    stroke="#1C1C1E"
+                    fill={isSelected ? '#18E0FF' : 'var(--color-success)'}
+                    stroke="var(--color-surface)"
                     strokeWidth="2"
                   />
                 </g>
@@ -172,7 +172,7 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
             })}
           </svg>
 
-          <div className="mt-1 flex justify-between text-[11px] tabular-nums text-[#8E8E93]">
+          <div className="mt-1 flex justify-between text-[11px] tabular-nums text-muted">
             <span>{formatShortDate(coords[0].date)}</span>
             {coords.length > 1 && <span>{formatShortDate(coords[coords.length - 1].date)}</span>}
           </div>

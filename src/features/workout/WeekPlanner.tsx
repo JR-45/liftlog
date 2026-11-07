@@ -6,8 +6,8 @@ import type { PlanDay, WeekWorkout } from './api'
 const DAY = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 const SHORT = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' })
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-const NAV = 'min-h-11 rounded-xl bg-[#2C2C2E] px-3 py-2 text-sm font-medium text-white disabled:opacity-40'
-const LINK = 'min-h-11 px-2 text-sm font-medium text-[#8E8E93] disabled:opacity-40'
+const NAV = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-40'
+const LINK = 'min-h-11 px-2 text-sm font-medium text-muted disabled:opacity-40'
 
 export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dirty, busy, onDate, onChange, onSave, onDiscard, onTemplate }: {
   selectedDate: string; today: string; days: ScheduledDay[]; planDays: PlanDay[]; workouts: WeekWorkout[]
@@ -20,8 +20,8 @@ export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dir
     <div className="flex items-center justify-between gap-2">
       <button className={NAV} type="button" aria-label="Vorherige Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, -7))}>‹</button>
       <div className="min-w-0 text-center">
-        <h2 className="font-semibold tracking-tight text-white">Deine Wochenplanung</h2>
-        <p className="text-sm tabular-nums text-[#8E8E93]">{SHORT.format(new Date(`${start}T12:00:00`))} – {SHORT.format(new Date(`${shiftDate(start, 6)}T12:00:00`))}</p>
+        <h2 className="font-semibold tracking-tight text-foreground">Deine Wochenplanung</h2>
+        <p className="text-sm tabular-nums text-muted">{SHORT.format(new Date(`${start}T12:00:00`))} – {SHORT.format(new Date(`${shiftDate(start, 6)}T12:00:00`))}</p>
       </div>
       <button className={NAV} type="button" aria-label="Nächste Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, 7))}>›</button>
     </div>
@@ -31,24 +31,24 @@ export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dir
       </div>
     )}
 
-    <ul className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-[#1C1C1E] px-3 ring-1 ring-white/[0.08] md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0">
+    <ul className="mt-3 divide-y divide-line/[0.06] rounded-2xl bg-surface px-3 ring-1 ring-line/[0.08] md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0">
       {days.map((day, index) => {
         const date = new Date(`${day.day_date}T12:00:00`)
         const trained = workouts.some((workout) => workout.performed_on === day.day_date)
         const isToday = day.day_date === today
         return <li key={day.day_date} className="flex items-center gap-3 py-2">
           <span className="w-16 shrink-0">
-            <span className={`block text-sm font-semibold ${isToday ? 'text-neon' : 'text-white'}`}>{WEEKDAYS[date.getDay()]}</span>
-            <span className="block text-xs tabular-nums text-[#8E8E93]">{SHORT.format(date)}</span>
+            <span className={`block text-sm font-semibold ${isToday ? 'text-accent-ink' : 'text-foreground'}`}>{WEEKDAYS[date.getDay()]}</span>
+            <span className="block text-xs tabular-nums text-muted">{SHORT.format(date)}</span>
           </span>
-          <select className="h-11 min-w-0 flex-1 rounded-xl bg-[#2C2C2E] px-2 text-sm text-white outline-none focus:ring-2 focus:ring-neon" disabled={busy}
+          <select className="h-11 min-w-0 flex-1 rounded-xl bg-control px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-neon" disabled={busy}
             aria-label={`Plan für ${DAY.format(date)}`}
             value={day.plan_day_id ?? (day.is_rest_day ? 'rest' : 'unplanned')} onChange={(event) => onChange(index, event.target.value)}>
             <option value="unplanned">Ungeplant</option>
             <option value="rest">Ruhetag</option>
             {planDays.map((item) => <option key={item.id} value={item.id}>{item.name} ({WEEKDAYS[item.weekday]})</option>)}
           </select>
-          <span className="flex w-5 shrink-0 justify-center text-[#30D158]" role={trained ? 'img' : undefined} aria-label={trained ? 'Trainiert' : undefined}>
+          <span className="flex w-5 shrink-0 justify-center text-success" role={trained ? 'img' : undefined} aria-label={trained ? 'Trainiert' : undefined}>
             {trained && <CheckIcon className="h-4 w-4 stroke-[3]" />}
           </span>
         </li>

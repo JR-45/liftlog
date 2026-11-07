@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { loadPlan, loadPlanSettings, savePlan, type PlanDayDraft } from './api'
 import { TemplateWeekdays } from './TemplateWeekdays'
 
-const BUTTON = 'min-h-11 rounded-xl bg-[#2C2C2E] px-3 py-2 text-sm font-medium text-white disabled:opacity-50'
+const BUTTON = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50'
 
 export function PlanEditor({ hasPlan, onSaved }: { hasPlan: boolean; onSaved: () => void }) {
   const [days, setDays] = useState<PlanDayDraft[]>([])
@@ -49,17 +49,17 @@ export function PlanEditor({ hasPlan, onSaved }: { hasPlan: boolean; onSaved: ()
 
   return (
     <section className="mt-4">
-      {!hasPlan && <h2 className="text-xl font-bold tracking-tight text-white">Dein erster Trainingsplan</h2>}
-      {error && <p role="alert" className="mt-4 text-sm text-[#FF453A]">{error}</p>}
-      {loading ? <p className="mt-4 text-sm text-[#8E8E93]">Plan wird geladen …</p> : loadFailed ? null : (
+      {!hasPlan && <h2 className="text-xl font-bold tracking-tight text-foreground">Dein erster Trainingsplan</h2>}
+      {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
+      {loading ? <p className="mt-4 text-sm text-muted">Plan wird geladen …</p> : loadFailed ? null : (
         <>
           <TemplateWeekdays days={days} onSave={persist} />
-          {hasPlan && !confirmDelete && <button className="mt-6 min-h-11 w-full text-sm font-medium text-[#FF453A]" type="button" disabled={busy}
+          {hasPlan && !confirmDelete && <button className="mt-6 min-h-11 w-full text-sm font-medium text-danger" type="button" disabled={busy}
             onClick={() => setConfirmDelete(true)}>Trainingsplan löschen</button>}
-          {hasPlan && confirmDelete && <div className="mt-4 rounded-2xl bg-[#1C1C1E] p-3.5 ring-1 ring-[#FF453A]/40">
-            <p className="text-sm text-white">Trainingsplan wirklich löschen? Deine bisherigen Trainingsdaten bleiben erhalten.</p>
+          {hasPlan && confirmDelete && <div className="mt-4 rounded-2xl bg-surface p-3.5 ring-1 ring-danger/40">
+            <p className="text-sm text-foreground">Trainingsplan wirklich löschen? Deine bisherigen Trainingsdaten bleiben erhalten.</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button className={`${BUTTON} text-[#FF453A]`} type="button" disabled={busy} onClick={() => void deletePlan()}>Ja, Plan löschen</button>
+              <button className={`${BUTTON} text-danger`} type="button" disabled={busy} onClick={() => void deletePlan()}>Ja, Plan löschen</button>
               <button className={BUTTON} type="button" disabled={busy} onClick={() => setConfirmDelete(false)}>Behalten</button>
             </div>
           </div>}

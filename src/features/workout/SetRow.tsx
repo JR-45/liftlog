@@ -13,9 +13,9 @@ import { CheckIcon, PlusIcon } from '../../lib/icons'
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
-  'h-11 w-full min-w-0 rounded-xl border border-transparent bg-[#2C2C2E] px-1 text-center text-base font-medium tabular-nums text-white outline-none transition-colors placeholder:text-[#8E8E93]/60 focus:border-neon focus:bg-[#3A3A3C]'
+  'h-11 w-full min-w-0 rounded-xl border border-transparent bg-control px-1 text-center text-base font-medium tabular-nums text-foreground outline-none transition-colors placeholder:text-muted/60 focus:border-neon focus:bg-control-hover'
 const stepClass =
-  'h-11 w-11 shrink-0 rounded-xl bg-[#2C2C2E] text-lg font-medium text-white transition-all active:scale-95 active:bg-[#3A3A3C] disabled:opacity-35 disabled:active:scale-100'
+  'h-11 w-11 shrink-0 rounded-xl bg-control text-lg font-medium text-foreground transition-all active:scale-95 active:bg-control-hover disabled:opacity-35 disabled:active:scale-100'
 
 type Props = {
   label: string
@@ -174,12 +174,12 @@ export function SetRow(props: Props) {
     <li className="mt-2">
       <div
         className={`flex items-center gap-1 rounded-xl p-1 transition-colors ${
-          isSaved ? 'bg-[#30D158]/10' : ''
+          isSaved ? 'bg-success/10' : ''
         }`}
       >
         <span
           className={`w-4 shrink-0 text-center text-xs font-semibold tabular-nums ${
-            isSaved ? 'text-[#30D158]' : 'text-[#8E8E93]'
+            isSaved ? 'text-success' : 'text-muted'
           }`}
         >
           {rowNumber}
@@ -248,8 +248,8 @@ export function SetRow(props: Props) {
         <button
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 disabled:opacity-50 ${
             isSaved
-              ? 'bg-[#30D158] text-black shadow-sm shadow-[#30D158]/20'
-              : 'bg-[#2C2C2E] text-[#8E8E93] hover:text-white'
+              ? 'bg-success-fill text-black shadow-sm shadow-[#30D158]/20'
+              : 'bg-control text-muted hover:text-foreground'
           }`}
           type="button"
           aria-label={isSaved ? `${label} gespeichert, Haken entfernen` : `${label} speichern`}
@@ -260,7 +260,7 @@ export function SetRow(props: Props) {
           <CheckIcon className="h-5 w-5 stroke-[2.5]" />
         </button>
       </div>
-      {error && <p role="alert" className="mt-1 text-sm text-[#FF453A]">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-sm text-danger">{error}</p>}
     </li>
   )
 }

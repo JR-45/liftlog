@@ -60,10 +60,10 @@ export function WeekPlanning({ today, planDays, active }: {
   }
 
   if (failed === start) return <div className="mt-6">
-    <p role="alert" className="text-sm text-[#FF453A]">Die Woche konnte nicht geladen werden.</p>
-    <button className="min-h-11 text-sm font-medium text-neon" type="button" onClick={() => { setFailed(null); setAttempt((value) => value + 1) }}>Erneut versuchen</button>
+    <p role="alert" className="text-sm text-danger">Die Woche konnte nicht geladen werden.</p>
+    <button className="min-h-11 text-sm font-medium text-accent-ink" type="button" onClick={() => { setFailed(null); setAttempt((value) => value + 1) }}>Erneut versuchen</button>
   </div>
-  if (!data) return <p className="mt-6 text-sm text-[#8E8E93]">Woche wird geladen …</p>
+  if (!data) return <p className="mt-6 text-sm text-muted">Woche wird geladen …</p>
 
   return <>
     <WeekPlanner selectedDate={selectedDate} today={today} days={data.days} planDays={planDays} workouts={data.workouts}
@@ -76,6 +76,6 @@ export function WeekPlanning({ today, planDays, active }: {
       }}
       onSave={() => void save()} onDiscard={() => { setLoaded({ ...data, days: data.original }); setMessage(null) }}
       onTemplate={() => { setLoaded({ ...data, days: buildWeek(start, planDays, []) }); setMessage(null) }} />
-    {message && <p role="status" className="mt-2 text-sm text-[#8E8E93]">{message}</p>}
+    {message && <p role="status" className="mt-2 text-sm text-muted">{message}</p>}
   </>
 }

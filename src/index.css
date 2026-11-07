@@ -12,23 +12,72 @@
   --color-neutral-700: #3A3A3C;
   /* Beast Mode: Ice Cyan als einzige Akzentfarbe. Auf Schwarz sehr gut lesbar, Text darauf schwarz. */
   --color-neon: #18E0FF;
-  --color-yellow-400: #18E0FF;
-  --color-yellow-300: #18E0FF;
+  --color-surface: #1c1c1e;
+  --color-surface-inset: #141416;
+  --color-surface-raised: #242426;
+  --color-control: #2c2c2e;
+  --color-control-hover: #3a3a3c;
+  --color-foreground: #f5f5f7;
+  --color-muted: #a1a1a6;
+  --color-line: #ffffff;
+  --color-accent: #18e0ff;
+  --color-accent-ink: #18e0ff;
+  --color-danger: #ff6961;
+  --color-success: #30d158;
+  --color-success-fill: #30d158;
+  --color-danger-fill: #d92d20;
+  --color-warning: #ff9f0a;
   --font-display: 'Barlow Condensed', 'SF Pro Display', system-ui, sans-serif;
 }
 
 :root {
   color-scheme: dark;
+  --glass-background: rgb(22 22 24 / .78);
+  --glass-solid: #161618;
+  --chart-grid: rgb(255 255 255 / .08);
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+}
+
+/* Die Systemeinstellung gilt auch bei einem Wechsel während der Nutzung. */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --color-neutral-950: #f2f2f7;
+    --color-neutral-900: #ffffff;
+    --color-neutral-800: #e5e5ea;
+    --color-neutral-700: #c7c7cc;
+    --color-neutral-500: #636366;
+    --color-neutral-400: #636366;
+    --color-neutral-300: #48484a;
+    --color-neutral-200: #3a3a3c;
+    --color-neutral-100: #1c1c1e;
+    --color-accent: #18e0ff;
+    --color-red-300: #b42318;
+    --color-surface: #ffffff;
+    --color-surface-inset: #f2f2f7;
+    --color-surface-raised: #f2f2f7;
+    --color-control: #e5e5ea;
+    --color-control-hover: #d1d1d6;
+    --color-foreground: #1c1c1e;
+    --color-muted: #636366;
+    --color-line: #000000;
+    --color-accent-ink: #006779;
+    --color-danger: #b42318;
+    --color-success: #147d36;
+    --color-warning: #965000;
+    --glass-background: rgb(255 255 255 / .82);
+    --glass-solid: #ffffff;
+    --chart-grid: rgb(0 0 0 / .12);
+  }
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #000000;
+  background-color: var(--color-neutral-950);
   /* Leichter Cyan-Schimmer oben, damit die Seite nicht flach schwarz wirkt. */
   background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgb(24 224 255 / 0.10), transparent 70%);
   background-attachment: fixed;
-  color: #f5f5f7;
+  color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
@@ -38,14 +87,14 @@ body {
 
 /* Apple Liquid Glass für Navigation und schwebende Leisten mit Fallback bei reduzierter Transparenz. */
 .apple-glass {
-  background-color: rgba(22, 22, 24, 0.78);
+  background-color: var(--glass-background);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .apple-glass {
-    background-color: #161618;
+    background-color: var(--glass-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -53,7 +102,7 @@ body {
 
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button:not(:disabled), select:not(:disabled) { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--color-yellow-300); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--color-accent-ink); outline-offset: 3px; }
 input, select, fieldset { min-width: 0; }
 select { max-width: 100%; }
 button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
@@ -68,6 +117,16 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
 .template-day-body { overscroll-behavior: contain; scrollbar-gutter: stable; }
 .template-day-actions { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 .exercise-book { perspective: 80rem; }
+.attendance-segment { transition: stroke-dasharray .7s ease-out, translate .25s ease-out; }
+.attendance-infographic { box-shadow: 0 2px 8px rgb(0 0 0 / .03); }
+.attendance-interactive-segment { pointer-events: visibleStroke; }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .attendance-interactive-segment:hover {
+    /* Der Kreis ist um 90 Grad gedreht: rechts entspricht hier oben. */
+    translate: 4px 0;
+  }
+}
+
 .exercise-page { transform-origin: left center; animation: turn-exercise-page .22s ease-out; }
 @keyframes turn-exercise-page {
   from { opacity: .6; transform: rotateY(-6deg) translateX(.5rem); }
@@ -84,7 +143,7 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
   .login-preview > span { color: var(--color-neutral-500); font-size: .7rem; letter-spacing: .15em; }
   .login-preview > div { display: grid; grid-template-columns: repeat(7, 1fr); gap: .5rem; margin-block: 1rem; }
   .login-preview b { display: grid; place-items: center; aspect-ratio: 1; border-radius: .5rem; background: var(--color-neutral-800); font-size: .75rem; }
-  .login-preview b:nth-child(odd) { background: var(--color-yellow-400); color: var(--color-neutral-950); }
+  .login-preview b:nth-child(odd) { background: var(--color-neon); color: #000; }
   .login-preview p { color: var(--color-neutral-400); font-size: .75rem; }
 }
 
@@ -126,4 +185,8 @@ button.bg-neon:not(:disabled):active { transform: scale(0.98); }
 
 @media (prefers-reduced-motion: reduce) {
   button.bg-neon:not(:disabled):active { transform: none; }
+}
+
+@media (prefers-color-scheme: light) {
+  .text-neon { color: var(--color-accent-ink); }
 }

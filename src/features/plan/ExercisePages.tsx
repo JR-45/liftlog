@@ -4,9 +4,9 @@ import type { TrackingType } from '../../domain/sets'
 import type { PlanExerciseDraft } from '../../domain/trainingPlan'
 import { newExercise } from './api'
 
-const INPUT = 'mt-1 h-11 w-full min-w-0 rounded-xl bg-[#2C2C2E] px-3 text-base text-white outline-none focus:ring-2 focus:ring-neon'
-const BUTTON = 'min-h-11 rounded-xl bg-[#2C2C2E] px-3 py-2 text-sm font-medium text-white disabled:opacity-40'
-const LABEL = 'block text-sm text-[#8E8E93]'
+const INPUT = 'mt-1 h-11 w-full min-w-0 rounded-xl bg-control px-3 text-base text-foreground outline-none focus:ring-2 focus:ring-neon'
+const BUTTON = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-40'
+const LABEL = 'block text-sm text-muted'
 const GROUPS = [...new Set(EXERCISE_CATALOG.map((exercise) => exercise.group))]
 const CUSTOM = '__eigene_uebung__'
 
@@ -76,11 +76,11 @@ export function ExercisePages({ exercises, onChange, reveal }: {
     <div className="exercise-book mt-4">
       <div className="flex items-center justify-between gap-2">
         <button className={BUTTON} type="button" aria-label="Vorherige Übung" disabled={index === 0} onClick={() => turn(index - 1)}>‹ Zurück</button>
-        <h4 ref={heading} tabIndex={-1} className="text-center text-sm font-semibold tabular-nums text-neon" aria-live="polite">Übung {index + 1} von {exercises.length}</h4>
+        <h4 ref={heading} tabIndex={-1} className="text-center text-sm font-semibold tabular-nums text-accent-ink" aria-live="polite">Übung {index + 1} von {exercises.length}</h4>
         <button className={BUTTON} type="button" aria-label="Nächste Übung" disabled={index === exercises.length - 1} onClick={() => turn(index + 1)}>Weiter ›</button>
       </div>
 
-      <div className="exercise-page mt-3 space-y-3 rounded-2xl bg-[#141416] p-3.5 ring-1 ring-white/[0.06]" key={index}
+      <div className="exercise-page mt-3 space-y-3 rounded-2xl bg-surface-inset p-3.5 ring-1 ring-line/[0.06]" key={index}
         onTouchStart={(event) => {
           const target = event.target as HTMLElement
           if (target.closest('input, select, button, label')) { touchStart.current = null; return }
@@ -117,7 +117,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
               <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="86400" step="1" value={exercise.duration_min ?? ''}
                 onChange={(event) => update({ duration_min: numberOrNull(event.target.value) })} />
             </label>
-            <span className="pb-3 text-[#8E8E93]" aria-hidden="true">–</span>
+            <span className="pb-3 text-muted" aria-hidden="true">–</span>
             <label className={`${LABEL} min-w-0 flex-1`}>bis
               <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="86400" step="1" value={exercise.duration_max ?? ''}
                 onChange={(event) => update({ duration_max: numberOrNull(event.target.value) })} />
@@ -127,7 +127,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
               <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_min ?? ''}
                 onChange={(event) => update({ reps_min: numberOrNull(event.target.value) })} />
             </label>
-            <span className="pb-3 text-[#8E8E93]" aria-hidden="true">–</span>
+            <span className="pb-3 text-muted" aria-hidden="true">–</span>
             <label className={`${LABEL} min-w-0 flex-1`}>bis
               <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_max ?? ''}
                 onChange={(event) => update({ reps_max: numberOrNull(event.target.value) })} />
@@ -135,11 +135,11 @@ export function ExercisePages({ exercises, onChange, reveal }: {
           </>}
         </div>
 
-        <button className="min-h-11 text-sm font-medium text-[#8E8E93]" type="button" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>
+        <button className="min-h-11 text-sm font-medium text-muted" type="button" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>
           {showMore ? 'Weniger Optionen' : 'Mehr Optionen'}
         </button>
 
-        {showMore && <div className="space-y-3 border-t border-white/[0.06] pt-3">
+        {showMore && <div className="space-y-3 border-t border-line/[0.06] pt-3">
           <label className={LABEL}>Eigener Name
             <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Bankdrücken"
               onChange={(event) => update({ name: event.target.value })} />
@@ -156,7 +156,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
             <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
               onChange={(event) => update({ sets_min: Number(event.target.value) })} />
           </label>
-          <button className="min-h-11 text-sm font-medium text-[#FF453A] disabled:opacity-40" type="button" disabled={exercises.length === 1} onClick={() => {
+          <button className="min-h-11 text-sm font-medium text-danger disabled:opacity-40" type="button" disabled={exercises.length === 1} onClick={() => {
             onChange(exercises.filter((_, i) => i !== index))
             turn(Math.max(0, index - 1))
           }}>Diese Übung entfernen</button>
