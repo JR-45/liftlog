@@ -28,6 +28,7 @@ import {
 } from './api'
 import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
 import { readDraft, removeDraft } from './drafts'
+import { DoneStamp } from './DoneStamp'
 import { SetRow } from './SetRow'
 
 const fieldClass =
@@ -145,6 +146,11 @@ export function ExerciseCard(props: Props) {
     return set ? [set] : []
   })
   const done = logged.length >= entry.sets_min
+  // Der Stempel kommt nur im Moment des Abschließens, nicht beim Öffnen einer fertigen Übung.
+  const [stamp, setStamp] = useState({ done, key: 0 })
+  if (stamp.done !== done) setStamp({ done, key: done ? stamp.key + 1 : stamp.key })
+  // Am Laptop steht die Übung links in der Liste und rechts groß. Gestempelt wird nur die große Karte.
+  const stampLayer = stamp.key > 0 && done && layout !== 'summary' && <DoneStamp key={stamp.key} />
   const direction = assisted ? -1 : 1
   const answered = logged.length > 0 && logged.every((set) => set.next_weight_kg != null)
   // Empfehlung: Dieselbe Regel wie beim Hinweis, nur mit den heutigen Sätzen.
@@ -605,7 +611,8 @@ export function ExerciseCard(props: Props) {
 
   if (isDetail) {
     return (
-      <section data-entry={entry.id} aria-label={exercise.name} className="scroll-mt-4 rounded-2xl border border-line/[0.08] bg-surface shadow-lg">
+      <section data-entry={entry.id} aria-label={exercise.name} className="relative scroll-mt-4 rounded-2xl border border-line/[0.08] bg-surface shadow-lg">
+        {stampLayer}
         {header}
         {answer}
         {body}
@@ -623,10 +630,11 @@ export function ExerciseCard(props: Props) {
       ref={cardRef}
       data-entry={entry.id}
       aria-label={exercise.name}
-      className={`scroll-mt-16 overflow-hidden rounded-2xl border transition-colors duration-300 motion-reduce:transition-none ${
+      className={`relative scroll-mt-16 overflow-hidden rounded-2xl border transition-colors duration-300 motion-reduce:transition-none ${
         open ? openStyle : 'border-line/[0.06] bg-surface/80'
       }`}
     >
+      {stampLayer}
       {header}
       {answer}
       {layout === 'stacked' && (
