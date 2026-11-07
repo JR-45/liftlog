@@ -14,10 +14,10 @@ export function TrainingDays({ today, userId, planDays, onSetLogged }: {
   return <>
     <nav className="mt-4 flex gap-1 rounded-2xl border border-line/[0.06] bg-surface p-1 lg:mt-0 lg:max-w-xl" aria-label="Trainingstag">
       {planDays.map((day) => <button key={day.id} type="button" aria-pressed={selected === day.weekday}
-        className={`relative min-h-11 flex-1 rounded-xl text-sm transition-all active:scale-95 ${selected === day.weekday ? 'bg-accent font-semibold text-black shadow-sm' : 'text-foreground/75 hover:text-foreground'}`}
+        className={`relative min-h-11 flex-1 rounded-xl text-sm transition-all active:scale-95 ${selected === day.weekday ? 'bg-neon font-semibold text-black shadow-sm' : 'text-foreground/75 hover:text-foreground'}`}
         onClick={() => setPickedWeekday(day.weekday)}>
         {WEEKDAYS[day.weekday]}
-        {day.weekday === currentWeekday && day.weekday !== selected && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-yellow-400" />}
+        {day.weekday === currentWeekday && day.weekday !== selected && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-neon" />}
       </button>)}
     </nav>
     {plan ? <>

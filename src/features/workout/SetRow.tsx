@@ -10,12 +10,10 @@ import {
   usesWeight,
 } from '../../domain/sets'
 import { CheckIcon, PlusIcon } from '../../lib/icons'
-import { ConfirmDeleteButton } from './ConfirmDeleteButton'
 import { removeDraft, writeDraft } from './drafts'
-import { SwipeToDelete } from './SwipeToDelete'
 
 const inputClass =
-  'h-11 w-full min-w-0 rounded-xl border border-transparent bg-control px-1 text-center text-base font-medium tabular-nums text-foreground outline-none transition-colors placeholder:text-muted/60 focus:border-accent focus:bg-control-hover'
+  'h-11 w-full min-w-0 rounded-xl border border-transparent bg-control px-1 text-center text-base font-medium tabular-nums text-foreground outline-none transition-colors placeholder:text-muted/60 focus:border-neon focus:bg-control-hover'
 const stepClass =
   'h-11 w-11 shrink-0 rounded-xl bg-control text-lg font-medium text-foreground transition-all active:scale-95 active:bg-control-hover disabled:opacity-35 disabled:active:scale-100'
 
@@ -41,10 +39,6 @@ type Props = {
   onSave: (setNumber: number, values: SetValues | null) => Promise<void>
   /** Meldet der Karte, dass es jetzt Eingaben gibt, die sich zurücksetzen lassen. */
   onEdit: () => void
-  /** Löscht diese Satzzeile. Fehlt, wenn nur noch ein Satz übrig ist. */
-  onDelete?: () => void
-  /** swipe: Handy und Tablet, nach links wischen. button: Laptop, Papierkorb am Zeilenende. */
-  deleteMode: 'swipe' | 'button'
 }
 
 function draftFromSaved(saved: SetValues, unit: DurationUnit): SetDraft {
@@ -75,8 +69,6 @@ export function SetRow(props: Props) {
     weightStep,
     onSave,
     onEdit,
-    onDelete,
-    deleteMode,
   } = props
 
   // weight === null: Das Feld zeigt das Arbeitsgewicht, z. B. im ersten Training nach dem ersten Satz.
@@ -180,12 +172,6 @@ export function SetRow(props: Props) {
 
   return (
     <li className="mt-2">
-      <SwipeToDelete
-        label={`${label} löschen`}
-        enabled={deleteMode === 'swipe' && onDelete !== undefined}
-        onDelete={() => onDelete?.()}
-        className="-mx-1 rounded-xl"
-      >
       <div
         className={`flex items-center gap-1 rounded-xl p-1 transition-colors ${
           isSaved ? 'bg-success/10' : ''
@@ -273,11 +259,7 @@ export function SetRow(props: Props) {
         >
           <CheckIcon className="h-5 w-5 stroke-[2.5]" />
         </button>
-        {deleteMode === 'button' && onDelete && (
-          <ConfirmDeleteButton label={`${label} löschen`} disabled={busy} onConfirm={onDelete} />
-        )}
       </div>
-      </SwipeToDelete>
       {error && <p role="alert" className="mt-1 text-sm text-danger">{error}</p>}
     </li>
   )

@@ -24,7 +24,7 @@ export function WorkoutSummary({ summary, finished }: Props) {
         <div className="flex items-center gap-2">
           <span
             className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-              finished ? 'bg-success-fill text-black' : 'bg-accent/15 text-accent-ink'
+              finished ? 'bg-success-fill text-black' : 'bg-neon/15 text-accent-ink'
             }`}
           >
             <TrophyIcon className="h-4 w-4" />
@@ -81,7 +81,7 @@ export function WorkoutSummary({ summary, finished }: Props) {
             {summary.progressingNext.map((item) => (
               <li
                 key={item.exerciseId}
-                className="flex items-center justify-between gap-2 rounded-xl bg-accent/12 px-3 py-2 text-sm ring-1 ring-accent/25"
+                className="flex items-center justify-between gap-2 rounded-xl bg-neon/12 px-3 py-2 text-sm ring-1 ring-neon/25"
               >
                 <span className="truncate font-medium text-foreground">{item.name}</span>
                 <span className="shrink-0 font-semibold tabular-nums text-accent-ink">{item.planned}</span>

@@ -1,12 +1,17 @@
 @import 'tailwindcss';
+/* Selbst gehostet statt über Google Fonts, damit keine Daten an Google gehen. */
+@import '@fontsource/barlow-condensed/latin-700.css';
+@import '@fontsource/barlow-condensed/latin-ext-700.css';
+@import '@fontsource/barlow-condensed/latin-800.css';
+@import '@fontsource/barlow-condensed/latin-ext-800.css';
 
 @theme {
   --color-neutral-950: #000000;
   --color-neutral-900: #1C1C1E;
   --color-neutral-800: #2C2C2E;
   --color-neutral-700: #3A3A3C;
-  --color-yellow-400: #FFD60A;
-  --color-yellow-300: #FFD60A;
+  /* Beast Mode: Ice Cyan als einzige Akzentfarbe. Auf Schwarz sehr gut lesbar, Text darauf schwarz. */
+  --color-neon: #18E0FF;
   --color-surface: #1c1c1e;
   --color-surface-inset: #141416;
   --color-surface-raised: #242426;
@@ -15,21 +20,22 @@
   --color-foreground: #f5f5f7;
   --color-muted: #a1a1a6;
   --color-line: #ffffff;
-  --color-accent: #ffd60a;
-  --color-accent-ink: #ffd60a;
+  --color-accent: #18e0ff;
+  --color-accent-ink: #18e0ff;
   --color-danger: #ff6961;
   --color-success: #30d158;
   --color-success-fill: #30d158;
   --color-danger-fill: #d92d20;
   --color-warning: #ff9f0a;
+  --font-display: 'Barlow Condensed', 'SF Pro Display', system-ui, sans-serif;
 }
 
 :root {
   color-scheme: dark;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
   --glass-background: rgb(22 22 24 / .78);
   --glass-solid: #161618;
   --chart-grid: rgb(255 255 255 / .08);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
 }
 
 /* Die Systemeinstellung gilt auch bei einem Wechsel während der Nutzung. */
@@ -45,7 +51,7 @@
     --color-neutral-300: #48484a;
     --color-neutral-200: #3a3a3c;
     --color-neutral-100: #1c1c1e;
-    --color-yellow-300: #806000;
+    --color-accent: #18e0ff;
     --color-red-300: #b42318;
     --color-surface: #ffffff;
     --color-surface-inset: #f2f2f7;
@@ -55,7 +61,7 @@
     --color-foreground: #1c1c1e;
     --color-muted: #636366;
     --color-line: #000000;
-    --color-accent-ink: #806000;
+    --color-accent-ink: #006779;
     --color-danger: #b42318;
     --color-success: #147d36;
     --color-warning: #965000;
@@ -68,6 +74,9 @@
 body {
   font-family: var(--font-sans);
   background-color: var(--color-neutral-950);
+  /* Leichter Cyan-Schimmer oben, damit die Seite nicht flach schwarz wirkt. */
+  background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgb(24 224 255 / 0.10), transparent 70%);
+  background-attachment: fixed;
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -93,7 +102,7 @@ body {
 
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button:not(:disabled), select:not(:disabled) { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--color-yellow-300); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--color-accent-ink); outline-offset: 3px; }
 input, select, fieldset { min-width: 0; }
 select { max-width: 100%; }
 button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
@@ -103,10 +112,6 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
 .login-intro { display: none; }
 .login-shell { display: flex; align-items: center; justify-content: center; padding-top: max(2rem, env(safe-area-inset-top)); padding-bottom: max(2rem, env(safe-area-inset-bottom)); }
 .login-panel { width: 100%; max-width: 26rem; }
-.plan-config, .plan-days > section { min-width: 0; }
-.plan-fields { display: flex; flex-direction: column; }
-.plan-days-area { order: -1; width: 100%; }
-.plan-config { width: 100%; }
 .template-day-dialog::backdrop { background: rgb(0 0 0 / .7); }
 .template-day-layout { display: flex; flex-direction: column; max-height: min(90dvh, 52rem); }
 .template-day-body { overscroll-behavior: contain; scrollbar-gutter: stable; }
@@ -121,6 +126,7 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
     translate: 4px 0;
   }
 }
+
 .exercise-page { transform-origin: left center; animation: turn-exercise-page .22s ease-out; }
 @keyframes turn-exercise-page {
   from { opacity: .6; transform: rotateY(-6deg) translateX(.5rem); }
@@ -128,8 +134,6 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
 }
 
 @media (min-width: 768px) {
-  .plan-days { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
-  .plan-config { padding: 1.25rem; }
   .login-shell { max-width: 76rem; gap: 3rem; padding-inline: 2rem; }
   .login-intro { display: block; flex: 1; max-width: 36rem; }
   .login-intro h2 { font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1.12; font-weight: 650; letter-spacing: -.04em; margin-block: 1.5rem; }
@@ -139,24 +143,12 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
   .login-preview > span { color: var(--color-neutral-500); font-size: .7rem; letter-spacing: .15em; }
   .login-preview > div { display: grid; grid-template-columns: repeat(7, 1fr); gap: .5rem; margin-block: 1rem; }
   .login-preview b { display: grid; place-items: center; aspect-ratio: 1; border-radius: .5rem; background: var(--color-neutral-800); font-size: .75rem; }
-  .login-preview b:nth-child(odd) { background: var(--color-yellow-400); color: #000; }
+  .login-preview b:nth-child(odd) { background: var(--color-neon); color: #000; }
   .login-preview p { color: var(--color-neutral-400); font-size: .75rem; }
 }
 
 @media (min-width: 1024px) {
   .page-shell { padding-top: 2rem; }
-  .plan-days { grid-template-columns: minmax(0, 1fr); }
-}
-
-@media (min-width: 1280px) {
-  .plan-fields { display: grid; grid-template-columns: 19rem minmax(0, 1fr); gap: 1.5rem; align-items: start; }
-  .plan-days-area { order: 0; }
-  .plan-config { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow-y: auto; }
-  .plan-days-area > h3 { margin-top: 1.25rem; }
-}
-
-@media (min-width: 1536px) {
-  .plan-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (hover: hover) {
@@ -165,4 +157,36 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation-duration: 0s !important; }
+}
+
+/* Beast Mode: Überschriften fett, schmal und in Großbuchstaben. */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+}
+
+/* Hauptbuttons leuchten. bg-neon/10 und Ähnliches bleibt bewusst ohne Glow. */
+button.bg-neon, a.bg-neon {
+  box-shadow: 0 0 0 1px rgb(24 224 255 / 0.6), 0 6px 24px -4px rgb(24 224 255 / 0.55);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #000;
+}
+button.bg-neon:not(:disabled):active { transform: scale(0.98); }
+
+/* Fortschritt leuchtet, sobald er läuft. */
+.neon-bar { box-shadow: 0 0 12px rgb(24 224 255 / 0.7); }
+
+@media (prefers-reduced-motion: reduce) {
+  button.bg-neon:not(:disabled):active { transform: none; }
+}
+
+@media (prefers-color-scheme: light) {
+  .text-neon { color: var(--color-accent-ink); }
 }

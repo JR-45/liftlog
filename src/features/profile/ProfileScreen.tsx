@@ -29,7 +29,7 @@ const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-
 const MEMBER_SINCE_FORMAT = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' })
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-accent focus:bg-control-hover disabled:opacity-50'
+  'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
 
 type Props = {
   user: User
@@ -37,6 +37,7 @@ type Props = {
   defaultWeeklyTarget: number
   restTimer: RestTimer
   onAvatarChange: (avatarUrl: string | null) => void
+  onNameChange: (displayName: string) => void
   onSignOut: () => void
 }
 
@@ -87,6 +88,7 @@ function ProfileView({
   today,
   restTimer,
   onAvatarChange,
+  onNameChange,
   onSignOut,
   initialProfile,
   initialAvatar,
@@ -184,6 +186,7 @@ function ProfileView({
     try {
       await saveProfile(next)
       setProfile(next)
+      onNameChange(next.displayName)
       setEditingProfile(false)
       showSuccess('Profil gespeichert')
     } catch {
@@ -206,12 +209,12 @@ function ProfileView({
                 <img
                   src={avatar}
                   alt={`Profilbild von ${profile.displayName}`}
-                  className="h-22 w-22 rounded-full object-cover ring-2 ring-accent/80"
+                  className="h-22 w-22 rounded-full object-cover ring-2 ring-neon/80"
                 />
               ) : (
                 <div
                   aria-hidden="true"
-                  className="flex h-22 w-22 items-center justify-center rounded-full bg-gradient-to-br from-accent to-[#FF9F0A] text-2xl font-bold tracking-tight text-black shadow-md"
+                  className="flex h-22 w-22 items-center justify-center rounded-full bg-gradient-to-br from-neon to-neon/60 text-2xl font-bold tracking-tight text-black shadow-md"
                 >
                   {initials}
                 </div>
@@ -237,7 +240,7 @@ function ProfileView({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-xl font-bold tracking-tight text-foreground">{profile.displayName}</h2>
-                <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent-ink ring-1 ring-accent/30">
+                <span className="rounded-full bg-neon/15 px-2.5 py-0.5 text-xs font-semibold text-accent-ink ring-1 ring-neon/30">
                   {GOAL_LABELS[profile.goal]}
                 </span>
               </div>
@@ -355,7 +358,7 @@ function ProfileView({
               <button
                 type="submit"
                 disabled={busy}
-                className="min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+                className="min-h-11 rounded-xl bg-neon px-5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
               >
                 Speichern
               </button>
@@ -379,7 +382,7 @@ function ProfileView({
           <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-control">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                stats.weekProgress >= 1 ? 'bg-success' : 'bg-accent'
+                stats.weekProgress >= 1 ? 'bg-success' : 'bg-neon'
               }`}
               style={{ width: `${Math.round(stats.weekProgress * 100)}%` }}
             />
@@ -413,7 +416,7 @@ function ProfileView({
         <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent-ink">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neon/15 text-accent-ink">
                 <TrophyIcon className="h-4 w-4" />
               </span>
               <div>
@@ -488,7 +491,7 @@ function ProfileView({
                 onClick={() => restTimer.chooseDuration(seconds)}
                 className={`h-11 min-w-14 rounded-[10px] px-3 text-sm tabular-nums transition-all ${
                   restTimer.duration === seconds
-                    ? 'bg-accent font-semibold text-black shadow-sm'
+                    ? 'bg-neon font-semibold text-black shadow-sm'
                     : 'text-muted hover:text-foreground'
                 }`}
               >

@@ -11,7 +11,7 @@ import {
 } from './api'
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-accent focus:bg-control-hover disabled:opacity-50'
+  'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
 const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-muted'
 const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
 
@@ -367,7 +367,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         <button
           type="submit"
           disabled={busy}
-          className="min-h-11 w-full rounded-xl bg-accent px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
+          className="min-h-11 w-full rounded-xl bg-neon px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
         >
           Messung speichern
         </button>

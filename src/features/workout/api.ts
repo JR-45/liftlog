@@ -26,15 +26,6 @@ export async function loadWeekWorkouts(from: string, to: string): Promise<WeekWo
   return rows.map(({ plan_day, ...workout }) => ({ ...workout, name: plan_day?.name ?? 'Früheres Training' }))
 }
 
-export async function loadWorkoutHistory(workoutId: string): Promise<(LoggedSet & { name: string })[]> {
-  const { data, error } = await supabase.from('sets')
-    .select('exercise_id, set_number, weight_kg, reps, duration_seconds, is_assisted, exercise:exercises!sets_exercise_id_user_id_fkey(name)')
-    .eq('workout_id', workoutId).order('exercise_id').order('set_number')
-  if (error) throw error
-  const rows = data as unknown as (LoggedSet & { exercise: { name: string } })[]
-  return rows.map(({ exercise, ...set }) => ({ ...set, name: exercise.name }))
-}
-
 export type Exercise = {
   id: string
   name: string
@@ -188,103 +179,4 @@ export async function updateExercise(
 ): Promise<void> {
   const { error } = await supabase.from('exercises').update(changes).eq('id', exerciseId)
   if (error) throw error
-}
-
-export async function updatePlanEntry(
-  entryId: string,
-  changes: { sets_min: number; sets_max: number; reps_min: number | null; reps_max: number | null },
-): Promise<void> {
-  const { error } = await supabase.from('plan_exercises').update(changes).eq('id', entryId)
-  if (error) throw error
-}
-
-export async function deletePlanEntry(entryId: string): Promise<void> {
-  const { error } = await supabase.from('plan_exercises').delete().eq('id', entryId)
-  if (error) throw error
-}
-
-/** Ändert die Anzahl der Sätze im Plan. Gilt auch für alle kommenden Trainings. */
-export async function updatePlanSets(entryId: string, setsMin: number, setsMax: number): Promise<void> {
-  const { error } = await supabase
-    .from('plan_exercises')
-    .update({ sets_min: setsMin, sets_max: setsMax })
-    .eq('id', entryId)
-  if (error) throw error
-}
-
-/**
- * Löscht einen Satz und lässt die gespeicherten Sätze dahinter eine Nummer aufrücken.
- * Aufsteigend, damit die Unique-Regel (workout, exercise, set_number) nie verletzt wird.
- */
-export async function deleteSetAndShift(
-  workoutId: string,
-  exerciseId: string,
-  setNumber: number,
-  savedNumbers: number[],
-): Promise<void> {
-  await deleteSet(workoutId, exerciseId, setNumber)
-  const later = savedNumbers.filter((number) => number > setNumber).sort((a, b) => a - b)
-  for (const number of later) {
-    const { error } = await supabase
-      .from('sets')
-      .update({ set_number: number - 1 })
-      .eq('workout_id', workoutId)
-      .eq('exercise_id', exerciseId)
-      .eq('set_number', number)
-    if (error) throw error
-  }
-}
-
-export async function addExerciseToPlanDay(input: {
-  planDayId: string
-  name: string
-  trackingType: TrackingType
-  sets: number
-  repsMin: number | null
-  repsMax: number | null
-  durationSeconds: number | null
-  position: number
-}): Promise<PlanEntry> {
-  const trimmed = input.name.trim()
-  const { data: existing, error: findError } = await supabase
-    .from('exercises')
-    .select(EXERCISE_COLUMNS)
-    .ilike('name', trimmed)
-    .maybeSingle()
-  if (findError) throw findError
-
-  let exercise = existing as Exercise | null
-  if (!exercise) {
-    const { data: created, error: createError } = await supabase
-      .from('exercises')
-      .insert({ name: trimmed, tracking_type: input.trackingType })
-      .select(EXERCISE_COLUMNS)
-      .single()
-    if (createError) throw createError
-    exercise = created as Exercise
-  }
-
-  const isDuration = input.trackingType === 'duration'
-  const { data: entry, error: entryError } = await supabase
-    .from('plan_exercises')
-    .insert({
-      plan_day_id: input.planDayId,
-      exercise_id: exercise.id,
-      position: input.position,
-      sets_min: input.sets,
-      sets_max: input.sets,
-      reps_min: isDuration ? null : input.repsMin,
-      reps_max: isDuration ? null : input.repsMax,
-      duration_min: isDuration ? input.durationSeconds : null,
-      duration_max: isDuration ? input.durationSeconds : null,
-    })
-    .select('id, position, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max')
-    .single()
-  if (entryError) throw entryError
-
-  return {
-    ...entry,
-    exercise,
-    alternative: null,
-  }
 }

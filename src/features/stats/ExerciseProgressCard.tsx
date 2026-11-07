@@ -60,7 +60,7 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
         <h2 className="text-xl font-bold tracking-tight text-foreground">Fortschritt pro Übung</h2>
         <select
           aria-label="Übung für Fortschritts-Diagramm wählen"
-          className="h-11 rounded-xl border border-line/[0.08] bg-surface px-3 text-sm font-medium text-foreground outline-none focus:border-accent"
+          className="h-11 rounded-xl border border-line/[0.08] bg-surface px-3 text-sm font-medium text-foreground outline-none focus:border-neon"
           value={currentExercise ?? ''}
           onChange={(event) => {
             setSelected(event.target.value)
@@ -163,7 +163,7 @@ export function ExerciseProgressCard({ rows }: { rows: ExportRow[] }) {
                     cx={pt.cx}
                     cy={pt.cy}
                     r={isSelected ? 5.5 : 4}
-                    fill={isSelected ? 'var(--color-accent)' : 'var(--color-success)'}
+                    fill={isSelected ? '#18E0FF' : 'var(--color-success)'}
                     stroke="var(--color-surface)"
                     strokeWidth="2"
                   />

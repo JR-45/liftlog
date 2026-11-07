@@ -5,6 +5,7 @@
     "": {
       "name": "liftlog",
       "dependencies": {
+        "@fontsource/barlow-condensed": "5.2.6",
         "@supabase/supabase-js": "^2.119.0",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
@@ -26,6 +27,8 @@
   },
   "packages": {
     "@ecies/ciphers": ["@ecies/ciphers@0.2.6", "", { "peerDependencies": { "@noble/ciphers": "^1.0.0" } }, "sha512-patgsRPKGkhhoBjETV4XxD0En4ui5fbX0hzayqI3M8tvNMGUoUvmyYAIWwlxBc1KX5cturfqByYdj5bYGRpN9g=="],
+
+    "@fontsource/barlow-condensed": ["@fontsource/barlow-condensed@5.2.6", "", {}, "sha512-VCZdIGxJtdcdDflOkodQcq+aT7CllW+3Fxcu1UraVbXQd67Cw+XPbl478ICTID48zzFPKmxg4sZ6MVyJPgx1yQ=="],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 

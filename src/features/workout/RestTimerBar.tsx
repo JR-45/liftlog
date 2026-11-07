@@ -19,14 +19,14 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
         variant === 'bar' ? 'border-t' : 'overflow-hidden rounded-2xl border'
       } ${
         overtime
-          ? 'border-accent bg-accent text-black'
+          ? 'border-neon bg-neon text-black'
           : 'apple-glass border-line/[0.08] text-foreground'
       }`}
     >
       {left !== null && !overtime && endsAt !== null && (
         <div className="h-1 bg-control">
           <div
-            className="h-full bg-accent transition-[width] duration-200 ease-linear"
+            className="h-full bg-neon transition-[width] duration-200 ease-linear"
             style={{ width: `${restFraction(endsAt, totalMs, now) * 100}%` }}
           />
         </div>
@@ -61,7 +61,7 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
                 ))}
               </div>
               <button
-                className={`${iconButtonClass} bg-accent text-black shadow-sm`}
+                className={`${iconButtonClass} bg-neon text-black shadow-sm`}
                 type="button"
                 onClick={() => start()}
               >

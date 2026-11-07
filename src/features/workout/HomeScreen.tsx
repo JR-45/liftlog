@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react'
 import { localDateString } from '../../domain/sets'
 import { PlanIcon, StatsIcon, TrainingIcon, UserIcon } from '../../lib/icons'
 import { supabase } from '../../lib/supabase'
-import { loadAvatar } from '../profile/api'
+import { Wordmark } from '../../lib/Wordmark'
+import { greetingFor, headline } from '../../domain/greeting'
+import { loadProfileHeader } from '../profile/api'
 import { ProfileScreen } from '../profile/ProfileScreen'
 import { StatsScreen } from '../stats/StatsScreen'
 import { PlanEditor } from '../plan/PlanEditor'
@@ -15,6 +17,7 @@ import { RestTimerBar } from './RestTimerBar'
 import { useRestTimer } from './useRestTimer'
 
 const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
+const SHORT_DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
 
 type Tab = 'training' | 'stats' | 'plan' | 'profile'
 
@@ -56,16 +59,31 @@ export function HomeScreen({ session }: { session: Session }) {
   const [tab, setTab] = useState<Tab>('training')
   const [planVersion, setPlanVersion] = useState(0)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState<string | null>(null)
+  const [hour, setHour] = useState(() => new Date().getHours())
 
-  // Das Profilbild liegt in der Datenbank und ist so auf allen Geräten gleich.
+  // Die Begrüßung folgt der Tageszeit, auch wenn die App lange offen bleibt.
+  useEffect(() => {
+    const update = () => setHour(new Date().getHours())
+    const interval = setInterval(update, 5 * 60 * 1000)
+    document.addEventListener('visibilitychange', update)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', update)
+    }
+  }, [])
+
+  // Name und Bild liegen in der Datenbank und sind so auf allen Geräten gleich.
   useEffect(() => {
     let cancelled = false
-    loadAvatar()
-      .then((url) => {
-        if (!cancelled) setAvatarUrl(url)
+    loadProfileHeader()
+      .then((header) => {
+        if (cancelled) return
+        setAvatarUrl(header.avatar)
+        setDisplayName(header.displayName)
       })
       .catch(() => {
-        // Ohne Bild zeigt die App das Standard-Symbol.
+        // Ohne Profil zeigt die App das Standard-Symbol und begrüßt ohne Namen.
       })
     return () => {
       cancelled = true
@@ -80,16 +98,8 @@ export function HomeScreen({ session }: { session: Session }) {
       .then((days) => {
         if (!cancelled) setPlanDays(days)
       })
-      .catch(async () => {
-        if (cancelled) return
-        // Gibt es den User nicht mehr, z. B. nach einem Reset der Datenbank, hilft nur ein neuer Login.
-        const { error } = await supabase.auth.getUser()
-        if (error) {
-          clearDrafts()
-          void supabase.auth.signOut()
-          return
-        }
-        setFailed(true)
+      .catch(() => {
+        if (!cancelled) setFailed(true)
       })
     return () => {
       cancelled = true
@@ -126,6 +136,15 @@ export function HomeScreen({ session }: { session: Session }) {
   const editingPlan = planArea && (planDays?.length === 0 || planMode === 'template')
 
   const dateLabel = DATE_FORMAT.format(new Date(`${today}T12:00:00`))
+  // Trainingstag laut Wochenvorlage. Die Großschreibung übernimmt das CSS der Überschrift.
+  const isTrainingDay = planDays?.some((day) => day.weekday === new Date(`${today}T12:00:00`).getDay()) ?? false
+  const title = headline(isTrainingDay, displayName)
+  // Ohne gespeicherten Namen ein dezenter Hinweis statt des Mail-Anfangs als Name.
+  const nameHint = displayName === null && (
+    <button type="button" className="mt-1 min-h-8 text-sm text-accent-ink" onClick={() => setTab('profile')}>
+      Name im Profil eintragen
+    </button>
+  )
 
   return (
     <div className="lg:pl-64">
@@ -134,7 +153,7 @@ export function HomeScreen({ session }: { session: Session }) {
         <div className="flex items-center gap-3 px-1">
           <img className="h-10 w-10 rounded-xl shadow-sm ring-1 ring-line/10" src="/icons/icon-192.png" alt="" />
           <div>
-            <p className="text-base font-semibold tracking-tight text-foreground">LiftLog</p>
+            <Wordmark className="block text-2xl" />
             <p className="text-xs text-muted">{dateLabel}</p>
           </div>
         </div>
@@ -172,9 +191,22 @@ export function HomeScreen({ session }: { session: Session }) {
 
       <main className="page-shell mx-auto min-h-dvh max-w-xl px-4 pb-[calc(11rem+env(safe-area-inset-bottom))] pt-6 md:max-w-4xl md:px-6 lg:max-w-7xl lg:px-8 lg:pb-10 lg:pt-8">
         <header className="flex items-center justify-between lg:hidden">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">{dateLabel}</p>
-            <h1 className="mt-0.5 text-3xl font-bold tracking-tight text-foreground">LiftLog</h1>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted">
+              {tab === 'training'
+                ? `${greetingFor(hour)} · ${SHORT_DATE_FORMAT.format(new Date(`${today}T12:00:00`))}`
+                : dateLabel}
+            </p>
+            {tab === 'training' ? (
+              <>
+                <h1 className="mt-1 text-4xl text-foreground [overflow-wrap:break-word]">{title}</h1>
+                {nameHint}
+              </>
+            ) : (
+              <h1 className="mt-0.5 text-3xl">
+                <Wordmark />
+              </h1>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -188,13 +220,13 @@ export function HomeScreen({ session }: { session: Session }) {
                   src={avatarUrl}
                   alt=""
                   className={`h-9 w-9 rounded-full object-cover ring-2 ${
-                    tab === 'profile' ? 'ring-accent' : 'ring-line/15'
+                    tab === 'profile' ? 'ring-neon' : 'ring-line/15'
                   }`}
                 />
               ) : (
                 <span
                   className={`flex h-9 w-9 items-center justify-center rounded-full bg-surface ring-1 ${
-                    tab === 'profile' ? 'text-accent-ink ring-accent' : 'text-muted ring-line/10'
+                    tab === 'profile' ? 'text-accent-ink ring-neon' : 'text-muted ring-line/10'
                   }`}
                 >
                   <UserIcon className="h-4 w-4" />
@@ -202,7 +234,7 @@ export function HomeScreen({ session }: { session: Session }) {
               )}
             </button>
             <button
-              className="-mr-2 min-h-11 rounded-xl px-2.5 text-sm font-medium text-muted transition-colors active:text-foreground"
+              className="-mr-2 min-h-11 shrink-0 whitespace-nowrap rounded-xl px-2.5 text-sm font-medium text-muted transition-colors active:text-foreground"
               type="button"
               onClick={handleSignOut}
             >
@@ -229,22 +261,29 @@ export function HomeScreen({ session }: { session: Session }) {
           <p className="mt-6 text-sm text-muted">Plan wird geladen …</p>
         ) : (
           <>
-            {tab === 'plan' && planDays.length > 0 && <nav className="mt-4 grid max-w-xl grid-cols-2 gap-2" aria-label="Trainingsplan-Bereich">
-              <button type="button" className={`min-h-14 rounded-lg px-2 py-2 text-sm ${planMode === 'weekly' ? 'bg-yellow-400 font-semibold text-black' : 'bg-neutral-800'}`}
+            {/* Am Laptop fehlt die Kopfzeile, die Begrüßung steht dann über dem Training. */}
+            {tab === 'training' && (
+              <div className="mb-2 hidden lg:block">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">{greetingFor(hour)}</p>
+                <h1 className="mt-1 text-6xl text-foreground">{title}</h1>
+                {nameHint}
+              </div>
+            )}
+            {tab === 'plan' && planDays.length > 0 && <nav className="mt-4 flex max-w-xl gap-1 rounded-2xl bg-surface p-1 ring-1 ring-line/[0.06]" aria-label="Trainingsplan-Bereich">
+              <button type="button" className={`min-h-11 flex-1 rounded-xl px-2 text-sm transition-all ${planMode === 'weekly' ? 'bg-neon font-semibold text-black' : 'text-muted'}`}
                 aria-pressed={planMode === 'weekly'} onClick={() => setPlanMode('weekly')}>Wochenplanung</button>
-              <button type="button" className={`min-h-14 rounded-lg px-2 py-2 text-sm ${planMode === 'template' ? 'bg-yellow-400 font-semibold text-black' : 'bg-neutral-800'}`}
-                aria-pressed={planMode === 'template'} onClick={() => setPlanMode('template')}>Wochenvorlage bearbeiten</button>
+              <button type="button" className={`min-h-11 flex-1 rounded-xl px-2 text-sm transition-all ${planMode === 'template' ? 'bg-neon font-semibold text-black' : 'text-muted'}`}
+                aria-pressed={planMode === 'template'} onClick={() => setPlanMode('template')}>Vorlage</button>
             </nav>}
             {editingPlan && (
               <PlanEditor
                 key={planVersion}
                 hasPlan={planDays.length > 0}
-                onCancel={() => setPlanMode('weekly')}
                 onSaved={() => {
-                  restTimer.stop()
-                  clearDrafts()
+                  // Bleibt in der Vorlage, damit sich mehrere Tage nacheinander bearbeiten lassen.
+                  // Pause und noch nicht gespeicherte Trainingseingaben laufen weiter.
                   setPlanDays(null)
-                  setPlanMode('weekly')
+                  setPlanMode('template')
                   setTab('plan')
                   setPlanVersion((value) => value + 1)
                   setAttempt((value) => value + 1)
@@ -275,6 +314,7 @@ export function HomeScreen({ session }: { session: Session }) {
                 defaultWeeklyTarget={planDays.length}
                 restTimer={restTimer}
                 onAvatarChange={setAvatarUrl}
+                onNameChange={setDisplayName}
                 onSignOut={handleSignOut}
               />
             )}

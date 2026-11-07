@@ -44,12 +44,12 @@ function DayCell({
   const label = `${DAY_FORMAT.format(new Date(`${cell.date}T12:00:00`))}: ${mark?.label ?? STATUS_LABEL[cell.status]}`
   const style: Record<DayStatus, string> = {
     trained: selected
-      ? 'bg-accent font-bold text-black ring-2 ring-line shadow-sm'
+      ? 'bg-neon font-bold text-black ring-2 ring-line shadow-sm'
       : 'bg-success-fill font-semibold text-black shadow-sm shadow-[#30D158]/20',
     missed: 'bg-danger/15 text-danger',
     marked: 'bg-control-hover font-medium text-foreground',
     rest: 'text-muted',
-    today: 'ring-2 ring-accent font-semibold text-foreground',
+    today: 'ring-2 ring-neon font-semibold text-foreground',
     future: 'text-muted/40',
     before_start: 'text-muted/25',
   }
@@ -283,7 +283,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                         key={mark.kind}
                         className={`min-h-11 rounded-xl px-1 text-sm font-medium transition-transform active:scale-95 disabled:opacity-50 ${
                           selectedCell.mark === mark.kind
-                            ? 'bg-accent font-semibold text-black'
+                            ? 'bg-neon font-semibold text-black'
                             : 'bg-control-hover text-foreground'
                         }`}
                         type="button"

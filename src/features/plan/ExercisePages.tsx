@@ -1,31 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
+import { EXERCISE_CATALOG } from '../../domain/exerciseCatalog'
 import type { TrackingType } from '../../domain/sets'
 import type { PlanExerciseDraft } from '../../domain/trainingPlan'
 import { newExercise } from './api'
-import { ExercisePicker } from './ExercisePicker'
 
-const INPUT = 'mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-100'
-const BUTTON = 'min-h-11 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-200 disabled:opacity-40'
+const INPUT = 'mt-1 h-11 w-full min-w-0 rounded-xl bg-control px-3 text-base text-foreground outline-none focus:ring-2 focus:ring-neon'
+const BUTTON = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-40'
+const LABEL = 'block text-sm text-muted'
+const GROUPS = [...new Set(EXERCISE_CATALOG.map((exercise) => exercise.group))]
+const CUSTOM = '__eigene_uebung__'
 
-function Range({ label, min, max, limit, onChange }: {
-  label: string; min: number | null; max: number | null; limit: number
-  onChange: (min: number | null, max: number | null) => void
-}) {
-  return (
-    <fieldset className="mt-3">
-      <legend className="text-sm text-neutral-400">{label}</legend>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-neutral-400">Minimum
-          <input className={INPUT} type="number" min="1" max={limit} step="1" value={min ?? ''}
-            onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value), max)} />
-        </label>
-        <label className="text-xs text-neutral-400">Maximum
-          <input className={INPUT} type="number" min={min ?? 1} max={limit} step="1" value={max ?? ''}
-            onChange={(event) => onChange(min, event.target.value === '' ? null : Number(event.target.value))} />
-        </label>
-      </div>
-    </fieldset>
-  )
+function numberOrNull(value: string): number | null {
+  return value === '' ? null : Number(value)
+}
+
+function trackingChanges(tracking_type: TrackingType): Partial<PlanExerciseDraft> {
+  return {
+    tracking_type, alternative_exercise_id: null,
+    reps_min: tracking_type === 'duration' ? null : 8, reps_max: tracking_type === 'duration' ? null : 12,
+    duration_min: tracking_type === 'duration' ? 30 : null, duration_max: tracking_type === 'duration' ? 60 : null,
+  }
 }
 
 export function ExercisePages({ exercises, onChange, reveal }: {
@@ -33,12 +27,14 @@ export function ExercisePages({ exercises, onChange, reveal }: {
   reveal?: { index: number }
 }) {
   const [page, setPage] = useState(0)
-  const [pickerIndex, setPickerIndex] = useState<number | null>(null)
   const [lastReveal, setLastReveal] = useState(reveal)
+  const [showMore, setShowMore] = useState(false)
   const heading = useRef<HTMLHeadingElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const index = Math.min(page, exercises.length - 1)
   const exercise = exercises[index]
+  const inCatalog = EXERCISE_CATALOG.some((item) => item.name === exercise.name)
+  const isDuration = exercise.tracking_type === 'duration'
 
   if (reveal !== lastReveal) {
     setLastReveal(reveal)
@@ -52,7 +48,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
 
   function turn(next: number) {
     setPage(next)
-    setPickerIndex(null)
+    setShowMore(false)
     heading.current?.focus()
   }
 
@@ -60,27 +56,31 @@ export function ExercisePages({ exercises, onChange, reveal }: {
     onChange(exercises.map((item, i) => i === index ? { ...item, ...changes } : item))
   }
 
-  function trackingChanges(tracking_type: TrackingType): Partial<PlanExerciseDraft> {
-    return {
-      tracking_type, alternative_exercise_id: null,
-      reps_min: tracking_type === 'duration' ? null : 8, reps_max: tracking_type === 'duration' ? null : 12,
-      duration_min: tracking_type === 'duration' ? 30 : null, duration_max: tracking_type === 'duration' ? 60 : null,
+  function selectExercise(value: string) {
+    if (value === CUSTOM) {
+      update({ name: '' })
+      setShowMore(true)
+      return
     }
+    const selected = EXERCISE_CATALOG.find((item) => item.name === value)
+    if (selected) update({ name: selected.name, ...trackingChanges(selected.tracking_type) })
+  }
+
+  function updateSets(value: number) {
+    // Eine feste Vorgabe bleibt fest. Bei einem Bereich wie 4–5 Runden ändert sich das Maximum.
+    if (exercise.sets_min === exercise.sets_max) update({ sets_min: value, sets_max: value })
+    else update({ sets_min: Math.min(exercise.sets_min, value), sets_max: value })
   }
 
   return (
-    <div className="exercise-book mt-5">
+    <div className="exercise-book mt-4">
       <div className="flex items-center justify-between gap-2">
         <button className={BUTTON} type="button" aria-label="Vorherige Übung" disabled={index === 0} onClick={() => turn(index - 1)}>‹ Zurück</button>
-        <h4 ref={heading} tabIndex={-1} className="rounded text-center text-sm font-medium text-yellow-300" aria-live="polite">Übung {index + 1}</h4>
+        <h4 ref={heading} tabIndex={-1} className="text-center text-sm font-semibold tabular-nums text-accent-ink" aria-live="polite">Übung {index + 1} von {exercises.length}</h4>
         <button className={BUTTON} type="button" aria-label="Nächste Übung" disabled={index === exercises.length - 1} onClick={() => turn(index + 1)}>Weiter ›</button>
       </div>
-      <label className="mt-3 block text-sm text-neutral-400">Direkt zur Übung
-        <select className={INPUT} value={index} onChange={(event) => turn(Number(event.target.value))}>
-          {exercises.map((item, i) => <option key={i} value={i}>{i + 1}. {item.name || 'Neue Übung'}</option>)}
-        </select>
-      </label>
-      <div className="exercise-page mt-3 rounded-xl border border-neutral-700 bg-neutral-950/30 p-3" key={index}
+
+      <div className="exercise-page mt-3 space-y-3 rounded-2xl bg-surface-inset p-3.5 ring-1 ring-line/[0.06]" key={index}
         onTouchStart={(event) => {
           const target = event.target as HTMLElement
           if (target.closest('input, select, button, label')) { touchStart.current = null; return }
@@ -96,42 +96,74 @@ export function ExercisePages({ exercises, onChange, reveal }: {
           if (dx < 0 && index < exercises.length - 1) turn(index + 1)
           if (dx > 0 && index > 0) turn(index - 1)
         }}>
-        <p className="mb-3 text-sm font-medium text-neutral-200">{exercise.name || 'Neue Übung auswählen'}</p>
-        {(!exercise.name || pickerIndex === index) ? (
-          <ExercisePicker onSelect={(selected) => {
-            update({ name: selected.name, ...trackingChanges(selected.tracking_type) })
-            setPickerIndex(null)
-          }} />
-        ) : (
-          <button className={`${BUTTON} mb-3 w-full`} type="button" onClick={() => setPickerIndex(index)}>Übung wechseln</button>
-        )}
-        <label className="block text-sm text-neutral-400">Übungsname
-          <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Bankdrücken"
-            onChange={(event) => update({ name: event.target.value })} />
-        </label>
-        <label className="mt-3 block text-sm text-neutral-400">Erfassung
-          <select className={INPUT} value={exercise.tracking_type} onChange={(event) => update(trackingChanges(event.target.value as TrackingType))}>
-            <option value="weight_reps">Gewicht + Wiederholungen</option>
-            <option value="assisted_reps">Gewichtshilfe + Wiederholungen</option>
-            <option value="reps">Nur Wiederholungen</option>
-            <option value="duration">Dauer</option>
+        <label className={LABEL}>Übung
+          <select className={INPUT} value={inCatalog || exercise.name ? exercise.name : ''} onChange={(event) => selectExercise(event.target.value)}>
+            <option value="">Bitte auswählen …</option>
+            {exercise.name && !inCatalog && <option value={exercise.name}>{exercise.name}</option>}
+            {GROUPS.map((group) => <optgroup key={group} label={group}>
+              {EXERCISE_CATALOG.filter((item) => item.group === group).map((item) => <option key={item.name}>{item.name}</option>)}
+            </optgroup>)}
+            <option value={CUSTOM}>Eigene Übung …</option>
           </select>
         </label>
-        <Range label="Sätze" min={exercise.sets_min} max={exercise.sets_max} limit={100}
-          onChange={(min, max) => update({ sets_min: min ?? 0, sets_max: max ?? 0 })} />
-        {exercise.tracking_type === 'duration' ? (
-          <Range label="Dauer in Sekunden (optional)" min={exercise.duration_min} max={exercise.duration_max} limit={86400}
-            onChange={(min, max) => update({ duration_min: min, duration_max: max })} />
-        ) : (
-          <Range label="Wiederholungen (optional)" min={exercise.reps_min} max={exercise.reps_max} limit={999}
-            onChange={(min, max) => update({ reps_min: min, reps_max: max })} />
-        )}
-        <button className={`${BUTTON} mt-4 text-red-300`} type="button" disabled={exercises.length === 1} onClick={() => {
-          onChange(exercises.filter((_, i) => i !== index))
-          turn(Math.max(0, index - 1))
-        }}>Diese Übung entfernen</button>
+
+        <div className="flex items-end gap-2">
+          <label className={`${LABEL} w-20 shrink-0`}>Sätze
+            <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_max || ''}
+              onChange={(event) => updateSets(Number(event.target.value))} />
+          </label>
+          {isDuration ? <>
+            <label className={`${LABEL} min-w-0 flex-1`}>Sek. von
+              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="86400" step="1" value={exercise.duration_min ?? ''}
+                onChange={(event) => update({ duration_min: numberOrNull(event.target.value) })} />
+            </label>
+            <span className="pb-3 text-muted" aria-hidden="true">–</span>
+            <label className={`${LABEL} min-w-0 flex-1`}>bis
+              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="86400" step="1" value={exercise.duration_max ?? ''}
+                onChange={(event) => update({ duration_max: numberOrNull(event.target.value) })} />
+            </label>
+          </> : <>
+            <label className={`${LABEL} min-w-0 flex-1`}>Wdh. von
+              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_min ?? ''}
+                onChange={(event) => update({ reps_min: numberOrNull(event.target.value) })} />
+            </label>
+            <span className="pb-3 text-muted" aria-hidden="true">–</span>
+            <label className={`${LABEL} min-w-0 flex-1`}>bis
+              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_max ?? ''}
+                onChange={(event) => update({ reps_max: numberOrNull(event.target.value) })} />
+            </label>
+          </>}
+        </div>
+
+        <button className="min-h-11 text-sm font-medium text-muted" type="button" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>
+          {showMore ? 'Weniger Optionen' : 'Mehr Optionen'}
+        </button>
+
+        {showMore && <div className="space-y-3 border-t border-line/[0.06] pt-3">
+          <label className={LABEL}>Eigener Name
+            <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Bankdrücken"
+              onChange={(event) => update({ name: event.target.value })} />
+          </label>
+          <label className={LABEL}>Erfassung
+            <select className={INPUT} value={exercise.tracking_type} onChange={(event) => update(trackingChanges(event.target.value as TrackingType))}>
+              <option value="weight_reps">Gewicht + Wiederholungen</option>
+              <option value="assisted_reps">Gewichtshilfe + Wiederholungen</option>
+              <option value="reps">Nur Wiederholungen</option>
+              <option value="duration">Dauer</option>
+            </select>
+          </label>
+          <label className={LABEL}>Mindestens Sätze (für Bereiche wie 4–5 Runden)
+            <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
+              onChange={(event) => update({ sets_min: Number(event.target.value) })} />
+          </label>
+          <button className="min-h-11 text-sm font-medium text-danger disabled:opacity-40" type="button" disabled={exercises.length === 1} onClick={() => {
+            onChange(exercises.filter((_, i) => i !== index))
+            turn(Math.max(0, index - 1))
+          }}>Diese Übung entfernen</button>
+        </div>}
       </div>
-      <button className={`${BUTTON} mt-4 w-full`} type="button" onClick={() => {
+
+      <button className={`${BUTTON} mt-3 w-full`} type="button" onClick={() => {
         onChange([...exercises, newExercise()])
         turn(exercises.length)
       }}>+ Übung hinzufügen</button>

@@ -18,14 +18,14 @@ Wochenplan als Vorlage. Änderungen betreffen nur die ausgewählte Woche.
 - Nicht gespeicherte Wochenänderungen gehen beim Wochenwechsel nicht stillschweigend verloren: Der Wechsel wird
   zunächst gesperrt; Speichern und Verwerfen bleiben möglich.
 - Die Wochenplanung bleibt im Bereich „Trainingsplan“. Der Bereich „Training“ behält die bisherige Tagesauswahl und
-  protokolliert Sätze für den aktuellen Tag, mit drei Startsätzen und frei anpassbarer Satzanzahl.
-- Bereits gespeicherte Sätze bleiben auch beim Umplanen oder Markieren eines Ruhetags erhalten. Die Wochenansicht weist
-  auf vorhandene Trainingsdaten hin und ermöglicht den Zugriff darauf.
+  protokolliert Sätze für den aktuellen Tag. Die Satzanzahl kommt aus dem Plan und ist im Training fest.
+- Bereits gespeicherte Sätze bleiben auch beim Umplanen oder Markieren eines Ruhetags erhalten. Die Wochenansicht zeigt
+  trainierte Tage mit einem Haken, die Sätze selbst stehen im Kalender der Statistik.
 - Die Statistik berücksichtigt ausdrücklich geplante Ruhetage und ungeplante Tage. Diese gelten nicht als verpasst.
-- Die Übungsseiten und die flexible Satzanzahl bleiben verfügbar.
-- Unter „Wochenvorlage bearbeiten“ stehen sieben Tagesbuttons. Ein Klick öffnet das Popup zur Erstellung oder
+- Die Übungsseiten bleiben verfügbar.
+- Unter „Vorlage“ stehen sieben Tagesbuttons. Ein Klick öffnet das Popup zur Erstellung oder
   Bearbeitung der Einheit dieses Tages. Tage ohne Einheit sind Ruhetage. Einheiten lassen sich von anderen Tagen
-  unabhängig kopieren. Übernehmen verändert zunächst den Entwurf; erst Speichern aktualisiert die Vorlage im Konto.
+  unabhängig kopieren. „Tag speichern“ aktualisiert die Vorlage direkt im Konto.
 
 ## Bestehende Technik und Struktur
 

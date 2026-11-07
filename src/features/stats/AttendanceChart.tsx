@@ -25,7 +25,7 @@ export function AttendanceChart({ trained, missed }: { trained: number; missed: 
   return (
     <figure className="attendance-infographic mt-3 rounded-2xl border border-line/[0.08] bg-surface p-4">
       <figcaption className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-foreground">Trainingsbilanz</span>
+        <span className="font-display text-lg font-extrabold uppercase tracking-wide text-foreground">Trainingsbilanz</span>
         <span className="rounded-full border border-line/[0.08] bg-control/40 px-2.5 py-1 text-[11px] font-medium text-muted">Monatsübersicht</span>
       </figcaption>
       <div className="mx-auto mt-2 w-full max-w-sm" role="img"
@@ -60,7 +60,7 @@ export function AttendanceChart({ trained, missed }: { trained: number; missed: 
               className="attendance-segment attendance-interactive-segment" />
           </g>
           <g pointerEvents="none" textAnchor="middle" fill="var(--color-foreground)">
-            <text x="160" y="110" fontSize="8" letterSpacing="1.5" fill="var(--color-muted)">DEINE QUOTE</text>
+            <text x="160" y="110" fontSize="8" letterSpacing="1.5" fill="var(--color-accent-ink)">DEINE QUOTE</text>
             <text x="160" y="137" fontSize="29" fontWeight="700" letterSpacing="-1">{total === 0 ? '–' : `${percentage} %`}</text>
             <text x="160" y="155" fontSize="10" fill="var(--color-muted)">{total === 0 ? 'Keine Trainings' : 'absolviert'}</text>
           </g>
