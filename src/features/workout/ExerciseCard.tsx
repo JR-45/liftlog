@@ -1,4 +1,3 @@
-import { NumberWheelInput } from '../../components/NumberWheelInput'
 import { useEffect, useRef, useState } from 'react'
 import { progressionHint } from '../../domain/progression'
 import { durationUnitForTarget, isCardioExercise, supportsGps } from '../../domain/cardio'
@@ -444,12 +443,13 @@ export function ExerciseCard(props: Props) {
             <label className="flex items-center justify-between gap-3 text-sm font-medium text-foreground/85">
               Schrittweite
               <span className="flex items-center gap-2 text-muted">
-                <NumberWheelInput min={0.01} max={99.99}
+                <input
                   className={`${fieldClass} w-20 text-center tabular-nums`}
                   aria-label="Schrittweite in kg"
                   inputMode="decimal"
+                  enterKeyHint="done"
                   value={stepText ?? String(exercise.weight_step_kg).replace('.', ',')}
-                  onValueChange={(value) => setStepText(value)}
+                  onChange={(event) => setStepText(event.target.value)}
                   onBlur={handleStepBlur}
                 />
                 kg

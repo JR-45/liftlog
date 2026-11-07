@@ -1,5 +1,4 @@
 import { TimeWheelInput } from '../../components/TimeWheelInput'
-import { NumberWheelInput } from '../../components/NumberWheelInput'
 import { useEffect, useRef, useState } from 'react'
 import { findExercises } from '../../domain/exerciseCatalog'
 import { exerciseDefaults, isCardioExercise } from '../../domain/cardio'
@@ -120,8 +119,8 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
 
         <div className="flex items-end gap-2">
           {!cardio && <label className={`${LABEL} w-20 shrink-0`}>Sätze
-            <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.sets_max || ''}
-              onValueChange={(value) => updateSets(Number(value))} />
+            <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_max || ''}
+              onChange={(event) => updateSets(Number(event.target.value))} />
           </label>}
           {cardio ? <label className={`${LABEL} min-w-0 flex-1`}>Dauer
             <TimeWheelInput className={`${INPUT} text-center tabular-nums`} valueSeconds={exercise.duration_min ?? exercise.duration_max}
@@ -138,13 +137,13 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
             </label>
           </> : <>
             <label className={`${LABEL} min-w-0 flex-1`}>Wdh. von
-              <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.reps_min ?? ''}
-                onValueChange={(value) => update({ reps_min: numberOrNull(value) })} />
+              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_min ?? ''}
+                onChange={(event) => update({ reps_min: numberOrNull(event.target.value) })} />
             </label>
             <span className="pb-3 text-muted" aria-hidden="true">–</span>
             <label className={`${LABEL} min-w-0 flex-1`}>bis
-              <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.reps_max ?? ''}
-                onValueChange={(value) => update({ reps_max: numberOrNull(value) })} />
+              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_max ?? ''}
+                onChange={(event) => update({ reps_max: numberOrNull(event.target.value) })} />
             </label>
           </>}
         </div>
@@ -167,8 +166,8 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
             </select>
           </label>}
           {!cardio && <label className={LABEL}>Mindestens Sätze (für Bereiche wie 4–5 Runden)
-            <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.sets_min || ''}
-              onValueChange={(value) => update({ sets_min: Number(value) })} />
+            <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
+              onChange={(event) => update({ sets_min: Number(event.target.value) })} />
           </label>}
           <button className="min-h-11 text-sm font-medium text-danger disabled:opacity-40" type="button" disabled={exercises.length === 1} onClick={() => {
             onChange(exercises.filter((_, i) => i !== index))
