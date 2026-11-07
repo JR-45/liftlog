@@ -60,6 +60,7 @@ Diagrams: `docs/database.puml` / `docs/database.png` and `docs/code-dependencies
 - Vor jedem `git push` immer zuerst `git pull --rebase` ausführen. Bei Konflikten anhalten und nachfragen, nicht selbst auflösen.
 - Nie force-pushen, ohne vorher ausdrücklich zu fragen. Falls doch freigegeben: nur `--force-with-lease`, und vorher prüfen, ob schon jemand auf den umzuschreibenden Commits weitergearbeitet hat.
 - Nicht direkt auf `main` arbeiten: eigener Branch (`feature/kurzer-name`), pushen, Pull Request. Gemergt wird erst, wenn die CI grün ist und jemand anderes drübergeschaut hat.
+- Nach dem Merge den Branch lokal und auf GitHub löschen (`git branch -d …`, `git push origin --delete …`), danach `main` pullen.
 - Commits: englische Conventional Commits (`feat(workout): …`, `fix(…)`, `ci:`, `docs:`, `chore:`), klein und in sich abgeschlossen.
 - Nur committen oder pushen, wenn der User es verlangt.
 

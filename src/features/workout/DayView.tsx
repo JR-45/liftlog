@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { countLoggedSets, setKey, type SetValues } from '../../domain/sets'
-import { type DayData, ensureWorkout, loadDay, type PlanEntry } from './api'
+import { DESKTOP_QUERY, useMediaQuery } from '../../lib/useMediaQuery'
+import { type DayData, ensureWorkout, type Exercise, loadDay, type PlanEntry } from './api'
 import { ExerciseCard } from './ExerciseCard'
 
 type SavedSets = Record<string, SetValues>
@@ -20,9 +21,21 @@ function nextOpenEntry(entries: PlanEntry[], saved: SavedSets, afterIndex: numbe
   return ordered.find((entry) => !isDone(entry, saved))?.id ?? null
 }
 
+/** Wurde heute schon die Alternative trainiert, startet die Übung direkt mit ihr. */
+function initialActiveId(entry: PlanEntry, saved: SavedSets): string {
+  const { alternative, exercise } = entry
+  const usedAlternative = alternative && countLoggedSets(saved, [alternative.id]) > 0
+  const usedMain = countLoggedSets(saved, [exercise.id]) > 0
+  return usedAlternative && !usedMain ? alternative.id : exercise.id
+}
+
 export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
+  const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [day, setDay] = useState<DayData | null>(null)
   const [savedSets, setSavedSets] = useState<SavedSets>({})
+  // Liegen hier statt in der Karte, damit Liste und Detail am Laptop denselben Stand zeigen.
+  const [exercises, setExercises] = useState<Record<string, Exercise>>({})
+  const [activeIds, setActiveIds] = useState<Record<string, string>>({})
   const [openId, setOpenId] = useState<string | null>(null)
   const [scrollTarget, setScrollTarget] = useState<{ id: string; request: number } | null>(null)
   const [failed, setFailed] = useState(false)
@@ -37,9 +50,12 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       .then((data) => {
         if (cancelled) return
         const saved = Object.fromEntries(data.todaySets.map((set) => [setKey(set.exercise_id, set.set_number), set]))
+        const all = data.entries.flatMap((entry) => (entry.alternative ? [entry.exercise, entry.alternative] : [entry.exercise]))
         workoutId.current = data.workoutId
         latestSaved.current = saved
         setSavedSets(saved)
+        setExercises(Object.fromEntries(all.map((exercise) => [exercise.id, exercise])))
+        setActiveIds(Object.fromEntries(data.entries.map((entry) => [entry.id, initialActiveId(entry, saved)])))
         setOpenId(nextOpenEntry(data.entries, saved, -1))
         setDay(data)
       })
@@ -62,12 +78,19 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   }
 
   function handleToggle(id: string) {
-    if (openId === id) {
+    // Am Laptop ist immer eine Übung rechts offen. Ein Klick wählt sie nur aus.
+    if (isDesktop) {
+      setOpenId(id)
+    } else if (openId === id) {
       setOpenId(null)
     } else {
       setOpenId(id)
       scrollTo(id)
     }
+  }
+
+  function handleExerciseChange(exerciseId: string, changes: Partial<Exercise>) {
+    setExercises((current) => ({ ...current, [exerciseId]: { ...current[exerciseId], ...changes } }))
   }
 
   function handleSetChange(exerciseId: string, setNumber: number, values: SetValues | null) {
@@ -122,45 +145,78 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
 
   const total = day.entries.length
   const done = day.entries.filter((entry) => isDone(entry, savedSets)).length
+  const openEntry = day.entries.find((entry) => entry.id === openId)
+
+  function card(entry: PlanEntry, layout: 'stacked' | 'summary' | 'detail') {
+    return (
+      <ExerciseCard
+        key={entry.id}
+        entry={entry}
+        layout={layout}
+        exercises={exercises}
+        activeId={activeIds[entry.id]}
+        userId={userId}
+        today={today}
+        open={openId === entry.id}
+        scrollRequest={layout === 'stacked' && scrollTarget?.id === entry.id ? scrollTarget.request : null}
+        savedSets={savedSets}
+        lastSets={day?.lastSets ?? []}
+        getWorkoutId={getWorkoutId}
+        onToggle={() => handleToggle(entry.id)}
+        onSetChange={handleSetChange}
+        onExerciseChange={handleExerciseChange}
+        onActiveChange={(exerciseId) => setActiveIds((current) => ({ ...current, [entry.id]: exerciseId }))}
+      />
+    )
+  }
+
+  const progress = (
+    <div className="sticky top-0 z-10 -mx-4 mt-3 bg-neutral-900 px-4 py-2 md:-mx-6 md:px-6 lg:mx-0 lg:px-0">
+      <span className={`text-sm ${done === total ? 'font-medium text-yellow-300' : 'text-neutral-300'}`}>
+        {done === total ? 'Training geschafft! 💪' : `${done} von ${total} Übungen`}
+      </span>
+      <div
+        className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-neutral-800"
+        role="progressbar"
+        aria-label="Fortschritt im Training"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={done}
+      >
+        <div
+          className="h-full rounded-full bg-yellow-400 transition-all duration-300"
+          style={{ width: `${total === 0 ? 0 : (done / total) * 100}%` }}
+        />
+      </div>
+    </div>
+  )
+
+  if (isDesktop) {
+    return (
+      <div className="mt-3 grid grid-cols-[minmax(0,20rem)_minmax(0,40rem)] items-start gap-6">
+        <div>
+          {progress}
+          <ul className="mt-2 space-y-2">{day.entries.map((entry) => card(entry, 'summary'))}</ul>
+        </div>
+        <div className="sticky top-4">
+          {openEntry ? (
+            card(openEntry, 'detail')
+          ) : (
+            <div className="rounded-xl border border-neutral-800 px-6 py-16 text-center">
+              <p className="text-lg font-medium text-neutral-100">
+                {done === total ? 'Training geschafft! 💪' : 'Wähle links eine Übung'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
-      <div className="sticky top-0 z-10 -mx-4 mt-3 bg-neutral-900 px-4 py-2">
-        <span className={`text-sm ${done === total ? 'font-medium text-yellow-300' : 'text-neutral-300'}`}>
-          {done === total ? 'Training geschafft! 💪' : `${done} von ${total} Übungen`}
-        </span>
-        <div
-          className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-neutral-800"
-          role="progressbar"
-          aria-label="Fortschritt im Training"
-          aria-valuemin={0}
-          aria-valuemax={total}
-          aria-valuenow={done}
-        >
-          <div
-            className="h-full rounded-full bg-yellow-400 transition-all duration-300"
-            style={{ width: `${total === 0 ? 0 : (done / total) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      <ul className="mt-2 space-y-2">
-        {day.entries.map((entry) => (
-          <ExerciseCard
-            key={entry.id}
-            entry={entry}
-            userId={userId}
-            today={today}
-            open={openId === entry.id}
-            scrollRequest={scrollTarget?.id === entry.id ? scrollTarget.request : null}
-            savedSets={savedSets}
-            lastSets={day.lastSets}
-            getWorkoutId={getWorkoutId}
-            onToggle={() => handleToggle(entry.id)}
-            onSetChange={handleSetChange}
-          />
-        ))}
-      </ul>
+      {progress}
+      <ul className="mt-2 space-y-2">{day.entries.map((entry) => card(entry, 'stacked'))}</ul>
     </>
   )
 }
