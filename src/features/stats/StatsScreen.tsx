@@ -313,25 +313,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
         </div>
 
         {calendar && (
-          <div>
-            <div className="mt-3 grid grid-cols-2 gap-2.5 md:mt-0 md:grid-cols-1 lg:grid-cols-2">
-              <div className="rounded-2xl border border-line/[0.08] bg-surface p-3.5">
-                <p className="text-2xl font-bold tabular-nums text-success" data-testid="trained-count">
-                  {calendar.trained}
-                </p>
-                <p className="text-sm font-medium text-muted">
-                  {calendar.trained === 1 ? 'Training' : 'Trainings'}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-line/[0.08] bg-surface p-3.5">
-                <p className="text-2xl font-bold tabular-nums text-danger" data-testid="missed-count">
-                  {calendar.missed}
-                </p>
-                <p className="text-sm font-medium text-muted">
-                  {calendar.missed === 1 ? 'Tag verpasst' : 'Tage verpasst'}
-                </p>
-              </div>
-            </div>
+          <div className="md:[&>figure:first-child]:mt-0">
             <AttendanceChart key={shownIndex} trained={calendar.trained} missed={calendar.missed} />
             {calendar.marked > 0 && (
               <p className="mt-3 text-sm font-medium text-muted" data-testid="marked-count">
