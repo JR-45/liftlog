@@ -1,5 +1,22 @@
+import type { DayMarkKind } from '../../domain/calendar'
 import type { ExportRow } from '../../domain/export'
 import { supabase } from '../../lib/supabase'
+
+export async function loadDayMarks(from: string, to: string): Promise<Map<string, DayMarkKind>> {
+  const { data, error } = await supabase.from('day_marks').select('day, kind').gte('day', from).lte('day', to)
+  if (error) throw error
+  return new Map(data.map((mark) => [mark.day, mark.kind as DayMarkKind]))
+}
+
+export async function saveDayMark(day: string, kind: DayMarkKind): Promise<void> {
+  const { error } = await supabase.from('day_marks').upsert({ day, kind }, { onConflict: 'user_id,day' })
+  if (error) throw error
+}
+
+export async function deleteDayMark(day: string): Promise<void> {
+  const { error } = await supabase.from('day_marks').delete().eq('day', day)
+  if (error) throw error
+}
 
 const PAGE_SIZE = 1000
 

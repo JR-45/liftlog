@@ -64,6 +64,14 @@ entity "workouts" as workouts {
   * created_at : timestamptz
 }
 
+entity "day_marks" as day_marks {
+  * user_id : uuid <<PK, FK>>
+  * day : date <<PK>>
+  --
+  * kind : text
+  * created_at : timestamptz
+}
+
 entity "sets" as sets {
   * id : uuid <<PK>>
   * user_id : uuid <<FK>>
@@ -90,6 +98,7 @@ users ||--o{ plan_days : "CASCADE"
 users ||--o{ workouts : "CASCADE"
 users ||--o{ plan_exercises : "CASCADE"
 users ||--o{ sets : "CASCADE"
+users ||--o{ day_marks : "CASCADE"
 
 legend right
   * = Pflichtfeld
