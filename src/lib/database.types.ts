@@ -113,14 +113,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "activity_level": string | null,"avatar": string | null,"bio": string,"birth_year": number | null,"display_name": string | null,"goal": string,"height_cm": number | null,"sex": string | null,"target_weight_kg": number | null,"updated_at": string,"user_id": string,"weekly_target": number | null
+                    "activity_level": string | null,"avatar": string | null,"bio": string,"birth_year": number | null,"display_name": string | null,"experience_level": string | null,"goal": string,"height_cm": number | null,"onboarding_completed_at": string | null,"session_minutes": number | null,"sex": string | null,"target_weight_kg": number | null,"training_location": string | null,"updated_at": string,"user_id": string,"weekly_target": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"goal"?: string,"height_cm"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
+                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"experience_level"?: string | null,"goal"?: string,"height_cm"?: number | null,"onboarding_completed_at"?: string | null,"session_minutes"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"training_location"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
                   }
                   Update: {
-                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"goal"?: string,"height_cm"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
+                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"experience_level"?: string | null,"goal"?: string,"height_cm"?: number | null,"onboarding_completed_at"?: string | null,"session_minutes"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"training_location"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
                   }
                   Relationships: [
                     
@@ -187,14 +187,14 @@ isOneToOne: false
                   ]
                 },"workouts": {
                   Row: {
-                    "created_at": string,"finished_at": string | null,"id": string,"performed_on": string,"plan_day_id": string | null,"user_id": string
+                    "created_at": string,"finished_at": string | null,"id": string,"performed_on": string,"plan_day_id": string | null,"started_at": string | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on": string,"plan_day_id"?: string | null,"user_id"?: string
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on": string,"plan_day_id"?: string | null,"started_at"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on"?: string,"plan_day_id"?: string | null,"user_id"?: string
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on"?: string,"plan_day_id"?: string | null,"started_at"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {

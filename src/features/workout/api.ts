@@ -52,7 +52,7 @@ export type LoggedSet = SetValues & { exercise_id: string; set_number: number }
 export type DayData = {
   entries: PlanEntry[]
   workoutId: string | null
-  /** Start der Stoppuhr: Anlage des heutigen Workouts. */
+  /** Start der Stoppuhr, null wenn nicht gestartet oder zurückgesetzt. */
   workoutStartedAt: string | null
   /** Ende der Stoppuhr, gesetzt beim Abschluss oder per „Beenden“. */
   workoutFinishedAt: string | null
@@ -95,7 +95,7 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
       .order('position'),
     supabase
       .from('workouts')
-      .select('id, created_at, finished_at')
+      .select('id, started_at, finished_at')
       .eq('plan_day_id', planDayId)
       .eq('performed_on', today)
       .maybeSingle(),
@@ -120,25 +120,34 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
     // Die generierten Typen kennen weder die zusammengesetzten FKs noch die erlaubten tracking_type-Werte.
     entries: entries.data as unknown as PlanEntry[],
     workoutId,
-    workoutStartedAt: workout.data?.created_at ?? null,
+    workoutStartedAt: workout.data?.started_at ?? null,
     workoutFinishedAt: workout.data?.finished_at ?? null,
     todaySets,
     lastSets: last.data as LoggedSet[],
   }
 }
 
-/**
- * Holt das heutige Workout oder legt es an. Die Unique-Regel verhindert Duplikate.
- * created_at bleibt beim zweiten Aufruf unverändert und ist damit der Start der Stoppuhr.
- */
-export async function ensureWorkout(planDayId: string, today: string): Promise<{ id: string; startedAt: string }> {
+/** Holt das heutige Workout oder legt es an. Die Unique-Regel verhindert Duplikate. */
+export async function ensureWorkout(planDayId: string, today: string): Promise<{ id: string; startedAt: string | null }> {
   const { data, error } = await supabase
     .from('workouts')
     .upsert({ plan_day_id: planDayId, performed_on: today }, { onConflict: 'plan_day_id,performed_on' })
-    .select('id, created_at')
+    .select('id, started_at')
     .single()
   if (error) throw error
-  return { id: data.id, startedAt: data.created_at }
+  return { id: data.id, startedAt: data.started_at }
+}
+
+/** Startet die Stoppuhr bei jetzt, auch nach einem Zurücksetzen. */
+export async function startWorkoutClock(workoutId: string, startedAt: string): Promise<void> {
+  const { error } = await supabase.from('workouts').update({ started_at: startedAt, finished_at: null }).eq('id', workoutId)
+  if (error) throw error
+}
+
+/** Setzt die Stoppuhr auf 0:00 zurück. created_at und die Sätze bleiben unverändert. */
+export async function resetWorkoutClock(workoutId: string): Promise<void> {
+  const { error } = await supabase.from('workouts').update({ started_at: null, finished_at: null }).eq('id', workoutId)
+  if (error) throw error
 }
 
 /** Stoppt die Stoppuhr. null setzt sie wieder auf „läuft“. */

@@ -7,7 +7,16 @@ import { StopwatchIcon, TrophyIcon } from '../../lib/icons'
 import { trainingSetCount } from '../../domain/planEditing'
 import { readSkippedEntries, writeSkippedEntries } from './drafts'
 import { DESKTOP_QUERY, useMediaQuery } from '../../lib/useMediaQuery'
-import { type DayData, ensureWorkout, type Exercise, loadDay, type PlanEntry, setWorkoutFinished } from './api'
+import {
+  type DayData,
+  ensureWorkout,
+  type Exercise,
+  loadDay,
+  type PlanEntry,
+  resetWorkoutClock,
+  startWorkoutClock,
+  setWorkoutFinished,
+} from './api'
 import { ExerciseCard } from './ExerciseCard'
 import { WorkoutSummary } from './WorkoutSummary'
 
@@ -80,6 +89,7 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [finishedAt, setFinishedAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [confirmReset, setConfirmReset] = useState(false)
 
   useEffect(() => {
     if (startedAt === null || finishedAt !== null) return
@@ -116,14 +126,26 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
     }
   }, [planDayId, userId, today, attempt])
 
-  // Das Workout entsteht erst mit dem ersten gespeicherten Satz. Bloßes Ansehen legt nichts an.
+  // Das Workout entsteht erst mit „Training starten“ oder dem ersten Satz. Bloßes Ansehen legt nichts an.
+  // Beim Anlegen startet auch die Stoppuhr, falls sie noch nicht läuft.
   async function getWorkoutId(): Promise<string> {
     if (workoutId.current === null) {
       const workout = await ensureWorkout(planDayId, today)
       workoutId.current = workout.id
-      setStartedAt((current) => current ?? Date.parse(workout.startedAt))
+      if (workout.startedAt) {
+        setStartedAt((current) => current ?? Date.parse(workout.startedAt as string))
+      } else {
+        startClock(workout.id)
+      }
     }
     return workoutId.current
+  }
+
+  function startClock(id: string) {
+    const start = Date.now()
+    setStartedAt(start)
+    setFinishedAt(null)
+    startWorkoutClock(id, new Date(start).toISOString()).catch(() => setStartedAt(null))
   }
 
   function scrollTo(id: string) {
@@ -292,8 +314,13 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
    * Meist ist sie schon offen, ohne Scrollen und Leuchten passiert dann scheinbar nichts.
    */
   async function handleStart() {
-    // Legt das Workout an und startet damit die Stoppuhr. Scheitert das, startet sie mit dem ersten Satz.
-    getWorkoutId().catch(() => {})
+    if (workoutId.current !== null && startedAt === null) {
+      // Das Workout gibt es schon, die Uhr wurde aber zurückgesetzt: Sie startet jetzt neu.
+      startClock(workoutId.current)
+    } else {
+      // Legt das Workout an und startet damit die Stoppuhr. Scheitert das, startet sie mit dem ersten Satz.
+      getWorkoutId().catch(() => {})
+    }
     if (!nextId) return
     setOpenId(nextId)
     // Erst nach dem Aufklappen scrollen, sonst verschiebt die Animation das Ziel.
@@ -333,6 +360,26 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
     }
   }
 
+  /** Erster Tipp fragt nach, der zweite setzt die Uhr auf 0:00. Die Sätze bleiben. */
+  async function handleReset() {
+    if (!confirmReset) {
+      setConfirmReset(true)
+      setTimeout(() => setConfirmReset(false), 3000)
+      return
+    }
+    setConfirmReset(false)
+    if (workoutId.current === null || startedAt === null) return
+    const previous = { startedAt, finishedAt }
+    setStartedAt(null)
+    setFinishedAt(null)
+    try {
+      await resetWorkoutClock(workoutId.current)
+    } catch {
+      setStartedAt(previous.startedAt)
+      setFinishedAt(previous.finishedAt)
+    }
+  }
+
   const running = startedAt !== null && finishedAt === null
   const elapsed = startedAt === null ? 0 : (finishedAt ?? now) - startedAt
   // Große Stoppuhr rechts oben in der Karte.
@@ -353,6 +400,17 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
       >
         {formatElapsed(elapsed)}
       </p>
+      {startedAt !== null && (
+        <button
+          type="button"
+          onClick={() => void handleReset()}
+          className={`mt-1 min-h-8 text-xs font-semibold uppercase tracking-wider underline underline-offset-2 ${
+            confirmReset ? 'text-danger' : 'text-muted'
+          }`}
+        >
+          {confirmReset ? 'Sicher? Nochmal tippen' : 'Zurücksetzen'}
+        </button>
+      )}
     </div>
   )
 
