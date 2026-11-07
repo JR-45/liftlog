@@ -69,7 +69,7 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
   if (workoutId) {
     const { data, error } = await supabase
       .from('sets')
-      .select('exercise_id, set_number, weight_kg, reps, duration_seconds')
+      .select('exercise_id, set_number, weight_kg, reps, duration_seconds, is_assisted')
       .eq('workout_id', workoutId)
     if (error) throw error
     todaySets = data

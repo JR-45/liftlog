@@ -6,6 +6,8 @@ import {
   formatWeight,
   type SetValues,
   stepWeight,
+  type TrackingType,
+  usesWeight,
 } from '../../domain/sets'
 import { deleteSet, type Exercise, type LoggedSet, type PlanEntry, saveSet, updateExercise } from './api'
 import { readDraft } from './drafts'
@@ -45,6 +47,7 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
   const [error, setError] = useState<string | null>(null)
 
   const exercise = exercises[activeId]
+  const weightName = exercise.tracking_type === 'assisted_reps' ? 'Gewichtshilfe' : 'Arbeitsgewicht'
   const unit: DurationUnit = entry.duration_min === null ? 'minutes' : 'seconds'
   const isRounds = entry.sets_min !== entry.sets_max
   const reps = formatRange(entry.reps_min, entry.reps_max)
@@ -69,6 +72,12 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
     } finally {
       setBusy(false)
     }
+  }
+
+  function handleTrackingChange(next: TrackingType) {
+    // Hilfe und Gewicht bedeuten Gegenteiliges: 30 kg Hilfe dürfen nicht zu 30 kg Zusatzgewicht werden.
+    const assistChanged = (exercise.tracking_type === 'assisted_reps') !== (next === 'assisted_reps')
+    void applyExerciseChange(assistChanged ? { tracking_type: next, current_weight_kg: null } : { tracking_type: next })
   }
 
   async function handleSaveSet(setNumber: number, values: SetValues | null) {
@@ -118,28 +127,29 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
       </p>
 
       {exercise.tracking_type !== 'duration' && (
-        <label className="mt-3 flex min-h-11 items-center justify-between text-sm text-neutral-300">
-          Gewicht tracken
-          <input
-            className="h-5 w-5 accent-neutral-300"
-            type="checkbox"
-            checked={exercise.tracking_type === 'weight_reps'}
+        <label className="mt-3 flex min-h-11 items-center justify-between gap-3 text-sm text-neutral-300">
+          Erfassung
+          <select
+            className="h-11 rounded-lg border border-neutral-700 bg-neutral-800 px-2 text-base text-neutral-100 disabled:opacity-50"
+            value={exercise.tracking_type}
             disabled={busy}
-            onChange={(event) =>
-              void applyExerciseChange({ tracking_type: event.target.checked ? 'weight_reps' : 'reps' })
-            }
-          />
+            onChange={(event) => handleTrackingChange(event.target.value as TrackingType)}
+          >
+            <option value="weight_reps">Mit Gewicht</option>
+            <option value="assisted_reps">Mit Gewichtshilfe</option>
+            <option value="reps">Ohne Gewicht</option>
+          </select>
         </label>
       )}
 
-      {exercise.tracking_type === 'weight_reps' && (
+      {usesWeight(exercise.tracking_type) && (
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-sm text-neutral-300">Arbeitsgewicht</span>
+          <span className="text-sm text-neutral-300">{weightName}</span>
           <div className="flex items-center gap-2">
             <button
               className={roundButtonClass}
               type="button"
-              aria-label={`Arbeitsgewicht um ${exercise.weight_step_kg} kg senken`}
+              aria-label={`${weightName} um ${exercise.weight_step_kg} kg senken`}
               disabled={busy || !exercise.current_weight_kg}
               onClick={() =>
                 void applyExerciseChange({
@@ -155,7 +165,7 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
             <button
               className={roundButtonClass}
               type="button"
-              aria-label={`Arbeitsgewicht um ${exercise.weight_step_kg} kg erhöhen`}
+              aria-label={`${weightName} um ${exercise.weight_step_kg} kg erhöhen`}
               disabled={busy}
               onClick={() =>
                 void applyExerciseChange({

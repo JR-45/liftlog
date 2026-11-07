@@ -85,14 +85,14 @@ isOneToOne: false
                   ]
                 },"sets": {
                   Row: {
-                    "created_at": string,"duration_seconds": number | null,"exercise_id": string,"id": string,"reps": number | null,"set_number": number,"user_id": string,"weight_kg": number | null,"workout_id": string
+                    "created_at": string,"duration_seconds": number | null,"exercise_id": string,"id": string,"is_assisted": boolean,"reps": number | null,"set_number": number,"user_id": string,"weight_kg": number | null,"workout_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"duration_seconds"?: number | null,"exercise_id": string,"id"?: string,"reps"?: number | null,"set_number": number,"user_id"?: string,"weight_kg"?: number | null,"workout_id": string
+                    "created_at"?: string,"duration_seconds"?: number | null,"exercise_id": string,"id"?: string,"is_assisted"?: boolean,"reps"?: number | null,"set_number": number,"user_id"?: string,"weight_kg"?: number | null,"workout_id": string
                   }
                   Update: {
-                    "created_at"?: string,"duration_seconds"?: number | null,"exercise_id"?: string,"id"?: string,"reps"?: number | null,"set_number"?: number,"user_id"?: string,"weight_kg"?: number | null,"workout_id"?: string
+                    "created_at"?: string,"duration_seconds"?: number | null,"exercise_id"?: string,"id"?: string,"is_assisted"?: boolean,"reps"?: number | null,"set_number"?: number,"user_id"?: string,"weight_kg"?: number | null,"workout_id"?: string
                   }
                   Relationships: [
                     {
@@ -137,7 +137,7 @@ isOneToOne: false
           Functions: {
             "last_performance":
 { Args: { "before_date": string }; Returns: {
-              "duration_seconds": number,"exercise_id": string,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
+              "duration_seconds": number,"exercise_id": string,"is_assisted": boolean,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
             }[]
                            },
 "seed_default_plan":

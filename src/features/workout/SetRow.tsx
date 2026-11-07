@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { type DurationUnit, parseSetDraft, type SetDraft, type SetValues, type TrackingType } from '../../domain/sets'
+import {
+  type DurationUnit,
+  parseSetDraft,
+  type SetDraft,
+  type SetValues,
+  type TrackingType,
+  usesWeight,
+} from '../../domain/sets'
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
@@ -100,11 +107,11 @@ export function SetRow(props: Props) {
           </label>
         ) : (
           <>
-            {tracking === 'weight_reps' && (
+            {usesWeight(tracking) && (
               <label className="flex min-w-0 flex-1 items-center gap-1 text-sm text-neutral-400">
                 <input
                   className={inputClass}
-                  aria-label={`${label} Gewicht in kg`}
+                  aria-label={`${label} ${tracking === 'assisted_reps' ? 'Gewichtshilfe' : 'Gewicht'} in kg`}
                   inputMode="decimal"
                   value={shownWeight}
                   onChange={(event) => change({ weight: event.target.value })}
