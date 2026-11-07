@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXERCISE_CATALOG } from './exerciseCatalog'
-import { buildOnboardingPlan, dayKinds, type OnboardingAnswers, suggestWeekdays } from './onboarding'
+import { buildOnboardingPlan, dayKinds, exercisesPerSession, isValidSessionMinutes, type OnboardingAnswers, suggestWeekdays } from './onboarding'
 
 const base: OnboardingAnswers = {
   goal: 'hypertrophy',
@@ -78,5 +78,30 @@ describe('buildOnboardingPlan', () => {
         }
       }
     }
+  })
+})
+
+describe('eigene Trainingsdauer', () => {
+  it('bleibt bei den Schnellwahl-Werten wie bisher', () => {
+    expect([30, 45, 60, 90].map(exercisesPerSession)).toEqual([4, 5, 6, 8])
+  })
+
+  it('passt die Übungen an freie Werte an, mit Grenzen', () => {
+    expect(exercisesPerSession(10)).toBe(3)
+    expect(exercisesPerSession(75)).toBe(7)
+    expect(exercisesPerSession(240)).toBe(8)
+  })
+
+  it('gibt ab 2 Stunden einen Satz mehr, höchstens 5', () => {
+    expect(buildOnboardingPlan({ ...base, minutes: 120 }).days[0].exercises[0].sets_min).toBe(4)
+    expect(buildOnboardingPlan({ ...base, goal: 'strength', experience: 'advanced', minutes: 180 }).days[0].exercises[0].sets_min).toBe(5)
+  })
+
+  it('erlaubt 10 bis 240 ganze Minuten', () => {
+    expect(isValidSessionMinutes(10)).toBe(true)
+    expect(isValidSessionMinutes(240)).toBe(true)
+    expect(isValidSessionMinutes(5)).toBe(false)
+    expect(isValidSessionMinutes(250)).toBe(false)
+    expect(isValidSessionMinutes(37.5)).toBe(false)
   })
 })

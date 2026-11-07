@@ -7,7 +7,17 @@ import type { PlanDayDraft, PlanExerciseDraft } from './trainingPlan'
 export type Goal = 'hypertrophy' | 'strength' | 'cut' | 'fitness'
 export type Experience = 'beginner' | 'intermediate' | 'advanced'
 export type Location = 'gym' | 'home' | 'bodyweight'
-export type SessionMinutes = 30 | 45 | 60 | 90
+/** Trainingsdauer in Minuten, 10 bis 240. Die Schnellauswahl bietet 30, 45, 60 und 90. */
+export type SessionMinutes = number
+
+export const PRESET_MINUTES = [30, 45, 60, 90] as const
+export const MIN_SESSION_MINUTES = 10
+export const MAX_SESSION_MINUTES = 240
+
+/** Gleiche Grenzen wie in der Datenbank. */
+export function isValidSessionMinutes(minutes: number): boolean {
+  return Number.isInteger(minutes) && minutes >= MIN_SESSION_MINUTES && minutes <= MAX_SESSION_MINUTES
+}
 
 export type OnboardingAnswers = {
   goal: Goal
@@ -70,7 +80,15 @@ const TEMPLATES: Record<Location, Partial<Record<DayKind, string[]>>> = {
   },
 }
 
-const EXERCISES_PER_SESSION: Record<SessionMinutes, number> = { 30: 4, 45: 5, 60: 6, 90: 8 }
+/** Etwa eine Übung pro Viertelstunde plus zwei, mindestens 3 und höchstens 8 (so viele hat eine Vorlage). */
+export function exercisesPerSession(minutes: number): number {
+  return Math.min(8, Math.max(3, Math.round(minutes / 15) + 2))
+}
+
+/** Ab 2 Stunden reichen 8 Übungen nicht, dann gibt es einen Satz mehr, höchstens 5. */
+function extraSets(minutes: number): number {
+  return minutes >= 120 ? 1 : 0
+}
 const REST_SECONDS: Record<Goal, number> = { strength: 180, hypertrophy: 90, cut: 60, fitness: 60 }
 /** Halteübungen, die in Sätzen mit Sekunden trainiert werden statt einmal am Stück. */
 const HOLDS = new Set(['Plank', 'Side Plank', 'Wandsitzen'])
@@ -110,7 +128,7 @@ function repsFor(goal: Goal, position: number, bodyweight: boolean): [number, nu
 function buildExercise(name: string, position: number, answers: OnboardingAnswers): PlanExerciseDraft {
   const item = EXERCISE_CATALOG.find((entry) => entry.name === name)
   if (!item) throw new Error(`Übung fehlt im Katalog: ${name}`)
-  const sets = setsFor(answers.goal, answers.experience)
+  const sets = Math.min(5, setsFor(answers.goal, answers.experience) + extraSets(answers.minutes))
   if (item.tracking_type === 'duration') {
     const hold = HOLDS.has(name)
     return {
@@ -131,7 +149,7 @@ function buildExercise(name: string, position: number, answers: OnboardingAnswer
 export function buildOnboardingPlan(answers: OnboardingAnswers): GeneratedPlan {
   const weekdays = [...new Set(answers.weekdays)].sort((a, b) => a - b)
   const { kinds, split } = dayKinds(weekdays.length, answers.location)
-  const perDay = EXERCISES_PER_SESSION[answers.minutes]
+  const perDay = exercisesPerSession(answers.minutes)
   const days = weekdays.map((weekday, index) => {
     const kind = kinds[index]
     const names = (TEMPLATES[answers.location][kind] ?? []).slice(0, perDay)
