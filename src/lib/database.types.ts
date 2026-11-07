@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "day_marks": {
+            "body_measurements": {
+                  Row: {
+                    "arm_cm": number | null,"body_fat_pct": number | null,"calf_cm": number | null,"chest_cm": number | null,"created_at": string,"hips_cm": number | null,"measured_on": string,"neck_cm": number | null,"thigh_cm": number | null,"user_id": string,"waist_cm": number | null,"weight_kg": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "arm_cm"?: number | null,"body_fat_pct"?: number | null,"calf_cm"?: number | null,"chest_cm"?: number | null,"created_at"?: string,"hips_cm"?: number | null,"measured_on": string,"neck_cm"?: number | null,"thigh_cm"?: number | null,"user_id"?: string,"waist_cm"?: number | null,"weight_kg"?: number | null
+                  }
+                  Update: {
+                    "arm_cm"?: number | null,"body_fat_pct"?: number | null,"calf_cm"?: number | null,"chest_cm"?: number | null,"created_at"?: string,"hips_cm"?: number | null,"measured_on"?: string,"neck_cm"?: number | null,"thigh_cm"?: number | null,"user_id"?: string,"waist_cm"?: number | null,"weight_kg"?: number | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"day_marks": {
                   Row: {
                     "created_at": string,"day": string,"kind": string,"user_id": string
                   }
@@ -96,6 +110,20 @@ isOneToOne: false
       referencedRelation: "plan_days"
       referencedColumns: ["id","user_id"]
     }
+                  ]
+                },"profiles": {
+                  Row: {
+                    "activity_level": string | null,"avatar": string | null,"bio": string,"birth_year": number | null,"display_name": string | null,"goal": string,"height_cm": number | null,"sex": string | null,"target_weight_kg": number | null,"updated_at": string,"user_id": string,"weekly_target": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"goal"?: string,"height_cm"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
+                  }
+                  Update: {
+                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"goal"?: string,"height_cm"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
+                  }
+                  Relationships: [
+                    
                   ]
                 },"sets": {
                   Row: {

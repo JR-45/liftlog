@@ -110,3 +110,21 @@ export function PlanIcon({ className }: IconProps) {
     </SvgIcon>
   )
 }
+
+export function UserIcon({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+    </SvgIcon>
+  )
+}
+
+export function CameraIcon({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" />
+      <circle cx="12" cy="13" r="3" />
+    </SvgIcon>
+  )
+}

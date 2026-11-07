@@ -6,10 +6,12 @@ const RUNNING_KEY = 'liftlog:rest-running'
 const DEFAULT_SECONDS = 90
 const MAX_OVERTIME_SECONDS = 600
 
+export const REST_OPTIONS = [60, 90, 120, 180] as const
+
 function readDuration(): number {
   try {
     const stored = Number(localStorage.getItem(STORAGE_KEY))
-    return stored === 60 || stored === 90 ? stored : DEFAULT_SECONDS
+    return (REST_OPTIONS as readonly number[]).includes(stored) ? stored : DEFAULT_SECONDS
   } catch {
     return DEFAULT_SECONDS
   }
