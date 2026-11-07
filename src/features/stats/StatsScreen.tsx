@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { buildMonth, type CalendarDay, type DayStatus, monthIndex } from '../../domain/calendar'
+import type { ExportRow } from '../../domain/export'
+import { buildDayHistory } from '../../domain/progress'
 import { localDateString } from '../../domain/sets'
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '../../lib/icons'
 import { loadTrainedDates, type PlanDay } from '../workout/api'
+import { loadExportRows } from './api'
+import { ExerciseProgressCard } from './ExerciseProgressCard'
 
 const WEEKDAY_HEADERS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const MONTH_FORMAT = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' })
@@ -18,25 +23,50 @@ const STATUS_LABEL: Record<DayStatus, string> = {
 
 type Props = { today: string; startDate: string; planDays: PlanDay[] }
 
-function DayCell({ cell }: { cell: CalendarDay }) {
+function DayCell({
+  cell,
+  selected,
+  onSelect,
+}: {
+  cell: CalendarDay
+  selected: boolean
+  onSelect: (date: string) => void
+}) {
   const label = `${DAY_FORMAT.format(new Date(`${cell.date}T12:00:00`))}: ${STATUS_LABEL[cell.status]}`
   const style: Record<DayStatus, string> = {
-    trained: 'bg-yellow-400 font-semibold text-neutral-950',
-    missed: 'bg-red-400/10 text-red-300',
-    rest: 'text-neutral-500',
-    today: 'border border-yellow-400 text-neutral-100',
-    future: 'text-neutral-600',
-    before_start: 'text-neutral-700',
+    trained: selected
+      ? 'bg-[#FFD60A] font-bold text-black ring-2 ring-white shadow-sm'
+      : 'bg-[#30D158] font-semibold text-black shadow-sm shadow-[#30D158]/20',
+    missed: 'bg-[#FF453A]/15 text-[#FF453A]',
+    rest: 'text-[#8E8E93]',
+    today: 'ring-2 ring-[#FFD60A] font-semibold text-white',
+    future: 'text-[#8E8E93]/40',
+    before_start: 'text-[#8E8E93]/25',
   }
+
+  if (cell.status === 'trained') {
+    return (
+      <button
+        type="button"
+        aria-label={`${label}, Details anzeigen`}
+        aria-pressed={selected}
+        onClick={() => onSelect(cell.date)}
+        className={`flex aspect-square flex-col items-center justify-center rounded-xl text-sm tabular-nums transition-transform active:scale-95 ${style[cell.status]}`}
+      >
+        <span className="leading-none">{cell.day}</span>
+        <CheckIcon className="mt-0.5 h-3.5 w-3.5 stroke-[2.5]" />
+      </button>
+    )
+  }
+
   return (
     <div
       role="img"
       aria-label={label}
-      className={`flex aspect-square flex-col items-center justify-center rounded-lg text-sm tabular-nums ${style[cell.status]}`}
+      className={`flex aspect-square flex-col items-center justify-center rounded-xl text-sm tabular-nums ${style[cell.status]}`}
     >
       <span className="leading-none">{cell.day}</span>
-      {cell.status === 'trained' && <span className="mt-0.5 text-xs leading-none" aria-hidden="true">✓</span>}
-      {cell.status === 'missed' && <span className="mt-0.5 text-xs leading-none" aria-hidden="true">✕</span>}
+      {cell.status === 'missed' && <CloseIcon className="mt-0.5 h-3.5 w-3.5" />}
     </div>
   )
 }
@@ -48,9 +78,25 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
   const [loaded, setLoaded] = useState<{ index: number; dates: Set<string> } | null>(null)
   const [failedIndex, setFailedIndex] = useState<number | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [historyRows, setHistoryRows] = useState<ExportRow[]>([])
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const year = Math.floor(shownIndex / 12)
   const month = shownIndex % 12
+
+  useEffect(() => {
+    let cancelled = false
+    loadExportRows()
+      .then((rows) => {
+        if (!cancelled) setHistoryRows(rows)
+      })
+      .catch(() => {
+        // Fortschritts-Diagramm bleibt leer, falls das Laden fehlschlägt.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [attempt])
 
   useEffect(() => {
     let cancelled = false
@@ -85,38 +131,38 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
 
   return (
     <section className="mt-5">
-      <h2 className="text-lg font-medium text-neutral-100">Trainingstage</h2>
+      <h2 className="text-xl font-bold tracking-tight text-white">Trainingstage</h2>
 
       {/* Ab Tablet stehen Kalender und Zahlen nebeneinander, damit die Tage nicht riesig werden. */}
       <div className="mt-3 md:grid md:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] md:items-start md:gap-4">
-        <div className="rounded-xl border border-neutral-800 bg-neutral-800/40 p-3">
+        <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-3.5">
           <div className="flex items-center justify-between">
             <button
-              className="h-11 w-11 rounded-lg text-xl text-neutral-300 disabled:opacity-25"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2C2C2E] text-white transition-transform active:scale-95 disabled:opacity-25"
               type="button"
               aria-label="Vorheriger Monat"
               disabled={shownIndex <= firstIndex}
               onClick={() => setShownIndex((current) => current - 1)}
             >
-              ‹
+              <ChevronLeftIcon className="h-5 w-5" />
             </button>
-            <span className="font-medium text-neutral-100">{MONTH_FORMAT.format(new Date(year, month, 1))}</span>
+            <span className="font-semibold tracking-tight text-white">{MONTH_FORMAT.format(new Date(year, month, 1))}</span>
             <button
-              className="h-11 w-11 rounded-lg text-xl text-neutral-300 disabled:opacity-25"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2C2C2E] text-white transition-transform active:scale-95 disabled:opacity-25"
               type="button"
               aria-label="Nächster Monat"
               disabled={shownIndex >= currentIndex}
               onClick={() => setShownIndex((current) => current + 1)}
             >
-              ›
+              <ChevronRightIcon className="h-5 w-5" />
             </button>
           </div>
 
           {failedIndex === shownIndex ? (
             <div className="py-10 text-center">
-              <p role="alert" className="text-sm text-red-300">Der Kalender konnte nicht geladen werden.</p>
+              <p role="alert" className="text-sm text-[#FF453A]">Der Kalender konnte nicht geladen werden.</p>
               <button
-                className="mt-2 py-2 text-sm text-neutral-200 underline"
+                className="mt-2 min-h-11 py-2 text-sm font-medium text-[#FFD60A]"
                 type="button"
                 onClick={() => {
                   setFailedIndex(null)
@@ -127,17 +173,26 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
               </button>
             </div>
           ) : calendar === null ? (
-            <p className="py-16 text-center text-sm text-neutral-400">Kalender wird geladen …</p>
+            <p className="py-16 text-center text-sm text-[#8E8E93]">Kalender wird geladen …</p>
           ) : (
             <>
-              <div className="mt-2 grid grid-cols-7 gap-1 text-center text-xs text-neutral-500" aria-hidden="true">
+              <div className="mt-3 grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]" aria-hidden="true">
                 {WEEKDAY_HEADERS.map((weekday) => (
                   <span key={weekday}>{weekday}</span>
                 ))}
               </div>
-              <div className="mt-1 grid grid-cols-7 gap-1">
+              <div className="mt-1.5 grid grid-cols-7 gap-1.5">
                 {calendar.weeks.flat().map((cell, index) =>
-                  cell ? <DayCell key={cell.date} cell={cell} /> : <span key={`blank-${index}`} />,
+                  cell ? (
+                    <DayCell
+                      key={cell.date}
+                      cell={cell}
+                      selected={selectedDate === cell.date}
+                      onSelect={(date) => setSelectedDate((current) => (current === date ? null : date))}
+                    />
+                  ) : (
+                    <span key={`blank-${index}`} />
+                  ),
                 )}
               </div>
             </>
@@ -146,26 +201,69 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
 
         {calendar && (
           <div>
-            <div className="mt-3 grid grid-cols-2 gap-2 md:mt-0 md:grid-cols-1 lg:grid-cols-2">
-              <div className="rounded-xl border border-neutral-800 bg-neutral-800/40 p-3">
-                <p className="text-2xl font-semibold tabular-nums text-yellow-300" data-testid="trained-count">
+            <div className="mt-3 grid grid-cols-2 gap-2.5 md:mt-0 md:grid-cols-1 lg:grid-cols-2">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-3.5">
+                <p className="text-2xl font-bold tabular-nums text-[#30D158]" data-testid="trained-count">
                   {calendar.trained}
                 </p>
-                <p className="text-sm text-neutral-400">{calendar.trained === 1 ? 'Training' : 'Trainings'}</p>
+                <p className="text-sm font-medium text-[#8E8E93]">
+                  {calendar.trained === 1 ? 'Training' : 'Trainings'}
+                </p>
               </div>
-              <div className="rounded-xl border border-neutral-800 bg-neutral-800/40 p-3">
-                <p className="text-2xl font-semibold tabular-nums text-red-300" data-testid="missed-count">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-3.5">
+                <p className="text-2xl font-bold tabular-nums text-[#FF453A]" data-testid="missed-count">
                   {calendar.missed}
                 </p>
-                <p className="text-sm text-neutral-400">{calendar.missed === 1 ? 'Tag verpasst' : 'Tage verpasst'}</p>
+                <p className="text-sm font-medium text-[#8E8E93]">
+                  {calendar.missed === 1 ? 'Tag verpasst' : 'Tage verpasst'}
+                </p>
               </div>
             </div>
-            <p className="mt-3 text-xs text-neutral-500">
-              ✕ zählt nur an deinen Trainingstagen. Ruhetage bleiben unmarkiert. Heute wird erst ab morgen als verpasst gezählt.
+            <p className="mt-3 text-xs leading-relaxed text-[#8E8E93]">
+              Tippe auf einen grünen Trainingstag im Kalender, um deine Sätze von diesem Tag zu sehen.{' '}
+              <CloseIcon className="mr-0.5 inline h-3.5 w-3.5 align-[-2px] text-[#FF453A]" /> zählt nur an deinen
+              Trainingstagen.
             </p>
+
+            {selectedDate && (() => {
+              const dayHistory = buildDayHistory(historyRows, selectedDate)
+              if (!dayHistory) return null
+              return (
+                <div className="mt-3 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#FFD60A]">
+                        {DAY_FORMAT.format(new Date(`${dayHistory.date}T12:00:00`))}
+                      </p>
+                      {dayHistory.planDay && (
+                        <h3 className="text-sm font-bold text-white">{dayHistory.planDay}</h3>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Tagesdetails schließen"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2C2C2E] text-[#8E8E93]"
+                      onClick={() => setSelectedDate(null)}
+                    >
+                      <CloseIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <ul className="mt-2.5 divide-y divide-white/[0.06]">
+                    {dayHistory.exercises.map((item) => (
+                      <li key={item.name} className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
+                        <span className="truncate font-medium text-white">{item.name}</span>
+                        <span className="shrink-0 tabular-nums text-[#8E8E93]">{item.summary}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })()}
           </div>
         )}
       </div>
+
+      <ExerciseProgressCard rows={historyRows} />
     </section>
   )
 }
