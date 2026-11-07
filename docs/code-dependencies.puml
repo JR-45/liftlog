@@ -1,0 +1,99 @@
+@startuml code-dependencies
+title LiftLog: Abhängigkeiten im Frontend-Code
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontName Helvetica
+skinparam ArrowColor #555555
+skinparam legendBackgroundColor #FFFFFF
+
+package "Einstieg" {
+  [main.tsx] as main
+  [App.tsx] as app
+}
+
+package "features/auth" {
+  [LoginForm.tsx] as login
+  [useSession.ts] as useSession
+}
+
+package "features/workout" {
+  [HomeScreen.tsx] as home
+  [DayView.tsx] as day
+  [ExerciseCard.tsx] as card
+  [SetRow.tsx] as row
+  [api.ts] as api
+  [drafts.ts] as drafts
+}
+
+package "domain\n(ohne React und Datenbank)" {
+  [sets.ts] as sets
+}
+
+package "lib" {
+  [supabase.ts] as client
+  [database.types.ts\n(generiert)] as types
+}
+
+package "Externe Pakete" {
+  [@supabase/supabase-js] as sdk
+  [react / react-dom] as react
+}
+
+cloud "Supabase" {
+  [Auth] as auth
+  [Postgres mit RLS] as db
+}
+
+database "localStorage" as storage
+
+' Oberfläche
+main --> app
+main --> react
+app --> login
+app --> useSession
+app --> home
+home --> day
+home --> api
+home --> drafts
+home --> sets
+home --> client : Abmelden
+day --> card
+day --> api
+card --> row
+card --> api
+card --> drafts
+card --> sets
+row --> drafts
+row --> sets
+
+' Datenzugriff
+login --> client
+useSession --> client
+api --> client
+client --> types
+client --> sdk
+drafts --> storage
+
+' Nur Typen, verschwinden beim Build
+api ..> sets : Typ
+drafts ..> sets : Typ
+login ..> sdk : Typ
+useSession ..> sdk : Typ
+home ..> sdk : Typ
+
+' Laufzeit
+sdk --> auth : HTTPS
+sdk --> db : HTTPS
+db ..> types : bunx supabase gen types
+
+legend right
+  durchgezogen: Import zur Laufzeit
+  gestrichelt: nur Typ oder Generierung
+  Alle .tsx-Dateien und useSession.ts nutzen zusätzlich React.
+  Datenzugriff läuft in features/workout nur über api.ts,
+  Ausnahme: signOut in HomeScreen.tsx.
+endlegend
+
+@enduml

@@ -1,0 +1,103 @@
+@startuml database
+title LiftLog: Abhängigkeiten in der Datenbank
+
+left to right direction
+hide circle
+hide methods
+skinparam nodesep 70
+skinparam ranksep 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam ArrowColor #555555
+skinparam legendBackgroundColor #FFFFFF
+
+entity "auth.users" as users {
+  * id : uuid <<PK>>
+  --
+  Verwaltet von Supabase Auth
+}
+
+entity "exercises" as exercises {
+  * id : uuid <<PK>>
+  * user_id : uuid <<FK>>
+  --
+  * name : text
+  * tracking_type : text
+  current_weight_kg : numeric
+  * weight_step_kg : numeric
+  * created_at : timestamptz
+}
+
+entity "plan_days" as plan_days {
+  * id : uuid <<PK>>
+  * user_id : uuid <<FK>>
+  --
+  * weekday : smallint
+  * name : text
+  * created_at : timestamptz
+}
+
+entity "plan_exercises" as plan_exercises {
+  * id : uuid <<PK>>
+  * user_id : uuid <<FK>>
+  * plan_day_id : uuid <<FK>>
+  * exercise_id : uuid <<FK>>
+  alternative_exercise_id : uuid <<FK>>
+  --
+  * position : smallint
+  * sets_min : smallint
+  * sets_max : smallint
+  reps_min : smallint
+  reps_max : smallint
+  duration_min : integer
+  duration_max : integer
+  * created_at : timestamptz
+}
+
+entity "workouts" as workouts {
+  * id : uuid <<PK>>
+  * user_id : uuid <<FK>>
+  plan_day_id : uuid <<FK>>
+  --
+  * performed_on : date
+  finished_at : timestamptz
+  * created_at : timestamptz
+}
+
+entity "sets" as sets {
+  * id : uuid <<PK>>
+  * user_id : uuid <<FK>>
+  * workout_id : uuid <<FK>>
+  * exercise_id : uuid <<FK>>
+  --
+  * set_number : smallint
+  weight_kg : numeric
+  reps : smallint
+  duration_seconds : integer
+  * is_assisted : boolean
+  * created_at : timestamptz
+}
+
+plan_days ||--o{ plan_exercises : "CASCADE"
+exercises ||--o{ plan_exercises : "exercise_id\nNO ACTION"
+exercises |o--o{ plan_exercises : "alternative_exercise_id\nSET NULL"
+plan_days |o--o{ workouts : "SET NULL"
+workouts ||--o{ sets : "CASCADE"
+exercises ||--o{ sets : "NO ACTION"
+
+users ||--o{ exercises : "CASCADE"
+users ||--o{ plan_days : "CASCADE"
+users ||--o{ workouts : "CASCADE"
+users ||--o{ plan_exercises : "CASCADE"
+users ||--o{ sets : "CASCADE"
+
+legend right
+  * = Pflichtfeld
+  Beschriftung: Verhalten beim Löschen der übergeordneten Zeile
+  Verweise zwischen Fachtabellen sind zusammengesetzte FKs mit (id, user_id).
+  Sie verhindern Verweise auf Zeilen anderer User.
+  RLS auf allen 5 Tabellen: auth.uid() = user_id
+  Funktionen (security invoker): seed_default_plan(), last_performance(date)
+endlegend
+
+@enduml
