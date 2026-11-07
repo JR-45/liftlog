@@ -1,8 +1,10 @@
 import { formatClock, restFraction, restSecondsLeft } from '../../domain/timer'
+import { CloseIcon } from '../../lib/icons'
 import type { RestTimer } from './useRestTimer'
 
 const OPTIONS = [60, 90]
-const iconButtonClass = 'h-11 min-w-11 rounded-lg px-3 text-sm font-medium'
+const iconButtonClass =
+  'inline-flex h-11 min-w-11 items-center justify-center rounded-xl px-3.5 text-sm font-semibold transition-transform active:scale-95'
 
 /** bar: Leiste unten auf Handy und Tablet. panel: Kasten in der Seitenleiste am Laptop. */
 export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'bar' | 'panel' }) {
@@ -12,14 +14,18 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
 
   return (
     <div
-      className={`transition-colors ${variant === 'bar' ? 'border-t' : 'overflow-hidden rounded-xl border'} ${
-        overtime ? 'border-yellow-300 bg-yellow-400 text-neutral-950' : 'border-neutral-800 bg-neutral-950 text-neutral-100'
+      className={`transition-colors ${
+        variant === 'bar' ? 'border-t' : 'overflow-hidden rounded-2xl border'
+      } ${
+        overtime
+          ? 'border-[#FFD60A] bg-[#FFD60A] text-black'
+          : 'apple-glass border-white/[0.08] text-white'
       }`}
     >
       {left !== null && !overtime && endsAt !== null && (
-        <div className="h-1 bg-neutral-800">
+        <div className="h-1 bg-[#2C2C2E]">
           <div
-            className="h-full bg-yellow-400 transition-[width] duration-200 ease-linear"
+            className="h-full bg-[#FFD60A] transition-[width] duration-200 ease-linear"
             style={{ width: `${restFraction(endsAt, totalMs, now) * 100}%` }}
           />
         </div>
@@ -34,14 +40,16 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
       >
         {left === null ? (
           <>
-            <span className="text-sm text-neutral-400">Pause</span>
+            <span className="text-sm font-medium text-[#8E8E93]">Pause</span>
             <div className="flex items-center gap-2">
-              <div className="flex rounded-lg bg-neutral-800 p-0.5" role="group" aria-label="Pausenlänge">
+              <div className="flex rounded-xl bg-[#2C2C2E] p-0.5" role="group" aria-label="Pausenlänge">
                 {OPTIONS.map((seconds) => (
                   <button
                     key={seconds}
-                    className={`h-10 rounded-md px-3 text-sm tabular-nums ${
-                      duration === seconds ? 'bg-neutral-600 font-medium text-neutral-100' : 'text-neutral-400'
+                    className={`h-11 min-w-11 rounded-[10px] px-3 text-sm tabular-nums transition-all ${
+                      duration === seconds
+                        ? 'bg-[#3A3A3C] font-semibold text-white shadow-sm'
+                        : 'text-[#8E8E93]'
                     }`}
                     type="button"
                     aria-pressed={duration === seconds}
@@ -52,7 +60,7 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
                 ))}
               </div>
               <button
-                className={`${iconButtonClass} bg-yellow-400 font-semibold text-neutral-950`}
+                className={`${iconButtonClass} bg-[#FFD60A] text-black shadow-sm`}
                 type="button"
                 onClick={() => start()}
               >
@@ -63,17 +71,17 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
         ) : (
           <>
             <div role="timer" aria-label="Pausentimer" className="flex items-baseline gap-2">
-              <span className="text-2xl font-semibold tabular-nums">
+              <span className="text-2xl font-bold tracking-tight tabular-nums">
                 {overtime ? `+${formatClock(left)}` : formatClock(left)}
               </span>
-              <span className={`text-sm ${overtime ? 'text-neutral-800' : 'text-neutral-400'}`}>
+              <span className={`text-sm font-medium ${overtime ? 'text-black/75' : 'text-[#8E8E93]'}`}>
                 {overtime ? 'Pause vorbei, weiter!' : 'Pause'}
               </span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               {!overtime && (
                 <button
-                  className={`${iconButtonClass} bg-neutral-800 tabular-nums text-neutral-100`}
+                  className={`${iconButtonClass} bg-[#2C2C2E] tabular-nums text-white`}
                   type="button"
                   aria-label="15 Sekunden mehr"
                   onClick={() => addSeconds(15)}
@@ -82,12 +90,12 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
                 </button>
               )}
               <button
-                className={`${iconButtonClass} ${overtime ? 'bg-neutral-950/10' : 'bg-neutral-800 text-neutral-100'}`}
+                className={`${iconButtonClass} ${overtime ? 'bg-black/15 text-black' : 'bg-[#2C2C2E] text-white'}`}
                 type="button"
                 aria-label="Pause beenden"
                 onClick={stop}
               >
-                ✕
+                <CloseIcon className="h-5 w-5" />
               </button>
             </div>
           </>
