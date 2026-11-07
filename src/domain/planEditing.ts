@@ -1,4 +1,5 @@
 import type { PlanDayDraft } from './trainingPlan'
+import { EXERCISE_CATALOG } from './exerciseCatalog'
 
 export type PlanDraftError = { day: number; exercise?: number; message: string }
 
@@ -8,7 +9,7 @@ function validRange(min: number | null, max: number | null, limit: number, optio
 }
 
 /** Prüft auch die Übungsseiten, die beim Speichern gerade nicht geöffnet sind. */
-export function validatePlanDraft(days: PlanDayDraft[]): PlanDraftError | null {
+export function validatePlanDraft(days: PlanDayDraft[], restrictToNamedGroup = false): PlanDraftError | null {
   if (days.length === 0) return { day: 0, message: 'Bitte mindestens einen Trainingstag anlegen.' }
   const weekdays = new Set<number>()
   for (const [day, item] of days.entries()) {
@@ -17,10 +18,14 @@ export function validatePlanDraft(days: PlanDayDraft[]): PlanDraftError | null {
     weekdays.add(item.weekday)
     if (item.exercises.length === 0) return { day, message: 'Bitte mindestens eine Übung hinzufügen.' }
     const names = new Set<string>()
+    const group = restrictToNamedGroup && EXERCISE_CATALOG.some(exercise => exercise.group === item.name) ? item.name : null
     for (const [exercise, entry] of item.exercises.entries()) {
       const fail = (message: string): PlanDraftError => ({ day, exercise, message })
       const name = entry.name.trim()
       if (!name || name.length > 100) return fail('Bitte einen Übungsnamen mit 1–100 Zeichen eintragen.')
+      if (group && !EXERCISE_CATALOG.some(exercise => exercise.group === group && exercise.name === name)) {
+        return fail(`Bitte eine Übung aus „${group}“ auswählen oder einen eigenen Tagesnamen verwenden.`)
+      }
       if (names.has(name)) return fail('Jede Übung darf pro Tag nur einmal vorkommen.')
       names.add(name)
       if (!validRange(entry.sets_min, entry.sets_max, 100)) return fail('Sätze prüfen: 1–100, Minimum höchstens Maximum.')

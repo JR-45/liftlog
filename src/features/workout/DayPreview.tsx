@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
 import { formatRange } from '../../domain/sets'
+import { isCardioExercise } from '../../domain/cardio'
 import { loadDay, type PlanEntry } from './api'
 
 function target(entry: PlanEntry): string {
+  if (entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name)) {
+    const minutes = formatRange(entry.duration_min === null ? null : entry.duration_min / 60, entry.duration_max === null ? null : entry.duration_max / 60)
+    return minutes ? `${minutes} Min.` : 'Minuten frei'
+  }
   const sets = formatRange(entry.sets_min, entry.sets_max)
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min, entry.duration_max)

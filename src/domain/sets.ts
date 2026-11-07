@@ -1,13 +1,16 @@
 // Reine Logik ohne React und Datenbank: Eingaben prüfen, Werte formatieren, Gewicht ändern.
 
+import { formatPace, formatSpeed } from './cardio'
+
 export type TrackingType = 'weight_reps' | 'assisted_reps' | 'reps' | 'duration'
 export type DurationUnit = 'seconds' | 'minutes'
 
-export type SetDraft = { weight: string; reps: string; duration: string }
+export type SetDraft = { weight: string; reps: string; duration: string; distance?: string; durationUnit?: DurationUnit; distanceUnit?: 'm' | 'km' }
 export type SetValues = {
   weight_kg: number | null
   reps: number | null
   duration_seconds: number | null
+  distance_km?: number | null
   is_assisted: boolean
   /** Gewicht fürs nächste Mal. Leer heißt: gleiches Gewicht wie dieser Satz. */
   next_weight_kg?: number | null
@@ -35,13 +38,20 @@ function parseNumber(input: string): number {
 
 export function parseSetDraft(draft: SetDraft, tracking: TrackingType, unit: DurationUnit): ParseResult {
   if (tracking === 'duration') {
-    if (draft.duration.trim() === '') return { kind: 'empty' }
+    if (draft.duration.trim() === '') return draft.distance?.trim()
+      ? { kind: 'invalid', message: 'Bitte auch die Dauer eintragen.' } : { kind: 'empty' }
     const value = parseNumber(draft.duration)
     const seconds = Math.round(unit === 'minutes' ? value * 60 : value)
     if (!Number.isFinite(value) || seconds <= 0 || seconds > MAX_DURATION_SECONDS) {
       return { kind: 'invalid', message: 'Dauer prüfen' }
     }
-    return { kind: 'ok', values: { weight_kg: null, reps: null, duration_seconds: seconds, is_assisted: false } }
+    const distance = draft.distance?.trim() ? parseNumber(draft.distance) / (draft.distanceUnit === 'm' ? 1000 : 1) : null
+    if (distance !== null && (!Number.isFinite(distance) || distance <= 0 || distance > 2000 || Math.round(distance * 1000) === 0)) {
+      return { kind: 'invalid', message: 'Strecke prüfen: mehr als 0 und höchstens 2000 km.' }
+    }
+    return { kind: 'ok', values: { weight_kg: null, reps: null, duration_seconds: seconds, is_assisted: false,
+      ...(draft.distance !== undefined ? { distance_km: distance === null ? null : Math.round(distance * 1000) / 1000 } : {}),
+    } }
   }
 
   // Das Gewicht ist vorausgefüllt, ein Satz zählt also erst mit Wiederholungen als eingetragen.
@@ -138,10 +148,14 @@ function weightLabel(set: SetValues): string | null {
 }
 
 /** „60 kg · 12 / 11 / 10“, mit Hilfe „Hilfe 30 kg · 8 / 7“, bei wechselndem Gewicht „60 kg × 12 / 55 kg × 10“. */
-export function formatPerformance(sets: SetValues[], unit: DurationUnit): string {
+export function formatPerformance(sets: SetValues[], unit: DurationUnit, metric: 'pace' | 'speed' = 'pace'): string {
   if (sets.length === 0) return ''
   if (sets[0].duration_seconds !== null) {
-    return sets.flatMap((set) => (set.duration_seconds === null ? [] : [formatDuration(set.duration_seconds, unit)])).join(' / ')
+    return sets.flatMap((set) => {
+      if (set.duration_seconds === null) return []
+      const duration = formatDuration(set.duration_seconds, unit)
+      return [set.distance_km ? `${duration} · ${formatNumber(set.distance_km)} km · ${(metric === 'speed' ? formatSpeed : formatPace)(set.duration_seconds, set.distance_km)}` : duration]
+    }).join(' / ')
   }
   const labels = new Set(sets.map(weightLabel))
   if (labels.size === 1) {

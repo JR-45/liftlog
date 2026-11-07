@@ -165,7 +165,7 @@ export function buildDayHistory(rows: ExportRow[], date: string): DayHistory | n
     const unit = sorted.some((s) => (s.duration_seconds ?? 0) >= 120) ? 'minutes' : 'seconds'
     return {
       name,
-      summary: formatPerformance(sorted, unit),
+      summary: formatPerformance(sorted, unit, name === 'Laufband' ? 'speed' : 'pace'),
     }
   })
 

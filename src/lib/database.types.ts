@@ -127,14 +127,14 @@ isOneToOne: false
                   ]
                 },"sets": {
                   Row: {
-                    "created_at": string,"duration_seconds": number | null,"exercise_id": string,"id": string,"is_assisted": boolean,"next_weight_kg": number | null,"reps": number | null,"set_number": number,"user_id": string,"weight_kg": number | null,"workout_id": string
+                    "created_at": string,"distance_km": number | null,"duration_seconds": number | null,"exercise_id": string,"id": string,"is_assisted": boolean,"next_weight_kg": number | null,"reps": number | null,"set_number": number,"user_id": string,"weight_kg": number | null,"workout_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"duration_seconds"?: number | null,"exercise_id": string,"id"?: string,"is_assisted"?: boolean,"next_weight_kg"?: number | null,"reps"?: number | null,"set_number": number,"user_id"?: string,"weight_kg"?: number | null,"workout_id": string
+                    "created_at"?: string,"distance_km"?: number | null,"duration_seconds"?: number | null,"exercise_id": string,"id"?: string,"is_assisted"?: boolean,"next_weight_kg"?: number | null,"reps"?: number | null,"set_number": number,"user_id"?: string,"weight_kg"?: number | null,"workout_id": string
                   }
                   Update: {
-                    "created_at"?: string,"duration_seconds"?: number | null,"exercise_id"?: string,"id"?: string,"is_assisted"?: boolean,"next_weight_kg"?: number | null,"reps"?: number | null,"set_number"?: number,"user_id"?: string,"weight_kg"?: number | null,"workout_id"?: string
+                    "created_at"?: string,"distance_km"?: number | null,"duration_seconds"?: number | null,"exercise_id"?: string,"id"?: string,"is_assisted"?: boolean,"next_weight_kg"?: number | null,"reps"?: number | null,"set_number"?: number,"user_id"?: string,"weight_kg"?: number | null,"workout_id"?: string
                   }
                   Relationships: [
                     {
@@ -213,7 +213,7 @@ isOneToOne: false
           Functions: {
             "last_performance":
 { Args: { "before_date": string }; Returns: {
-              "duration_seconds": number,"exercise_id": string,"is_assisted": boolean,"next_weight_kg": number,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
+              "distance_km": number,"duration_seconds": number,"exercise_id": string,"is_assisted": boolean,"next_weight_kg": number,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
             }[]
                            },
 "save_training_plan":

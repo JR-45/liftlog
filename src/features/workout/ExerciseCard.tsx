@@ -1,5 +1,7 @@
+import { NumberWheelInput } from '../../components/NumberWheelInput'
 import { useEffect, useRef, useState } from 'react'
 import { progressionHint } from '../../domain/progression'
+import { durationUnitForTarget, isCardioExercise, supportsGps } from '../../domain/cardio'
 import {
   type DurationUnit,
   formatPerformance,
@@ -115,15 +117,16 @@ export function ExerciseCard(props: Props) {
   const exercise = exercises[activeId]
   const weighted = usesWeight(exercise.tracking_type)
   const assisted = exercise.tracking_type === 'assisted_reps'
-  const unit: DurationUnit = entry.duration_min === null ? 'minutes' : 'seconds'
+  const cardio = exercise.tracking_type === 'duration' && isCardioExercise(exercise.name)
+  const unit: DurationUnit = cardio ? 'minutes' : durationUnitForTarget(entry.duration_min)
   const isRounds = entry.sets_min !== entry.sets_max
   const reps = formatRange(entry.reps_min, entry.reps_max)
-  const duration = formatRange(entry.duration_min, entry.duration_max)
+  const duration = formatRange(entry.duration_min === null ? null : entry.duration_min / (unit === 'minutes' ? 60 : 1), entry.duration_max === null ? null : entry.duration_max / (unit === 'minutes' ? 60 : 1))
   const sets = formatRange(entry.sets_min, entry.sets_max)
   const target = reps
     ? `${sets}${isRounds ? ' Runden' : ''} × ${reps}`
     : duration
-      ? `${sets} × ${duration} Sek.`
+      ? `${cardio ? '' : `${sets} × `}${duration} ${unit === 'minutes' ? 'Min.' : 'Sek.'}`
       : 'Dauer frei'
   const last = lastSets.filter((set) => set.exercise_id === activeId)
   const hint = progressionHint({
@@ -300,7 +303,7 @@ export function ExerciseCard(props: Props) {
     <span
       className={`block truncate text-sm tabular-nums ${hint && !done && !isSkipped ? 'font-medium text-accent-ink' : 'text-muted'}`}
     >
-      {isSkipped ? 'Heute übersprungen' : logged.length > 0 ? formatPerformance(logged, unit) : hint && !bodyVisible ? hintText : target}
+      {isSkipped ? 'Heute übersprungen' : logged.length > 0 ? formatPerformance(logged, unit, exercise.name === 'Laufband' ? 'speed' : 'pace') : hint && !bodyVisible ? hintText : target}
     </span>
   )
 
@@ -435,12 +438,12 @@ export function ExerciseCard(props: Props) {
             <label className="flex items-center justify-between gap-3 text-sm font-medium text-foreground/85">
               Schrittweite
               <span className="flex items-center gap-2 text-muted">
-                <input
+                <NumberWheelInput min={0.01} max={99.99}
                   className={`${fieldClass} w-20 text-center tabular-nums`}
                   aria-label="Schrittweite in kg"
                   inputMode="decimal"
                   value={stepText ?? String(exercise.weight_step_kg).replace('.', ',')}
-                  onChange={(event) => setStepText(event.target.value)}
+                  onValueChange={(value) => setStepText(value)}
                   onBlur={handleStepBlur}
                 />
                 kg
@@ -500,7 +503,7 @@ export function ExerciseCard(props: Props) {
 
       <p className="text-sm tabular-nums text-muted">
         {logged.length > 0 && <span className="mr-2 text-muted/75">Vorgabe {target} ·</span>}
-        {last.length > 0 ? `Letztes Mal: ${formatPerformance(last, unit)}` : 'Noch kein letztes Training'}
+        {last.length > 0 ? `Letztes Mal: ${formatPerformance(last, unit, exercise.name === 'Laufband' ? 'speed' : 'pace')}` : 'Noch kein letztes Training'}
       </p>
 
       {hint && !done && (
@@ -512,9 +515,9 @@ export function ExerciseCard(props: Props) {
       {error && bodyVisible && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
 
       <div className="mt-3.5 flex gap-1.5 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
-        <span className="w-4 shrink-0">{isRounds ? 'R' : '#'}</span>
+        {!cardio && <span className="w-4 shrink-0">{isRounds ? 'R' : '#'}</span>}
         {exercise.tracking_type === 'duration' ? (
-          <span className="flex-1">{unit === 'minutes' ? 'Minuten' : 'Sekunden'}</span>
+          <><span className="flex-1">h / min</span>{cardio && <span className="flex-1">Strecke</span>}</>
         ) : (
           <>
             {weighted && <span className="flex-[2]">{assisted ? 'Hilfe (kg)' : 'kg'}</span>}
@@ -524,7 +527,7 @@ export function ExerciseCard(props: Props) {
         <span className={isDetail && entry.sets_max > 1 ? 'w-[5.75rem] shrink-0' : 'w-11 shrink-0'} />
       </div>
 
-      <fieldset disabled={busy} aria-label="Sätze">
+      <fieldset disabled={busy} aria-label={cardio ? 'Cardio-Einheit' : 'Sätze'}>
       <ul>
         {rows.map((setNumber) => {
           const lastSet = last.find((set) => set.set_number === setNumber)
@@ -539,7 +542,11 @@ export function ExerciseCard(props: Props) {
           return (
             <SetRow
               key={`${setKey(activeId, setNumber)}:${rowGeneration}`}
-              label={isRounds ? `Runde ${setNumber}` : `Satz ${setNumber}`}
+              label={cardio ? 'Cardio' : isRounds ? `Runde ${setNumber}` : `Satz ${setNumber}`}
+              distanceEnabled={cardio}
+              metricMode={exercise.name === 'Laufband' ? 'speed' : 'pace'}
+              gpsEnabled={cardio && supportsGps(exercise.name)}
+              legacyUnit={entry.duration_min === null ? 'minutes' : 'seconds'}
               rowNumber={setNumber}
               userId={userId}
               date={today}

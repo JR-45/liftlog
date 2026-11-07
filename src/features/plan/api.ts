@@ -1,4 +1,5 @@
 import type { TrackingType } from '../../domain/sets'
+import { isCardioExercise } from '../../domain/cardio'
 import { supabase } from '../../lib/supabase'
 import { loadPlanDays, type PlanEntry } from '../workout/api'
 import type { PlanDayDraft, PlanExerciseDraft } from '../../domain/trainingPlan'
@@ -29,7 +30,8 @@ export async function loadPlan(): Promise<PlanDayDraft[]> {
         name: entry.exercise.name,
         tracking_type: entry.exercise.tracking_type,
         alternative_exercise_id: entry.alternative_exercise_id,
-        sets_min: entry.sets_min, sets_max: entry.sets_max,
+        sets_min: entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name) ? 1 : entry.sets_min,
+        sets_max: entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name) ? 1 : entry.sets_max,
         reps_min: entry.reps_min, reps_max: entry.reps_max,
         duration_min: entry.duration_min, duration_max: entry.duration_max,
       })),

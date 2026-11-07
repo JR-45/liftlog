@@ -1,3 +1,6 @@
+import { TimeWheelInput } from '../../components/TimeWheelInput'
+import { NumberWheelInput } from '../../components/NumberWheelInput'
+import { DistanceWheelInput } from '../../components/DistanceWheelInput'
 import { useEffect, useState } from 'react'
 import {
   type DurationUnit,
@@ -10,6 +13,8 @@ import {
   usesWeight,
 } from '../../domain/sets'
 import { CheckIcon, PlusIcon } from '../../lib/icons'
+import { formatPace, formatSpeed } from '../../domain/cardio'
+import { GpsTracker } from './GpsTracker'
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
@@ -26,6 +31,10 @@ type Props = {
   setNumber: number
   tracking: TrackingType
   unit: DurationUnit
+  legacyUnit?: DurationUnit
+  distanceEnabled?: boolean
+  gpsEnabled?: boolean
+  metricMode?: 'pace' | 'speed'
   workingWeight: number | null
   saved: SetValues | null
   initialDraft: SetDraft | null
@@ -41,12 +50,13 @@ type Props = {
   onEdit: () => void
 }
 
-function draftFromSaved(saved: SetValues, unit: DurationUnit): SetDraft {
+function draftFromSaved(saved: SetValues, unit: DurationUnit, distanceUnit: 'm' | 'km'): SetDraft {
   const duration = saved.duration_seconds === null ? '' : unit === 'minutes' ? saved.duration_seconds / 60 : saved.duration_seconds
   return {
     weight: saved.weight_kg === null ? '' : String(saved.weight_kg).replace('.', ','),
     reps: saved.reps === null ? '' : String(saved.reps),
     duration: String(duration).replace('.', ','),
+    distance: saved.distance_km == null ? '' : String(saved.distance_km * (distanceUnit === 'm' ? 1000 : 1)).replace('.', ','),
   }
 }
 
@@ -60,6 +70,10 @@ export function SetRow(props: Props) {
     setNumber,
     tracking,
     unit,
+    legacyUnit = unit,
+    distanceEnabled = false,
+    gpsEnabled = false,
+    metricMode = 'pace',
     workingWeight,
     saved,
     initialDraft,
@@ -72,9 +86,17 @@ export function SetRow(props: Props) {
   } = props
 
   // weight === null: Das Feld zeigt das Arbeitsgewicht, z. B. im ersten Training nach dem ersten Satz.
-  const [draft, setDraft] = useState<{ weight: string | null; reps: string; duration: string }>(() => {
-    if (initialDraft) return initialDraft
-    if (saved) return draftFromSaved(saved, unit)
+  const [distanceUnit] = useState<'m' | 'km'>(initialDraft?.distanceUnit ?? (initialDraft ? 'km' : 'm'))
+  const [gpsRunning, setGpsRunning] = useState(false)
+  const [draft, setDraft] = useState<{ weight: string | null; reps: string; duration: string; distance?: string }>(() => {
+    if (initialDraft) {
+      const oldUnit = initialDraft.durationUnit ?? legacyUnit
+      const value = Number(initialDraft.duration.replace(',', '.'))
+      return oldUnit !== unit && initialDraft.duration.trim() && Number.isFinite(value)
+        ? { ...initialDraft, duration: String(unit === 'minutes' ? value / 60 : value * 60).replace('.', ',') }
+        : initialDraft
+    }
+    if (saved) return draftFromSaved(saved, unit, distanceUnit)
     return { weight: plannedWeight === null ? null : String(plannedWeight).replace('.', ','), reps: '', duration: '' }
   })
   const [dirty, setDirty] = useState(initialDraft !== null)
@@ -99,8 +121,11 @@ export function SetRow(props: Props) {
       weight: shownWeight,
       reps: draft.reps,
       duration: draft.duration,
+      distance: draft.distance,
+      distanceUnit,
+      durationUnit: unit,
     })
-  }, [dirty, shownWeight, draft.reps, draft.duration, userId, date, exerciseId, setNumber])
+  }, [dirty, shownWeight, draft.reps, draft.duration, draft.distance, distanceUnit, unit, userId, date, exerciseId, setNumber])
 
   function change(changes: Partial<SetDraft>) {
     setDraft({ ...draft, ...changes })
@@ -118,11 +143,11 @@ export function SetRow(props: Props) {
   function handleRepsIncrement() {
     const current = Number(draft.reps.trim())
     if (draft.reps.trim() !== '' && Number.isInteger(current)) {
-      change({ reps: String(Math.min(999, current + 1)) })
+      change({ reps: String(Math.max(1, Math.min(20, current + 1))) })
       return
     }
     const fromLast = Number(placeholder)
-    change({ reps: String(placeholder !== '' && Number.isInteger(fromLast) && fromLast > 0 ? fromLast : 1) })
+    change({ reps: String(placeholder !== '' && Number.isInteger(fromLast) && fromLast > 0 ? Math.min(20, fromLast) : 1) })
   }
 
   /** Nimmt den Haken zurück. Die Werte bleiben stehen, damit ein weiterer Tipp sie wieder speichert. */
@@ -142,7 +167,9 @@ export function SetRow(props: Props) {
   }
 
   async function handleSave() {
-    const parsed = parseSetDraft({ weight: shownWeight, reps: draft.reps, duration: draft.duration }, tracking, unit)
+    const parsed = parseSetDraft({ weight: shownWeight, reps: draft.reps, duration: draft.duration,
+      ...(tracking === 'duration' && distanceEnabled ? { distance: draft.distance ?? '', distanceUnit } : {}),
+    }, tracking, unit)
     if (parsed.kind === 'invalid') {
       setError(parsed.message)
       return
@@ -169,6 +196,8 @@ export function SetRow(props: Props) {
   }
 
   const isSaved = saved !== null && !dirty
+  const distanceKm = Number(draft.distance?.replace(',', '.')) / (distanceUnit === 'm' ? 1000 : 1)
+  const metric = tracking === 'duration' ? (metricMode === 'speed' ? formatSpeed : formatPace)(Number(draft.duration.replace(',', '.')) * (unit === 'minutes' ? 60 : 1), distanceKm) : null
 
   return (
     <li className="mt-2">
@@ -177,23 +206,26 @@ export function SetRow(props: Props) {
           isSaved ? 'bg-success/10' : ''
         }`}
       >
-        <span
+        {!distanceEnabled && <span
           className={`w-4 shrink-0 text-center text-xs font-semibold tabular-nums ${
             isSaved ? 'text-success' : 'text-muted'
           }`}
         >
           {rowNumber}
-        </span>
+        </span>}
 
         {tracking === 'duration' ? (
-          <input
-            className={inputClass}
-            aria-label={`${label} Dauer in ${unit === 'minutes' ? 'Minuten' : 'Sekunden'}`}
-            inputMode="decimal"
-            placeholder={placeholder}
-            value={draft.duration}
-            onChange={(event) => change({ duration: event.target.value })}
+          <><TimeWheelInput
+            className={`${inputClass} flex-1`}
+            aria-label={`${label} Dauer`}
+            valueSeconds={draft.duration.trim() && Number.isFinite(Number(draft.duration.replace(',', '.'))) ? Number(draft.duration.replace(',', '.')) * (unit === 'minutes' ? 60 : 1) : null}
+            placeholderSeconds={placeholder ? Number(placeholder.replace(',', '.')) * (unit === 'minutes' ? 60 : 1) : null}
+            disabled={gpsRunning}
+            onSecondsChange={seconds => change({ duration: seconds === null ? '' : String(seconds / (unit === 'minutes' ? 60 : 1)) })}
           />
+          {distanceEnabled && <DistanceWheelInput className={`${inputClass} flex-1`} aria-label={`${label} Strecke`}
+            disabled={gpsRunning} placeholder="Strecke" valueKm={draft.distance?.trim() && Number.isFinite(distanceKm) ? distanceKm : null}
+            onKilometersChange={kilometers => change({ distance: kilometers === null ? '' : String(distanceUnit === 'm' ? Math.round(kilometers * 1000) : kilometers) })} />}</>
         ) : (
           <>
             {usesWeight(tracking) && (
@@ -207,12 +239,12 @@ export function SetRow(props: Props) {
                 >
                   −
                 </button>
-                <input
+                <NumberWheelInput min={0} max={9999.99}
                   className={inputClass}
                   aria-label={`${label} ${weightName} in kg`}
                   inputMode="decimal"
                   value={shownWeight}
-                  onChange={(event) => change({ weight: event.target.value })}
+                  onValueChange={(value) => change({ weight: value })}
                 />
                 <button
                   className={stepClass}
@@ -225,13 +257,13 @@ export function SetRow(props: Props) {
               </div>
             )}
             <div className="flex min-w-0 flex-1 items-center gap-1">
-              <input
+              <NumberWheelInput min={1} max={20}
                 className={inputClass}
                 aria-label={`${label} Wiederholungen`}
                 inputMode="numeric"
                 placeholder={placeholder}
                 value={draft.reps}
-                onChange={(event) => change({ reps: event.target.value })}
+                onValueChange={(value) => change({ reps: value })}
               />
               <button
                 className={`${stepClass} flex items-center justify-center`}
@@ -254,12 +286,17 @@ export function SetRow(props: Props) {
           type="button"
           aria-label={isSaved ? `${label} gespeichert, Haken entfernen` : `${label} speichern`}
           aria-pressed={isSaved}
-          disabled={busy}
+          disabled={busy || gpsRunning}
           onClick={() => void (isSaved ? handleUncheck() : handleSave())}
         >
           <CheckIcon className="h-5 w-5 stroke-[2.5]" />
         </button>
       </div>
+      {metric && <p className="mt-1 text-right text-xs font-medium tabular-nums text-accent-ink" aria-live="polite">{metricMode === 'speed' ? 'Geschwindigkeit' : 'Pace'}: {metric}</p>}
+      {gpsEnabled && <GpsTracker onRunningChange={setGpsRunning} onMeasured={(meters, seconds) => change({
+        distance: String(Math.round(meters) / (distanceUnit === 'km' ? 1000 : 1)).replace('.', ','),
+        duration: String(unit === 'minutes' ? Number((seconds / 60).toFixed(3)) : seconds).replace('.', ','),
+      })} />}
       {error && <p role="alert" className="mt-1 text-sm text-danger">{error}</p>}
     </li>
   )
