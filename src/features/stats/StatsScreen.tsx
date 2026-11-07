@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { buildMonth, type CalendarDay, type DayStatus, monthIndex } from '../../domain/calendar'
+import { buildMonth, type CalendarDay, type DayMarkKind, type DayStatus, monthIndex } from '../../domain/calendar'
 import type { ExportRow } from '../../domain/export'
 import { buildDayHistory } from '../../domain/progress'
 import { localDateString } from '../../domain/sets'
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '../../lib/icons'
 import { loadTrainedDates, type PlanDay } from '../workout/api'
-import { loadExportRows } from './api'
+import { deleteDayMark, loadDayMarks, loadExportRows, saveDayMark } from './api'
 import { ExerciseProgressCard } from './ExerciseProgressCard'
 
 const WEEKDAY_HEADERS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -15,11 +15,18 @@ const DAY_FORMAT = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'lo
 const STATUS_LABEL: Record<DayStatus, string> = {
   trained: 'trainiert',
   missed: 'nicht trainiert',
+  marked: 'markiert',
   rest: 'Ruhetag',
   today: 'heute',
   future: 'noch offen',
   before_start: 'vor dem Start',
 }
+
+const MARKS: { kind: DayMarkKind; label: string; short: string }[] = [
+  { kind: 'sick', label: 'Krank', short: 'K' },
+  { kind: 'vacation', label: 'Urlaub', short: 'U' },
+  { kind: 'moved', label: 'Verschoben', short: '→' },
+]
 
 type Props = { today: string; startDate: string; planDays: PlanDay[] }
 
@@ -32,12 +39,14 @@ function DayCell({
   selected: boolean
   onSelect: (date: string) => void
 }) {
-  const label = `${DAY_FORMAT.format(new Date(`${cell.date}T12:00:00`))}: ${STATUS_LABEL[cell.status]}`
+  const mark = MARKS.find((item) => item.kind === cell.mark)
+  const label = `${DAY_FORMAT.format(new Date(`${cell.date}T12:00:00`))}: ${mark?.label ?? STATUS_LABEL[cell.status]}`
   const style: Record<DayStatus, string> = {
     trained: selected
       ? 'bg-[#FFD60A] font-bold text-black ring-2 ring-white shadow-sm'
       : 'bg-[#30D158] font-semibold text-black shadow-sm shadow-[#30D158]/20',
     missed: 'bg-[#FF453A]/15 text-[#FF453A]',
+    marked: 'bg-[#3A3A3C] font-medium text-white',
     rest: 'text-[#8E8E93]',
     today: 'ring-2 ring-[#FFD60A] font-semibold text-white',
     future: 'text-[#8E8E93]/40',
@@ -59,14 +68,41 @@ function DayCell({
     )
   }
 
+  const content = (
+    <>
+      <span className="leading-none">{cell.day}</span>
+      {cell.status === 'missed' && <CloseIcon className="mt-0.5 h-3.5 w-3.5" />}
+      {mark && (
+        <span className="mt-0.5 text-xs leading-none" aria-hidden="true">
+          {mark.short}
+        </span>
+      )}
+    </>
+  )
+
+  if (cell.canMark) {
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={selected}
+        onClick={() => onSelect(cell.date)}
+        className={`flex aspect-square flex-col items-center justify-center rounded-xl text-sm tabular-nums transition-transform active:scale-95 ${style[cell.status]} ${
+          selected ? 'ring-2 ring-white' : ''
+        }`}
+      >
+        {content}
+      </button>
+    )
+  }
+
   return (
     <div
       role="img"
       aria-label={label}
       className={`flex aspect-square flex-col items-center justify-center rounded-xl text-sm tabular-nums ${style[cell.status]}`}
     >
-      <span className="leading-none">{cell.day}</span>
-      {cell.status === 'missed' && <CloseIcon className="mt-0.5 h-3.5 w-3.5" />}
+      {content}
     </div>
   )
 }
@@ -75,11 +111,15 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
   const currentIndex = monthIndex(today)
   const firstIndex = Math.min(monthIndex(startDate), currentIndex)
   const [shownIndex, setShownIndex] = useState(currentIndex)
-  const [loaded, setLoaded] = useState<{ index: number; dates: Set<string> } | null>(null)
+  const [loaded, setLoaded] = useState<{ index: number; dates: Set<string>; marks: Map<string, DayMarkKind> } | null>(
+    null,
+  )
   const [failedIndex, setFailedIndex] = useState<number | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [historyRows, setHistoryRows] = useState<ExportRow[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [markBusy, setMarkBusy] = useState(false)
+  const [markError, setMarkError] = useState<string | null>(null)
 
   const year = Math.floor(shownIndex / 12)
   const month = shownIndex % 12
@@ -102,10 +142,10 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
     let cancelled = false
     const from = localDateString(new Date(year, month, 1))
     const to = localDateString(new Date(year, month + 1, 0))
-    loadTrainedDates(from, to)
-      .then((dates) => {
+    Promise.all([loadTrainedDates(from, to), loadDayMarks(from, to)])
+      .then(([dates, marks]) => {
         if (cancelled) return
-        setLoaded({ index: shownIndex, dates })
+        setLoaded({ index: shownIndex, dates, marks })
         setFailedIndex(null)
       })
       .catch(() => {
@@ -116,18 +156,49 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
     }
   }, [shownIndex, year, month, attempt])
 
-  const dates = loaded?.index === shownIndex ? loaded.dates : null
+  const current = loaded?.index === shownIndex ? loaded : null
   const calendar = useMemo(() => {
-    if (!dates) return null
+    if (!current) return null
     return buildMonth({
       year,
       month,
       today,
       startDate,
-      trainedDates: dates,
+      trainedDates: current.dates,
+      marks: current.marks,
       plannedWeekdays: new Set(planDays.map((day) => day.weekday)),
     })
-  }, [dates, year, month, today, startDate, planDays])
+  }, [current, year, month, today, startDate, planDays])
+
+  const selectedCell = calendar?.weeks.flat().find((cell) => cell?.date === selectedDate) ?? null
+
+  function changeMonth(step: 1 | -1) {
+    setSelectedDate(null)
+    setMarkError(null)
+    setShownIndex((index) => index + step)
+  }
+
+  /** Speichert zuerst und ändert die Anzeige nur bei Erfolg. null entfernt die Markierung. */
+  async function applyMark(date: string, kind: DayMarkKind | null) {
+    setMarkBusy(true)
+    setMarkError(null)
+    try {
+      if (kind) await saveDayMark(date, kind)
+      else await deleteDayMark(date)
+      setLoaded((state) => {
+        if (!state) return state
+        const marks = new Map(state.marks)
+        if (kind) marks.set(date, kind)
+        else marks.delete(date)
+        return { ...state, marks }
+      })
+      setSelectedDate(null)
+    } catch {
+      setMarkError('Das hat nicht geklappt. Versuch es noch einmal.')
+    } finally {
+      setMarkBusy(false)
+    }
+  }
 
   return (
     <section className="mt-5">
@@ -142,7 +213,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
               type="button"
               aria-label="Vorheriger Monat"
               disabled={shownIndex <= firstIndex}
-              onClick={() => setShownIndex((current) => current - 1)}
+              onClick={() => changeMonth(-1)}
             >
               <ChevronLeftIcon className="h-5 w-5" />
             </button>
@@ -152,7 +223,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
               type="button"
               aria-label="Nächster Monat"
               disabled={shownIndex >= currentIndex}
-              onClick={() => setShownIndex((current) => current + 1)}
+              onClick={() => changeMonth(1)}
             >
               <ChevronRightIcon className="h-5 w-5" />
             </button>
@@ -188,13 +259,53 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                       key={cell.date}
                       cell={cell}
                       selected={selectedDate === cell.date}
-                      onSelect={(date) => setSelectedDate((current) => (current === date ? null : date))}
+                      onSelect={(date) => {
+                        setMarkError(null)
+                        setSelectedDate((current) => (current === date ? null : date))
+                      }}
                     />
                   ) : (
                     <span key={`blank-${index}`} />
                   ),
                 )}
               </div>
+
+              {selectedCell?.canMark && (
+                <div className="mt-3 rounded-xl bg-[#2C2C2E] p-3">
+                  <p className="text-sm font-semibold text-white">
+                    {DAY_FORMAT.format(new Date(`${selectedCell.date}T12:00:00`))} markieren
+                  </p>
+                  <div className="mt-2 grid grid-cols-3 gap-2" role="group" aria-label="Markierung wählen">
+                    {MARKS.map((mark) => (
+                      <button
+                        key={mark.kind}
+                        className={`min-h-11 rounded-xl px-1 text-sm font-medium transition-transform active:scale-95 disabled:opacity-50 ${
+                          selectedCell.mark === mark.kind
+                            ? 'bg-[#FFD60A] font-semibold text-black'
+                            : 'bg-[#3A3A3C] text-white'
+                        }`}
+                        type="button"
+                        aria-pressed={selectedCell.mark === mark.kind}
+                        disabled={markBusy}
+                        onClick={() => void applyMark(selectedCell.date, mark.kind)}
+                      >
+                        {mark.label}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedCell.mark && (
+                    <button
+                      className="mt-2 min-h-11 w-full text-sm font-medium text-[#FFD60A] disabled:opacity-50"
+                      type="button"
+                      disabled={markBusy}
+                      onClick={() => void applyMark(selectedCell.date, null)}
+                    >
+                      Markierung entfernen
+                    </button>
+                  )}
+                  {markError && <p role="alert" className="mt-2 text-sm text-[#FF453A]">{markError}</p>}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -219,10 +330,16 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                 </p>
               </div>
             </div>
+            {calendar.marked > 0 && (
+              <p className="mt-3 text-sm font-medium text-[#8E8E93]" data-testid="marked-count">
+                {calendar.marked === 1 ? '1 Tag markiert' : `${calendar.marked} Tage markiert`}
+              </p>
+            )}
             <p className="mt-3 text-xs leading-relaxed text-[#8E8E93]">
-              Tippe auf einen grünen Trainingstag im Kalender, um deine Sätze von diesem Tag zu sehen.{' '}
+              Tippe auf einen grünen Trainingstag im Kalender, um deine Sätze von diesem Tag zu sehen. Einen offenen
+              Trainingstag kannst du antippen und als krank, Urlaub oder verschoben markieren.{' '}
               <CloseIcon className="mr-0.5 inline h-3.5 w-3.5 align-[-2px] text-[#FF453A]" /> zählt nur an deinen
-              Trainingstagen.
+              Trainingstagen, heute erst ab morgen.
             </p>
 
             {selectedDate && (() => {

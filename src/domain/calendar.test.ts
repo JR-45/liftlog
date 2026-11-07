@@ -78,6 +78,61 @@ describe('buildMonth', () => {
   })
 })
 
+describe('Markierungen', () => {
+  const cell = (month: CalendarMonth, day: number) => month.weeks.flat().find((item) => item?.day === day)
+
+  it('zählt einen markierten Tag nicht als verpasst', () => {
+    const month = buildMonth({ ...base, marks: new Map([['2026-11-04', 'sick']]) })
+    expect(status(month, 4)).toBe('marked')
+    expect(cell(month, 4)?.mark).toBe('sick')
+    expect(month.marked).toBe(1)
+    expect(month.missed).toBe(4)
+  })
+
+  it('lässt ein Training vor der Markierung gehen', () => {
+    const month = buildMonth({
+      ...base,
+      trainedDates: new Set(['2026-11-04']),
+      marks: new Map([['2026-11-04', 'moved']]),
+    })
+    expect(status(month, 4)).toBe('trained')
+    expect(cell(month, 4)?.mark).toBeNull()
+    expect(month.marked).toBe(0)
+    expect(month.trained).toBe(1)
+  })
+
+  it('markiert auch heute und die Zukunft', () => {
+    const marks = new Map([
+      ['2026-11-05', 'vacation'],
+      ['2026-11-09', 'vacation'],
+    ] as const)
+    const month = buildMonth({ ...base, today: '2026-11-05', marks })
+    expect(status(month, 5)).toBe('marked')
+    expect(status(month, 9)).toBe('marked')
+  })
+
+  it('erlaubt das Markieren nur an offenen Trainingstagen', () => {
+    const month = buildMonth({
+      ...base,
+      startDate: '2026-11-02',
+      trainedDates: new Set(['2026-11-02']),
+      marks: new Map([['2026-11-04', 'sick']]),
+    })
+    expect(cell(month, 1)?.canMark).toBe(false) // vor dem Start
+    expect(cell(month, 2)?.canMark).toBe(false) // trainiert
+    expect(cell(month, 3)?.canMark).toBe(false) // Ruhetag
+    expect(cell(month, 4)?.canMark).toBe(true) // markiert
+    expect(cell(month, 5)?.canMark).toBe(true) // verpasst
+    expect(cell(month, 7)?.canMark).toBe(false) // heute, aber Ruhetag
+    expect(cell(month, 8)?.canMark).toBe(true) // Zukunft, Trainingstag
+    expect(cell(month, 10)?.canMark).toBe(false) // Zukunft, Ruhetag
+  })
+
+  it('erlaubt heute an einem Trainingstag', () => {
+    expect(cell(buildMonth({ ...base, today: '2026-11-05' }), 5)?.canMark).toBe(true)
+  })
+})
+
 describe('monthIndex', () => {
   it('zählt über den Jahreswechsel hinweg', () => {
     expect(monthIndex('2027-01-15') - monthIndex('2026-12-31')).toBe(1)

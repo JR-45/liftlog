@@ -41,6 +41,7 @@ Local env: `.env.local` (gitignored) with `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 **Database** (`supabase/migrations/`, append-only: add a new timestamped migration, never edit old ones):
 - Chain: `exercises` → `plan_days` (one per weekday, 0 = Sunday) → `plan_exercises` (targets, optional alternative exercise) → `workouts` (unique per plan day + date) → `sets` (unique per workout + exercise + set number).
+- `day_marks` (one per user + day, `kind` is `sick`, `vacation` or `moved`) keeps a calendar day from counting as missed. A saved workout on that day takes precedence.
 - Security model: `anon` has no grants, every table has an owner-only RLS policy, `user_id` defaults to `auth.uid()` (the frontend never sends it), and **composite FKs `(id, user_id)`** guarantee rows only reference rows of the same user. Keep this pattern for new tables. `supabase/tests/rls.test.sql` checks RLS is enabled on every table in `public`.
 - RPCs are `security invoker` with `set search_path = ''`, and `execute` is revoked from `public` and `anon`. `seed_default_plan()` is idempotent and is called on every load to create the default plan on first login. `last_performance(before_date)` returns the sets from the most recent previous workout per exercise. Changing a function's return type requires `drop function` + `create`.
 
