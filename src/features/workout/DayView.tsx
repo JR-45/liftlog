@@ -2,16 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import { dayProgress } from '../../domain/dayProgress'
 import { countLoggedSets, setKey, type SetValues } from '../../domain/sets'
 import { summarizeWorkout } from '../../domain/summary'
-import { TrophyIcon } from '../../lib/icons'
+import { estimateMinutes, formatElapsed } from '../../domain/motivation'
+import { StopwatchIcon, TrophyIcon } from '../../lib/icons'
 import { trainingSetCount } from '../../domain/planEditing'
 import { readSkippedEntries, writeSkippedEntries } from './drafts'
 import { DESKTOP_QUERY, useMediaQuery } from '../../lib/useMediaQuery'
-import { type DayData, ensureWorkout, type Exercise, loadDay, type PlanEntry } from './api'
+import { type DayData, ensureWorkout, type Exercise, loadDay, type PlanEntry, setWorkoutFinished } from './api'
 import { ExerciseCard } from './ExerciseCard'
 import { WorkoutSummary } from './WorkoutSummary'
 
 type SavedSets = Record<string, SetValues>
-type Props = { planDayId: string; userId: string; today: string; onSetLogged: () => void }
+type Props = {
+  planDayId: string
+  userId: string
+  today: string
+  /** Name des Trainingstags, z. B. „Oberkörper“. */
+  dayName: string
+  /** Ob der gezeigte Tag heute ist. Sonst steht der Wochentag in der Karte. */
+  dayLabel: string
+  restSeconds: number
+  onSetLogged: () => void
+}
 
 function entryIds(entry: PlanEntry): string[] {
   return entry.alternative ? [entry.exercise.id, entry.alternative.id] : [entry.exercise.id]
@@ -50,7 +61,7 @@ function initialActiveId(entry: PlanEntry, saved: SavedSets): string {
   return usedAlternative && !usedMain ? alternative.id : exercise.id
 }
 
-export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
+export function DayView({ planDayId, userId, today, dayName, dayLabel, restSeconds, onSetLogged }: Props) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [day, setDay] = useState<DayData | null>(null)
   const [savedSets, setSavedSets] = useState<SavedSets>({})
@@ -65,6 +76,18 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   const workoutId = useRef<string | null>(null)
   // Immer der neueste Stand, auch wenn mehrere Sätze kurz nacheinander gespeichert werden.
   const latestSaved = useRef<SavedSets>({})
+  // Stoppuhr: Start ist die Anlage des Workouts, Ende der Abschluss. Beides liegt in der Datenbank.
+  const [startedAt, setStartedAt] = useState<number | null>(null)
+  const [finishedAt, setFinishedAt] = useState<number | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (startedAt === null || finishedAt !== null) return
+    const tick = () => setNow(Date.now())
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [startedAt, finishedAt])
 
   useEffect(() => {
     let cancelled = false
@@ -74,6 +97,8 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         const saved = Object.fromEntries(data.todaySets.map((set) => [setKey(set.exercise_id, set.set_number), set]))
         const all = data.entries.flatMap((entry) => (entry.alternative ? [entry.exercise, entry.alternative] : [entry.exercise]))
         workoutId.current = data.workoutId
+        setStartedAt(data.workoutStartedAt ? Date.parse(data.workoutStartedAt) : null)
+        setFinishedAt(data.workoutFinishedAt ? Date.parse(data.workoutFinishedAt) : null)
         latestSaved.current = saved
         setSavedSets(saved)
         setExercises(Object.fromEntries(all.map((exercise) => [exercise.id, exercise])))
@@ -93,7 +118,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
 
   // Das Workout entsteht erst mit dem ersten gespeicherten Satz. Bloßes Ansehen legt nichts an.
   async function getWorkoutId(): Promise<string> {
-    workoutId.current ??= await ensureWorkout(planDayId, today)
+    if (workoutId.current === null) {
+      const workout = await ensureWorkout(planDayId, today)
+      workoutId.current = workout.id
+      setStartedAt((current) => current ?? Date.parse(workout.startedAt))
+    }
     return workoutId.current
   }
 
@@ -117,6 +146,15 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     setExercises((current) => ({ ...current, [exerciseId]: { ...current[exerciseId], ...changes } }))
   }
 
+  /** Sind alle Übungen erledigt oder übersprungen, stoppt die Stoppuhr von selbst. */
+  function stopIfDone(saved: SavedSets, skippedNow: ReadonlySet<string>) {
+    if (!day || finishedAt !== null || workoutId.current === null) return
+    if (!day.entries.every((entry) => isDone(entry, saved) || skippedNow.has(entry.id))) return
+    const end = Date.now()
+    setFinishedAt(end)
+    setWorkoutFinished(workoutId.current, new Date(end).toISOString()).catch(() => setFinishedAt(null))
+  }
+
   function handleSkipChange(entryId: string, skip: boolean) {
     if (!day) return
     const next = new Set(skipped)
@@ -124,6 +162,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     else next.delete(entryId)
     setSkipped(next)
     writeSkippedEntries(userId, today, next)
+    stopIfDone(latestSaved.current, next)
     if (skip && openId === entryId) {
       const index = day.entries.findIndex((entry) => entry.id === entryId)
       const nextId = nextOpenEntry(day.entries, latestSaved.current, index, next)
@@ -143,6 +182,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     setSavedSets(next)
 
     if (!values || !day) return
+
     const index = day.entries.findIndex((entry) => entryIds(entry).includes(exerciseId))
     const entry = day.entries[index]
     if (!entry) return
@@ -170,6 +210,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.
     const trainingDone = day.entries.every((current) => isDone(current, next) || nowSkipped.has(current.id))
     if (!(key in previous) && !trainingDone) onSetLogged()
+    if (trainingDone) stopIfDone(next, nowSkipped)
   }
 
   if (failed) {
@@ -241,6 +282,123 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     )
   }
 
+  const nextId = finished ? null : nextOpenEntry(day.entries, savedSets, -1, skipped)
+  const plannedSets = day.entries
+    .filter((entry) => !skipped.has(entry.id))
+    .reduce((sum, entry) => sum + setCountFor(entry, savedSets), 0)
+
+  /**
+   * Öffnet die nächste offene Übung, scrollt zu ihr und lässt sie kurz aufleuchten.
+   * Meist ist sie schon offen, ohne Scrollen und Leuchten passiert dann scheinbar nichts.
+   */
+  async function handleStart() {
+    // Legt das Workout an und startet damit die Stoppuhr. Scheitert das, startet sie mit dem ersten Satz.
+    getWorkoutId().catch(() => {})
+    if (!nextId) return
+    setOpenId(nextId)
+    // Erst nach dem Aufklappen scrollen, sonst verschiebt die Animation das Ziel.
+    setTimeout(() => {
+      const target = [...document.querySelectorAll<HTMLElement>(`[data-entry="${nextId}"]`)].find(
+        (element) => element.offsetParent !== null,
+      )
+      if (!target) return
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      target.scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'auto' })
+      target.classList.remove('start-pulse')
+      void target.offsetWidth // Startet die Animation auch beim zweiten Klick neu.
+      target.classList.add('start-pulse')
+    }, 320)
+  }
+
+  async function handleStop() {
+    if (workoutId.current === null || finishedAt !== null) return
+    const end = Date.now()
+    setFinishedAt(end)
+    try {
+      await setWorkoutFinished(workoutId.current, new Date(end).toISOString())
+    } catch {
+      setFinishedAt(null)
+    }
+  }
+
+  /** Nimmt ein versehentliches „Beenden“ zurück. Die Uhr läuft ab dem ursprünglichen Start weiter. */
+  async function handleResume() {
+    if (workoutId.current === null || finishedAt === null) return
+    const previous = finishedAt
+    setFinishedAt(null)
+    try {
+      await setWorkoutFinished(workoutId.current, null)
+    } catch {
+      setFinishedAt(previous)
+    }
+  }
+
+  const running = startedAt !== null && finishedAt === null
+  const elapsed = startedAt === null ? 0 : (finishedAt ?? now) - startedAt
+  // Große Stoppuhr rechts oben in der Karte.
+  const stopwatch = (
+    <div className="shrink-0 text-right" role="timer" aria-label={`Trainingsdauer ${formatElapsed(elapsed)}`}>
+      <p
+        className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${
+          running ? 'text-neon' : 'text-muted'
+        }`}
+      >
+        <StopwatchIcon className="h-3.5 w-3.5" />
+        {running ? 'Läuft' : finishedAt !== null ? 'Dauer' : 'Stoppuhr'}
+      </p>
+      <p
+        className={`mt-1 font-display text-5xl font-extrabold tabular-nums leading-none lg:text-6xl ${
+          running ? 'text-foreground' : finishedAt !== null ? 'text-success' : 'text-muted/60'
+        }`}
+      >
+        {formatElapsed(elapsed)}
+      </p>
+    </div>
+  )
+
+  const ended = finishedAt !== null
+  const hero = (
+    <section className="hero-card relative mt-4 overflow-hidden rounded-3xl border border-neon/30 bg-surface p-5 lg:max-w-[62.5rem] lg:p-7">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-neon">{dayLabel}</p>
+          <h2 className="mt-1 text-4xl text-foreground [overflow-wrap:break-word] lg:text-5xl">{dayName}</h2>
+        </div>
+        {stopwatch}
+      </div>
+      <p className="mt-1.5 text-sm font-medium text-muted">
+        {total} Übungen · {plannedSets} Sätze · ca. {estimateMinutes(plannedSets, restSeconds)} Min.
+      </p>
+      <div className="mt-4">
+        {finished ? (
+          <p className="inline-flex min-h-14 items-center gap-2 font-display text-2xl font-extrabold uppercase text-success">
+            <TrophyIcon className="h-6 w-6" /> Training geschafft
+          </p>
+        ) : ended ? (
+          <div className="flex min-h-14 flex-wrap items-center justify-between gap-3">
+            <p className="font-display text-2xl font-extrabold uppercase text-foreground">Training beendet</p>
+            <button type="button" onClick={() => void handleResume()} className="min-h-11 rounded-xl px-3 text-sm font-semibold text-neon underline">
+              Fortsetzen
+            </button>
+          </div>
+        ) : running ? (
+          // Derselbe Button stoppt das Training, sobald die Uhr läuft.
+          <button
+            type="button"
+            onClick={() => void handleStop()}
+            className="min-h-14 w-full rounded-2xl bg-danger-fill px-4 font-display text-lg font-extrabold uppercase tracking-wide text-white shadow-[0_6px_24px_-6px_var(--color-danger-fill)] active:scale-[0.98] lg:w-auto lg:px-10"
+          >
+            ■ Training beenden
+          </button>
+        ) : (
+          <button type="button" onClick={() => void handleStart()} className="bg-neon min-h-14 w-full rounded-2xl px-4 text-black lg:w-auto lg:px-10">
+            ▶ Training starten
+          </button>
+        )}
+      </div>
+    </section>
+  )
+
   const progress = (
     <div className="apple-glass sticky top-0 z-10 -mx-4 mt-2 border-b border-line/[0.06] px-4 py-2.5 md:-mx-6 md:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:bg-surface lg:px-4">
       <div className="flex items-center justify-between">
@@ -286,7 +444,9 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
 
   if (isDesktop) {
     return (
-      <div className="mt-3 grid grid-cols-[minmax(0,21rem)_minmax(0,40rem)] items-start gap-6">
+      <>
+      {hero}
+      <div className="mt-4 grid grid-cols-[minmax(0,21rem)_minmax(0,40rem)] items-start gap-6">
         <div>
           {progress}
           <ul className="mt-3 space-y-2.5">{day.entries.map((entry) => card(entry, 'summary'))}</ul>
@@ -304,11 +464,13 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
           <WorkoutSummary summary={summary} finished={finished} />
         </div>
       </div>
+      </>
     )
   }
 
   return (
     <>
+      {hero}
       {progress}
       <ul className="mt-3 space-y-2.5">{day.entries.map((entry) => card(entry, 'stacked'))}</ul>
       {summary.totalSets > 0 && (

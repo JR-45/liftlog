@@ -190,3 +190,20 @@ button.bg-neon:not(:disabled):active { transform: scale(0.98); }
 @media (prefers-color-scheme: light) {
   .text-neon { color: var(--color-accent-ink); }
 }
+
+/* Hero-Karte fürs heutige Training: Cyan-Glow von oben rechts. */
+.hero-card {
+  background-image: radial-gradient(ellipse 70% 90% at 100% 0%, rgb(24 224 255 / 0.22), transparent 65%);
+  box-shadow: 0 18px 50px -24px rgb(24 224 255 / 0.55);
+}
+
+/* Kurzes Aufleuchten der Übung nach „Training starten“. */
+.start-pulse { animation: start-pulse 1.2s ease-out; }
+@keyframes start-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(24 224 255 / 0.9); border-color: var(--color-neon); }
+  70% { box-shadow: 0 0 0 14px rgb(24 224 255 / 0); border-color: var(--color-neon); }
+  100% { box-shadow: 0 0 0 0 rgb(24 224 255 / 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-pulse { animation: none; outline: 2px solid var(--color-neon); outline-offset: 2px; }
+}

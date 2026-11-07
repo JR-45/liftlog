@@ -4,8 +4,10 @@ import { DayView } from './DayView'
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
-export function TrainingDays({ today, userId, planDays, onSetLogged }: {
-  today: string; userId: string; planDays: PlanDay[]; onSetLogged: () => void
+const WEEKDAY_NAMES = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+
+export function TrainingDays({ today, userId, planDays, restSeconds, onSetLogged }: {
+  today: string; userId: string; planDays: PlanDay[]; restSeconds: number; onSetLogged: () => void
 }) {
   const [pickedDay, setPickedDay] = useState<{ date: string; weekday: number } | null>(null)
   const currentWeekday = new Date(`${today}T12:00:00`).getDay()
@@ -23,8 +25,8 @@ export function TrainingDays({ today, userId, planDays, onSetLogged }: {
       </button>)}
     </nav>
     {plan ? <>
-      <h2 className="mt-5 text-xl font-bold tracking-tight text-foreground">{plan.name}</h2>
-      <DayView key={`${plan.id}:${today}`} planDayId={plan.id} userId={userId} today={today} onSetLogged={onSetLogged} />
+      <DayView key={`${plan.id}:${today}`} planDayId={plan.id} userId={userId} today={today} dayName={plan.name}
+        dayLabel={selected === currentWeekday ? 'Heute' : WEEKDAY_NAMES[selected]} restSeconds={restSeconds} onSetLogged={onSetLogged} />
     </> : <div className="mt-12 rounded-2xl border border-line/[0.08] bg-surface px-6 py-12 text-center">
       <p className="text-lg font-semibold text-foreground">{selected === currentWeekday ? 'Heute ist Ruhetag' : 'An diesem Tag ist Ruhetag'}</p>
       <p className="mt-1 text-sm text-muted">Oben kannst du trotzdem einen Trainingstag wählen.</p>

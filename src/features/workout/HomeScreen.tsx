@@ -9,7 +9,9 @@ import { loadProfileHeader } from '../profile/api'
 import { ProfileScreen } from '../profile/ProfileScreen'
 import { StatsScreen } from '../stats/StatsScreen'
 import { PlanEditor } from '../plan/PlanEditor'
-import { loadPlanDays, type PlanDay } from './api'
+import { loadPlanDays, loadTrainedDates, type PlanDay } from './api'
+import { weekStreak } from '../../domain/motivation'
+import { FlameIcon } from '../../lib/icons'
 import { WeekPlanning } from './WeekPlanning'
 import { TrainingDays } from './TrainingDays'
 import { clearDrafts } from './drafts'
@@ -91,6 +93,28 @@ export function HomeScreen({ session }: { session: Session }) {
   }, [userId])
   // Liegt hier und nicht beim Tag, damit die Pause beim Wechsel von Tag oder Tab weiterläuft.
   const restTimer = useRestTimer()
+  const [trainedDates, setTrainedDates] = useState<ReadonlySet<string>>(new Set())
+
+  // Trainingstage des letzten Jahres für die Streak. Ohne Daten bleibt die Flamme einfach weg.
+  useEffect(() => {
+    let cancelled = false
+    const from = new Date(`${today}T12:00:00`)
+    from.setFullYear(from.getFullYear() - 1)
+    loadTrainedDates(localDateString(from), today)
+      .then((dates) => {
+        if (!cancelled) setTrainedDates(dates)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [userId, today])
+
+  /** Startet die Pause und zählt den heutigen Tag sofort für die Streak mit. */
+  function handleSetLogged() {
+    restTimer.start()
+    setTrainedDates((current) => (current.has(today) ? current : new Set([...current, today])))
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -148,6 +172,16 @@ export function HomeScreen({ session }: { session: Session }) {
   const planArea = tab === 'plan' || (tab === 'training' && planDays?.length === 0)
   const editingPlan = planArea && (planDays?.length === 0 || planMode === 'template')
 
+  const streak = weekStreak(trainedDates, today)
+  const streakChip = streak > 0 && (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-neon/15 px-2.5 py-1 font-display text-base font-extrabold uppercase tracking-wide text-neon"
+      aria-label={`${streak} ${streak === 1 ? 'Woche' : 'Wochen'} am Stück trainiert`}
+    >
+      <FlameIcon className="h-4 w-4" />
+      {streak} {streak === 1 ? 'Woche' : 'Wochen'}
+    </span>
+  )
   const dateLabel = DATE_FORMAT.format(new Date(`${today}T12:00:00`))
   // Trainingstag laut Wochenvorlage. Die Großschreibung übernimmt das CSS der Überschrift.
   const isTrainingDay = planDays?.some((day) => day.weekday === new Date(`${today}T12:00:00`).getDay()) ?? false
@@ -213,6 +247,7 @@ export function HomeScreen({ session }: { session: Session }) {
             {tab === 'training' ? (
               <>
                 <h1 className="mt-1 text-4xl text-foreground [overflow-wrap:break-word]">{title}</h1>
+                {streakChip && <div className="mt-2">{streakChip}</div>}
                 {nameHint}
               </>
             ) : (
@@ -279,6 +314,7 @@ export function HomeScreen({ session }: { session: Session }) {
               <div className="mb-2 hidden lg:block">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted">{greetingFor(hour)}</p>
                 <h1 className="mt-1 text-6xl text-foreground">{title}</h1>
+                {streakChip && <div className="mt-3">{streakChip}</div>}
                 {nameHint}
               </div>
             )}
@@ -305,7 +341,7 @@ export function HomeScreen({ session }: { session: Session }) {
             )}
             {/* Bleibt beim Tab-Wechsel erhalten, damit Eingaben und offene Übung nicht verloren gehen. */}
             {planDays.length > 0 && <div className={tab === 'training' ? '' : 'hidden'}>
-              <TrainingDays key={planVersion} today={today} userId={userId} planDays={planDays} onSetLogged={restTimer.start} />
+              <TrainingDays key={planVersion} today={today} userId={userId} planDays={planDays} restSeconds={restTimer.duration} onSetLogged={handleSetLogged} />
             </div>}
             {planDays.length > 0 && <div className={tab === 'plan' && planMode === 'weekly' ? '' : 'hidden'}>
               <WeekPlanning key={planVersion} today={today} planDays={planDays} active={tab === 'plan' && planMode === 'weekly'} />
