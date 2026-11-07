@@ -11,7 +11,9 @@ if (!url || !publishableKey) {
 // Der Publishable Key ist öffentlich und landet im Browser-Code. Die Daten schützt RLS.
 export const supabase = createClient<Database>(url, publishableKey, {
   auth: {
-    // Login läuft über einen Code, Tokens kommen also nie über die URL.
-    detectSessionInUrl: false,
+    // Links aus Bestätigungs- und Passwort-Mails kommen mit einem einmaligen ?code= zurück.
+    // PKCE tauscht ihn gegen eine Sitzung, Tokens stehen dabei nie in der URL.
+    flowType: 'pkce',
+    detectSessionInUrl: true,
   },
 })

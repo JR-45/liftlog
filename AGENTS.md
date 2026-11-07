@@ -30,7 +30,7 @@ bunx supabase gen types typescript --local > src/lib/database.types.ts
 
 CI (`.github/workflows/ci.yml`) runs lint, unit tests, build, pgTAP tests and **fails if `src/lib/database.types.ts` differs from the generated types**. Regenerate them after every schema migration.
 
-Local env: `.env.local` (gitignored) with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (`src/lib/supabase.ts` throws at startup if either is missing). The README has a one-liner that fills it from `bunx supabase status -o env`. There is no sign-up in the app: create a local user in Studio (Authentication → Users). The default plan is seeded on first login.
+Local env: `.env.local` (gitignored) with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (`src/lib/supabase.ts` throws at startup if either is missing). The README has a one-liner that fills it from `bunx supabase status -o env`. Sign-up with email confirmation is built in; locally all auth mails land in Mailpit (http://localhost:54324). Test users can still be created in Studio (Authentication → Users). The default plan is seeded on first login.
 
 ## Architecture
 
@@ -58,6 +58,13 @@ Local env: `.env.local` (gitignored) with `VITE_SUPABASE_URL` and `VITE_SUPABASE
 `.github/workflows/keep-database-active.yml` pings the REST API every 3 days so the free Supabase project is not paused. It expects the `42501` permission error as proof the DB is up.
 
 Diagrams: `docs/database.puml` / `docs/database.png` and `docs/code-dependencies.puml`.
+
+## Auth
+
+- Email + password via Supabase Auth with **PKCE** (`flowType: 'pkce'`, `detectSessionInUrl: true` in `src/lib/supabase.ts`). Links from confirmation and password mails return to the app root with `?code=`; `App.tsx` reads the redirect once (`readAuthRedirect` in `src/domain/auth.ts`), shows `NewPasswordForm` on `PASSWORD_RECOVERY`, then clears the URL.
+- A link opened on another device cannot exchange the code (no PKCE verifier there), but the email is already confirmed server-side, so the login screen says "E-Mail bestätigt, melde dich an".
+- `supabase/config.toml` holds the auth settings for local and production (`[remotes.production.auth]`): sign-up on, email confirmation on, minimum password length 8, German templates in `supabase/templates/`. Online they take effect only after the project owner runs `supabase config push`. Real users need a custom SMTP provider in the dashboard (Authentication → SMTP); the built-in sender is heavily rate-limited.
+- Supabase intentionally returns success when signing up an already registered email (no account enumeration). Keep the "check your mail" message neutral.
 
 ## Regeln
 
