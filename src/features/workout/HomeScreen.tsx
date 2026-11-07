@@ -1,9 +1,10 @@
 import type { Session } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { localDateString } from '../../domain/sets'
-import { PlanIcon, StatsIcon, TrainingIcon } from '../../lib/icons'
+import { PlanIcon, StatsIcon, TrainingIcon, UserIcon } from '../../lib/icons'
 import { supabase } from '../../lib/supabase'
-import { ExportCard } from '../stats/ExportCard'
+import { loadAvatar } from '../profile/api'
+import { ProfileScreen } from '../profile/ProfileScreen'
 import { StatsScreen } from '../stats/StatsScreen'
 import { PlanEditor } from '../plan/PlanEditor'
 import { loadPlanDays, type PlanDay } from './api'
@@ -15,7 +16,7 @@ import { useRestTimer } from './useRestTimer'
 
 const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 
-type Tab = 'training' | 'stats' | 'plan'
+type Tab = 'training' | 'stats' | 'plan' | 'profile'
 
 /** bottom: untere Leiste auf Handy und Tablet. side: Seitenleiste am Laptop. */
 function TabButton(props: {
@@ -54,6 +55,22 @@ export function HomeScreen({ session }: { session: Session }) {
   const [planMode, setPlanMode] = useState<'weekly' | 'template'>('weekly')
   const [tab, setTab] = useState<Tab>('training')
   const [planVersion, setPlanVersion] = useState(0)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  // Das Profilbild liegt in der Datenbank und ist so auf allen Geräten gleich.
+  useEffect(() => {
+    let cancelled = false
+    loadAvatar()
+      .then((url) => {
+        if (!cancelled) setAvatarUrl(url)
+      })
+      .catch(() => {
+        // Ohne Bild zeigt die App das Standard-Symbol.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
   // Liegt hier und nicht beim Tag, damit die Pause beim Wechsel von Tag oder Tab weiterläuft.
   const restTimer = useRestTimer()
 
@@ -63,8 +80,16 @@ export function HomeScreen({ session }: { session: Session }) {
       .then((days) => {
         if (!cancelled) setPlanDays(days)
       })
-      .catch(() => {
-        if (!cancelled) setFailed(true)
+      .catch(async () => {
+        if (cancelled) return
+        // Gibt es den User nicht mehr, z. B. nach einem Reset der Datenbank, hilft nur ein neuer Login.
+        const { error } = await supabase.auth.getUser()
+        if (error) {
+          clearDrafts()
+          void supabase.auth.signOut()
+          return
+        }
+        setFailed(true)
       })
     return () => {
       cancelled = true
@@ -124,6 +149,13 @@ export function HomeScreen({ session }: { session: Session }) {
             <TabButton label="Trainingsplan" variant="side" active={planArea} onClick={() => setTab('plan')}>
               <PlanIcon />
             </TabButton>
+            <TabButton label="Profil" variant="side" active={tab === 'profile'} onClick={() => setTab('profile')}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover ring-1 ring-white/20" />
+              ) : (
+                <UserIcon />
+              )}
+            </TabButton>
           </nav>
         )}
         <div className="mt-auto space-y-3">
@@ -139,18 +171,44 @@ export function HomeScreen({ session }: { session: Session }) {
       </aside>
 
       <main className="page-shell mx-auto min-h-dvh max-w-xl px-4 pb-[calc(11rem+env(safe-area-inset-bottom))] pt-6 md:max-w-4xl md:px-6 lg:max-w-7xl lg:px-8 lg:pb-10 lg:pt-8">
-        <header className="flex items-start justify-between lg:hidden">
+        <header className="flex items-center justify-between lg:hidden">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">{dateLabel}</p>
             <h1 className="mt-0.5 text-3xl font-bold tracking-tight text-white">LiftLog</h1>
           </div>
-          <button
-            className="-mr-2 min-h-11 rounded-xl px-2.5 text-sm font-medium text-[#8E8E93] transition-colors active:text-white"
-            type="button"
-            onClick={handleSignOut}
-          >
-            Abmelden
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Profil öffnen"
+              onClick={() => setTab('profile')}
+              className="flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-95"
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className={`h-9 w-9 rounded-full object-cover ring-2 ${
+                    tab === 'profile' ? 'ring-[#FFD60A]' : 'ring-white/15'
+                  }`}
+                />
+              ) : (
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-full bg-[#1C1C1E] ring-1 ${
+                    tab === 'profile' ? 'text-[#FFD60A] ring-[#FFD60A]' : 'text-[#8E8E93] ring-white/10'
+                  }`}
+                >
+                  <UserIcon className="h-4 w-4" />
+                </span>
+              )}
+            </button>
+            <button
+              className="-mr-2 min-h-11 rounded-xl px-2.5 text-sm font-medium text-[#8E8E93] transition-colors active:text-white"
+              type="button"
+              onClick={handleSignOut}
+            >
+              Abmelden
+            </button>
+          </div>
         </header>
 
         {failed ? (
@@ -203,14 +261,22 @@ export function HomeScreen({ session }: { session: Session }) {
 
             {/* Wird bei jedem Öffnen neu geladen und zeigt so auch gerade gespeicherte Sätze. */}
             {tab === 'stats' && (
-              <>
-                <StatsScreen
-                  today={today}
-                  startDate={localDateString(new Date(session.user.created_at))}
-                  planDays={planDays}
-                />
-                <ExportCard today={today} />
-              </>
+              <StatsScreen
+                today={today}
+                startDate={localDateString(new Date(session.user.created_at))}
+                planDays={planDays}
+              />
+            )}
+
+            {tab === 'profile' && (
+              <ProfileScreen
+                user={session.user}
+                today={today}
+                defaultWeeklyTarget={planDays.length}
+                restTimer={restTimer}
+                onAvatarChange={setAvatarUrl}
+                onSignOut={handleSignOut}
+              />
             )}
 
             {/* Handy und Tablet: Pause und Menü unten. Am Laptop übernimmt das die Seitenleiste. */}
@@ -226,6 +292,13 @@ export function HomeScreen({ session }: { session: Session }) {
                   </TabButton>
                   <TabButton label="Trainingsplan" variant="bottom" active={planArea} onClick={() => setTab('plan')}>
                     <PlanIcon />
+                  </TabButton>
+                  <TabButton label="Profil" variant="bottom" active={tab === 'profile'} onClick={() => setTab('profile')}>
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover ring-1 ring-white/20" />
+                    ) : (
+                      <UserIcon />
+                    )}
                   </TabButton>
                 </div>
               </nav>

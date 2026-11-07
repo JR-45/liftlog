@@ -11,6 +11,7 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
   const { duration, endsAt, totalMs, now, start, stop, addSeconds, chooseDuration } = timer
   const left = endsAt === null ? null : restSecondsLeft(endsAt, now)
   const overtime = left !== null && left <= 0
+  const quickOptions = duration === 120 || duration === 180 ? [60, 90, duration] : OPTIONS
 
   return (
     <div
@@ -43,7 +44,7 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
             <span className="text-sm font-medium text-[#8E8E93]">Pause</span>
             <div className="flex items-center gap-2">
               <div className="flex rounded-xl bg-[#2C2C2E] p-0.5" role="group" aria-label="Pausenlänge">
-                {OPTIONS.map((seconds) => (
+                {quickOptions.map((seconds) => (
                   <button
                     key={seconds}
                     className={`h-11 min-w-11 rounded-[10px] px-3 text-sm tabular-nums transition-all ${
