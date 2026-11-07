@@ -1,5 +1,4 @@
 import { TimeWheelInput } from '../../components/TimeWheelInput'
-import { NumberWheelInput } from '../../components/NumberWheelInput'
 import { DistanceWheelInput } from '../../components/DistanceWheelInput'
 import { useEffect, useState } from 'react'
 import {
@@ -143,11 +142,11 @@ export function SetRow(props: Props) {
   function handleRepsIncrement() {
     const current = Number(draft.reps.trim())
     if (draft.reps.trim() !== '' && Number.isInteger(current)) {
-      change({ reps: String(Math.max(1, Math.min(20, current + 1))) })
+      change({ reps: String(Math.max(1, current + 1)) })
       return
     }
     const fromLast = Number(placeholder)
-    change({ reps: String(placeholder !== '' && Number.isInteger(fromLast) && fromLast > 0 ? Math.min(20, fromLast) : 1) })
+    change({ reps: String(placeholder !== '' && Number.isInteger(fromLast) && fromLast > 0 ? fromLast : 1) })
   }
 
   /** Nimmt den Haken zurück. Die Werte bleiben stehen, damit ein weiterer Tipp sie wieder speichert. */
@@ -239,12 +238,13 @@ export function SetRow(props: Props) {
                 >
                   −
                 </button>
-                <NumberWheelInput min={0} max={9999.99}
+                <input
                   className={inputClass}
                   aria-label={`${label} ${weightName} in kg`}
                   inputMode="decimal"
+                  enterKeyHint="done"
                   value={shownWeight}
-                  onValueChange={(value) => change({ weight: value })}
+                  onChange={(event) => change({ weight: event.target.value })}
                 />
                 <button
                   className={stepClass}
@@ -257,13 +257,14 @@ export function SetRow(props: Props) {
               </div>
             )}
             <div className="flex min-w-0 flex-1 items-center gap-1">
-              <NumberWheelInput min={1} max={20}
+              <input
                 className={inputClass}
                 aria-label={`${label} Wiederholungen`}
                 inputMode="numeric"
+                enterKeyHint="done"
                 placeholder={placeholder}
                 value={draft.reps}
-                onValueChange={(value) => change({ reps: value })}
+                onChange={(event) => change({ reps: event.target.value })}
               />
               <button
                 className={`${stepClass} flex items-center justify-center`}
