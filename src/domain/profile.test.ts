@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExportRow } from './export'
-import { computeAthleteStats, formatVolume } from './profile'
+import { computeAthleteStats } from './profile'
 
 const sampleRows: ExportRow[] = [
   {
@@ -48,10 +48,7 @@ const sampleRows: ExportRow[] = [
 describe('computeAthleteStats', () => {
   it('berechnet Trainings, Sätze, Volumen, Wochenziel und persönliche Rekorde', () => {
     const stats = computeAthleteStats(sampleRows, '2026-11-07', 3)
-    expect(stats.totalWorkouts).toBe(3)
-    expect(stats.totalSets).toBe(4)
     // 80*8 (640) + 85*5 (425) + 75*8 (600) = 1665
-    expect(stats.totalVolumeKg).toBe(1665)
     expect(stats.thisWeekWorkouts).toBe(2)
     expect(stats.weekProgress).toBeCloseTo(2 / 3)
     expect(stats.activeWeeksStreak).toBe(2)
@@ -81,18 +78,8 @@ describe('computeAthleteStats', () => {
 
   it('liefert Nullwerte ohne Trainingsdaten', () => {
     const stats = computeAthleteStats([], '2026-11-07', 4)
-    expect(stats.totalWorkouts).toBe(0)
-    expect(stats.totalSets).toBe(0)
-    expect(stats.totalVolumeKg).toBe(0)
     expect(stats.thisWeekWorkouts).toBe(0)
     expect(stats.activeWeeksStreak).toBe(0)
     expect(stats.personalRecords).toEqual([])
-  })
-})
-
-describe('formatVolume', () => {
-  it('formatiert Kilogramm und Tonnen auf Deutsch', () => {
-    expect(formatVolume(850)).toBe('850 kg')
-    expect(formatVolume(12450)).toBe('12,5 t')
   })
 })

@@ -1,5 +1,5 @@
 import type { ExportRow } from './export'
-import { localDateString } from './sets'
+import { mondayOf, weekStreak } from './motivation'
 
 export type PersonalRecord = {
   name: string
@@ -11,30 +11,10 @@ export type PersonalRecord = {
 }
 
 export type AthleteStats = {
-  totalWorkouts: number
-  totalSets: number
-  totalVolumeKg: number
   thisWeekWorkouts: number
   weekProgress: number
   activeWeeksStreak: number
   personalRecords: PersonalRecord[]
-}
-
-/** Montag der ISO-Woche eines Datums als YYYY-MM-DD. */
-function mondayOfWeek(dateStr: string): string {
-  const date = new Date(`${dateStr}T12:00:00`)
-  const day = date.getDay()
-  // Sonntag (0) gehört in Deutschland zur laufenden Woche (6 Tage nach Montag).
-  const offset = day === 0 ? -6 : 1 - day
-  date.setDate(date.getDate() + offset)
-  return localDateString(date)
-}
-
-/** Vorheriger Montag (7 Tage zurück) als YYYY-MM-DD. */
-function previousMonday(mondayStr: string): string {
-  const date = new Date(`${mondayStr}T12:00:00`)
-  date.setDate(date.getDate() - 7)
-  return localDateString(date)
 }
 
 /** Geschätztes 1RM nach Epley-Formel: Gewicht × (1 + Wdh. / 30). */
@@ -45,27 +25,22 @@ function estimate1Rm(weightKg: number, reps: number): number {
 }
 
 /**
- * Berechnet die lebenslangen Athleten-Statistiken, Wochenserie und persönlichen Rekorde (PRs).
+ * Berechnet Wochenziel, Wochenserie und persönliche Rekorde (PRs).
  */
 export function computeAthleteStats(rows: ExportRow[], today: string, weeklyGoal: number): AthleteStats {
   const workoutDates = new Set<string>()
-  const activeMondays = new Set<string>()
-  const currentMonday = mondayOfWeek(today)
+  const currentMonday = mondayOf(today)
   const thisWeekDates = new Set<string>()
-  let totalVolumeKg = 0
 
   const prMap = new Map<string, PersonalRecord>()
 
   for (const row of rows) {
     workoutDates.add(row.performed_on)
-    const weekStart = mondayOfWeek(row.performed_on)
-    activeMondays.add(weekStart)
-    if (weekStart === currentMonday) {
+    if (mondayOf(row.performed_on) === currentMonday) {
       thisWeekDates.add(row.performed_on)
     }
 
     if (!row.is_assisted && row.weight_kg !== null && row.weight_kg > 0 && row.reps !== null && row.reps > 0) {
-      totalVolumeKg += row.weight_kg * row.reps
       const oneRm = estimate1Rm(row.weight_kg, row.reps)
       const existing = prMap.get(row.exercise)
       if (!existing) {
@@ -113,14 +88,6 @@ export function computeAthleteStats(rows: ExportRow[], today: string, weeklyGoal
     }
   }
 
-  // Aktive Wochen-Serie zählen (startet in dieser Woche oder in der Vorwoche, falls diese Woche noch offen ist).
-  let streak = 0
-  let cursor = activeMondays.has(currentMonday) ? currentMonday : previousMonday(currentMonday)
-  while (activeMondays.has(cursor)) {
-    streak += 1
-    cursor = previousMonday(cursor)
-  }
-
   const personalRecords = [...prMap.values()].sort((a, b) => {
     const scoreA = a.estimated1RmKg ?? (a.maxRepsOnly ?? 0) * 0.5
     const scoreB = b.estimated1RmKg ?? (b.maxRepsOnly ?? 0) * 0.5
@@ -129,21 +96,10 @@ export function computeAthleteStats(rows: ExportRow[], today: string, weeklyGoal
 
   const thisWeekWorkouts = thisWeekDates.size
   return {
-    totalWorkouts: workoutDates.size,
-    totalSets: rows.length,
-    totalVolumeKg: Math.round(totalVolumeKg),
     thisWeekWorkouts,
     weekProgress: weeklyGoal > 0 ? Math.min(1, thisWeekWorkouts / weeklyGoal) : 0,
-    activeWeeksStreak: streak,
+    // Gleiche Berechnung wie die Flamme auf der Trainingsseite.
+    activeWeeksStreak: weekStreak(workoutDates, today),
     personalRecords,
   }
-}
-
-/** Formatiert das bewegte Gesamtvolumen als kg oder Tonnen (t). */
-export function formatVolume(volumeKg: number): string {
-  if (volumeKg >= 1000) {
-    const tonnes = Math.round((volumeKg / 1000) * 10) / 10
-    return `${String(tonnes).replace('.', ',')} t`
-  }
-  return `${Math.round(volumeKg)} kg`
 }

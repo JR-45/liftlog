@@ -1,8 +1,7 @@
 import { formatClock, restFraction, restSecondsLeft } from '../../domain/timer'
 import { CloseIcon } from '../../lib/icons'
-import type { RestTimer } from './useRestTimer'
+import { REST_OPTIONS, type RestTimer } from './useRestTimer'
 
-const OPTIONS = [60, 90]
 const iconButtonClass =
   'inline-flex h-11 min-w-11 items-center justify-center rounded-xl px-3.5 text-sm font-semibold transition-transform active:scale-95'
 
@@ -11,7 +10,6 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
   const { duration, endsAt, totalMs, now, start, stop, addSeconds, chooseDuration } = timer
   const left = endsAt === null ? null : restSecondsLeft(endsAt, now)
   const overtime = left !== null && left <= 0
-  const quickOptions = duration === 120 || duration === 180 ? [60, 90, duration] : OPTIONS
 
   return (
     <div
@@ -41,27 +39,30 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
       >
         {left === null ? (
           <>
-            <span className="text-sm font-medium text-muted">Pause</span>
-            <div className="flex items-center gap-2">
+            {/* Auf sehr schmalen Handys fehlt sonst der Platz für alle Längen und Start. */}
+            <span className="text-sm font-medium text-muted max-[359px]:hidden">Pause</span>
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex rounded-xl bg-control p-0.5" role="group" aria-label="Pausenlänge">
-                {quickOptions.map((seconds) => (
+                {/* Immer alle Längen zeigen, sonst verschwindet z. B. 180 nach dem Wechsel auf 60. */}
+                {REST_OPTIONS.map((seconds) => (
                   <button
                     key={seconds}
-                    className={`h-11 min-w-11 rounded-[10px] px-3 text-sm tabular-nums transition-all ${
+                    className={`h-11 min-w-11 whitespace-nowrap rounded-[10px] px-2.5 text-sm tabular-nums transition-all ${
                       duration === seconds
                         ? 'bg-control-hover font-semibold text-foreground shadow-sm'
                         : 'text-muted'
                     }`}
                     type="button"
+                    aria-label={`${seconds} Sekunden`}
                     aria-pressed={duration === seconds}
                     onClick={() => chooseDuration(seconds)}
                   >
-                    {seconds} s
+                    {formatClock(seconds)}
                   </button>
                 ))}
               </div>
               <button
-                className={`${iconButtonClass} bg-neon text-black shadow-sm`}
+                className={`${iconButtonClass} whitespace-nowrap bg-neon text-black shadow-sm`}
                 type="button"
                 onClick={() => start()}
               >

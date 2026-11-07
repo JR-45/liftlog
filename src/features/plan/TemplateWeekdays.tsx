@@ -74,7 +74,7 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
   const copySources = draft ? days.filter((day) => day.weekday !== draft.weekday) : []
 
   return <section className="mt-4" aria-label="Wochentage der Vorlage">
-    <p className="mb-3 text-sm text-muted">Tippe auf einen Tag, um sein Training festzulegen.</p>
+    <p className="mb-3 text-sm text-muted">Tippe auf einen Tag, um dein Training festzulegen.</p>
     {/* Alle sieben Tage in einer Reihe. Am Handy reicht der Platz nur für Kürzel und Anzahl. */}
     <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
       {ORDER.map((weekday) => {
