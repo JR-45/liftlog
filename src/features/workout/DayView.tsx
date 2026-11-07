@@ -140,7 +140,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
         <p role="alert" className="text-sm text-[#FF453A]">Der Trainingstag konnte nicht geladen werden.</p>
         <button
-          className="mt-2 min-h-11 py-2 text-sm font-medium text-[#FFD60A]"
+          className="mt-2 min-h-11 py-2 text-sm font-medium text-neon"
           type="button"
           onClick={() => {
             setFailed(false)
@@ -267,7 +267,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
               <TrophyIcon className="h-4 w-4 shrink-0" />
             </>
           ) : (
-            `${done} von ${total} Übungen`
+            <span className="font-display text-2xl font-extrabold uppercase leading-none tracking-wide text-white">
+              {done}
+              <span className="text-[#8E8E93]">/{total}</span>
+              <span className="ml-1.5 text-base text-[#8E8E93]">Übungen</span>
+            </span>
           )}
         </span>
         <span className="text-xs font-semibold tabular-nums text-[#8E8E93]">
@@ -275,7 +279,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         </span>
       </div>
       <div
-        className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#2C2C2E]"
+        className="mt-2 h-3 overflow-hidden rounded-full bg-[#2C2C2E]"
         role="progressbar"
         aria-label="Fortschritt im Training"
         aria-valuemin={0}
@@ -284,7 +288,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       >
         <div
           className={`h-full rounded-full transition-all duration-300 ${
-            done === total ? 'bg-[#30D158]' : 'bg-[#FFD60A]'
+            done === total ? 'bg-[#30D158]' : 'neon-bar bg-neon'
           }`}
           style={{ width: `${total === 0 ? 0 : (done / total) * 100}%` }}
         />

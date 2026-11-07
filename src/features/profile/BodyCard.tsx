@@ -11,7 +11,7 @@ import {
 } from './api'
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 text-base text-white placeholder-[#8E8E93]/60 outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
+  'h-11 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 text-base text-white placeholder-[#8E8E93]/60 outline-none transition-colors focus:border-neon focus:bg-[#3A3A3C] disabled:opacity-50'
 const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#8E8E93]'
 const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
 
@@ -41,7 +41,7 @@ const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
 
 const RATING_STYLE: Record<Rating, string> = {
   good: 'text-[#30D158]',
-  elevated: 'text-[#FFD60A]',
+  elevated: 'text-neon',
   high: 'text-[#FF453A]',
 }
 const RATING_LABEL: Record<Rating, string> = { good: 'günstig', elevated: 'erhöht', high: 'hoch' }
@@ -252,7 +252,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 ? 'Ziel erreicht'
                 : `${diff > 0 ? '+' : ''}${formatNumber(diff)} kg zum Ziel`
           }
-          noteClass={diff === 0 ? 'text-[#30D158]' : 'text-[#FFD60A]'}
+          noteClass={diff === 0 ? 'text-[#30D158]' : 'text-neon'}
         />
         <Tile label="BMI" value={analysis.bmi === null ? '—' : formatNumber(analysis.bmi)} note={analysis.bmiCategory ?? undefined} />
         <Tile
@@ -367,7 +367,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         <button
           type="submit"
           disabled={busy}
-          className="min-h-11 w-full rounded-xl bg-[#FFD60A] px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
+          className="min-h-11 w-full rounded-xl bg-neon px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
         >
           Messung speichern
         </button>

@@ -1,9 +1,10 @@
 import type { AuthError } from '@supabase/supabase-js'
 import { type FormEvent, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { Wordmark } from '../../lib/Wordmark'
 
 const inputClass =
-  'mt-1.5 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 py-3 text-base text-white outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C]'
+  'mt-1.5 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 py-3 text-base text-white outline-none transition-colors focus:border-neon focus:bg-[#3A3A3C]'
 
 function loginErrorMessage(error: AuthError): string {
   if (error.status === 429) return 'Zu viele Versuche. Warte kurz und versuch es noch einmal.'
@@ -41,7 +42,9 @@ export function LoginForm() {
       </aside>
       <div className="login-panel rounded-3xl border border-white/[0.08] bg-[#1C1C1E] p-6 shadow-2xl">
         <img className="h-14 w-14 rounded-2xl shadow-md ring-1 ring-white/10" src="/icons/icon-192.png" alt="" />
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-white">LiftLog</h1>
+        <h1 className="mt-4 text-4xl">
+          <Wordmark />
+        </h1>
         <p className="mt-1 text-sm text-[#8E8E93]">Melde dich an, um dein Training zu starten.</p>
 
         <form className="mt-6" onSubmit={handleSubmit}>
@@ -69,7 +72,7 @@ export function LoginForm() {
           </label>
           {error && <p role="alert" className="mt-3 text-sm text-[#FF453A]">{error}</p>}
           <button
-            className="mt-6 min-h-12 w-full rounded-xl bg-[#FFD60A] px-4 py-3 font-semibold text-black shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50"
+            className="mt-6 min-h-12 w-full rounded-xl bg-neon px-4 py-3 font-semibold text-black shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50"
             type="submit"
             disabled={busy}
           >

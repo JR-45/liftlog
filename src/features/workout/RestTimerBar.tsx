@@ -19,14 +19,14 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
         variant === 'bar' ? 'border-t' : 'overflow-hidden rounded-2xl border'
       } ${
         overtime
-          ? 'border-[#FFD60A] bg-[#FFD60A] text-black'
+          ? 'border-neon bg-neon text-black'
           : 'apple-glass border-white/[0.08] text-white'
       }`}
     >
       {left !== null && !overtime && endsAt !== null && (
         <div className="h-1 bg-[#2C2C2E]">
           <div
-            className="h-full bg-[#FFD60A] transition-[width] duration-200 ease-linear"
+            className="h-full bg-neon transition-[width] duration-200 ease-linear"
             style={{ width: `${restFraction(endsAt, totalMs, now) * 100}%` }}
           />
         </div>
@@ -61,7 +61,7 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
                 ))}
               </div>
               <button
-                className={`${iconButtonClass} bg-[#FFD60A] text-black shadow-sm`}
+                className={`${iconButtonClass} bg-neon text-black shadow-sm`}
                 type="button"
                 onClick={() => start()}
               >

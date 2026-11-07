@@ -15,7 +15,7 @@ import { removeDraft, writeDraft } from './drafts'
 import { SwipeToDelete } from './SwipeToDelete'
 
 const inputClass =
-  'h-11 w-full min-w-0 rounded-xl border border-transparent bg-[#2C2C2E] px-1 text-center text-base font-medium tabular-nums text-white outline-none transition-colors placeholder:text-[#8E8E93]/60 focus:border-[#FFD60A] focus:bg-[#3A3A3C]'
+  'h-11 w-full min-w-0 rounded-xl border border-transparent bg-[#2C2C2E] px-1 text-center text-base font-medium tabular-nums text-white outline-none transition-colors placeholder:text-[#8E8E93]/60 focus:border-neon focus:bg-[#3A3A3C]'
 const stepClass =
   'h-11 w-11 shrink-0 rounded-xl bg-[#2C2C2E] text-lg font-medium text-white transition-all active:scale-95 active:bg-[#3A3A3C] disabled:opacity-35 disabled:active:scale-100'
 
