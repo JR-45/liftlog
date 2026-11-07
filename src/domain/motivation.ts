@@ -1,7 +1,7 @@
 // Reine Logik für Hero-Karte und Streak. Ohne React und Datenbank.
 
 /** Montag der Woche eines Datums (YYYY-MM-DD), in lokaler Zeit. */
-function mondayOf(date: string): string {
+export function mondayOf(date: string): string {
   const value = new Date(`${date}T12:00:00`)
   const offset = (value.getDay() + 6) % 7
   value.setDate(value.getDate() - offset)

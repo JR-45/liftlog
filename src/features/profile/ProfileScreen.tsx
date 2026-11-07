@@ -1,12 +1,11 @@
 import type { User } from '@supabase/supabase-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportRow } from '../../domain/export'
-import { computeAthleteStats, formatVolume } from '../../domain/profile'
+import { computeAthleteStats } from '../../domain/profile'
 import { formatWeight } from '../../domain/sets'
 import { CameraIcon, CheckIcon, TrashIcon, TrophyIcon } from '../../lib/icons'
 import { loadExportRows } from '../stats/api'
 import { ExportCard } from '../stats/ExportCard'
-import { REST_OPTIONS, type RestTimer } from '../workout/useRestTimer'
 import { BodyCard } from './BodyCard'
 import {
   cropSquareAvatar,
@@ -35,7 +34,6 @@ type Props = {
   user: User
   today: string
   defaultWeeklyTarget: number
-  restTimer: RestTimer
   onAvatarChange: (avatarUrl: string | null) => void
   onNameChange: (displayName: string) => void
   onSignOut: () => void
@@ -86,7 +84,6 @@ export function ProfileScreen(props: Props) {
 function ProfileView({
   user,
   today,
-  restTimer,
   onAvatarChange,
   onNameChange,
   onSignOut,
@@ -367,44 +364,24 @@ function ProfileView({
         )}
       </div>
 
-      {/* 2. Athleten-Übersicht & Wochenziel */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4 sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted">Wochenziel</span>
-            <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-success">
-              {stats.activeWeeksStreak} {stats.activeWeeksStreak === 1 ? 'Woche' : 'Wochen'} Serie
-            </span>
-          </div>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
-            {stats.thisWeekWorkouts} <span className="text-base font-medium text-muted">/ {profile.weeklyTarget} Trainings</span>
-          </p>
-          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-control">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                stats.weekProgress >= 1 ? 'bg-success' : 'bg-neon'
-              }`}
-              style={{ width: `${Math.round(stats.weekProgress * 100)}%` }}
-            />
-          </div>
+      {/* 2. Wochenziel mit Serie */}
+      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Wochenziel</span>
+          <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-success">
+            {stats.activeWeeksStreak} {stats.activeWeeksStreak === 1 ? 'Woche' : 'Wochen'} Serie
+          </span>
         </div>
-
-        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Trainings gesamt</p>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{stats.totalWorkouts}</p>
-          <p className="mt-0.5 text-xs text-muted">Absolvierte Einheiten</p>
-        </div>
-
-        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Sätze gesamt</p>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{stats.totalSets}</p>
-          <p className="mt-0.5 text-xs text-muted">Geloggte Arbeitssätze</p>
-        </div>
-
-        <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Gesamtvolumen</p>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-accent-ink">{formatVolume(stats.totalVolumeKg)}</p>
-          <p className="mt-0.5 text-xs text-muted">Bewegtes Gewicht</p>
+        <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+          {stats.thisWeekWorkouts} <span className="text-base font-medium text-muted">/ {profile.weeklyTarget} {profile.weeklyTarget === 1 ? 'Training' : 'Trainings'}</span>
+        </p>
+        <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-control">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${
+              stats.weekProgress >= 1 ? 'bg-success' : 'bg-neon'
+            }`}
+            style={{ width: `${Math.round(stats.weekProgress * 100)}%` }}
+          />
         </div>
       </div>
 
@@ -474,34 +451,7 @@ function ProfileView({
         </div>
       </div>
 
-      {/* 5. Trainings-Einstellungen & Datenexport */}
-      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
-        <h3 className="text-base font-bold tracking-tight text-foreground">Trainings-Einstellungen</h3>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-foreground">Standard-Pausenzeit</p>
-            <p className="text-xs text-muted">Wird automatisch nach jedem neuen Arbeitssatz gestartet</p>
-          </div>
-          <div className="flex rounded-xl bg-control p-0.5" role="group" aria-label="Standard-Pausenzeit">
-            {REST_OPTIONS.map((seconds) => (
-              <button
-                key={seconds}
-                type="button"
-                aria-pressed={restTimer.duration === seconds}
-                onClick={() => restTimer.chooseDuration(seconds)}
-                className={`h-11 min-w-14 rounded-[10px] px-3 text-sm tabular-nums transition-all ${
-                  restTimer.duration === seconds
-                    ? 'bg-neon font-semibold text-black shadow-sm'
-                    : 'text-muted hover:text-foreground'
-                }`}
-              >
-                {seconds} s
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
+      {/* 5. Datenexport. Die Pausenlänge wählst du direkt in der Pausenleiste. */}
       <ExportCard today={today} />
 
       <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">

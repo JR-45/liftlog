@@ -353,7 +353,6 @@ export function HomeScreen({ session }: { session: Session }) {
                 user={session.user}
                 today={today}
                 defaultWeeklyTarget={planDays.length}
-                restTimer={restTimer}
                 onAvatarChange={setAvatarUrl}
                 onNameChange={setDisplayName}
                 onSignOut={handleSignOut}
