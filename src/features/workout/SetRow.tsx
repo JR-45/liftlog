@@ -109,6 +109,21 @@ export function SetRow(props: Props) {
     if (next !== null) change({ weight: String(next).replace('.', ',') })
   }
 
+  /** Nimmt den Haken zurück. Die Werte bleiben stehen, damit ein weiterer Tipp sie wieder speichert. */
+  async function handleUncheck() {
+    setBusy(true)
+    setError(null)
+    try {
+      await onSave(setNumber, null)
+      setDraft((current) => ({ ...current, weight: shownWeight }))
+      setDirty(true)
+    } catch {
+      setError('Der Haken konnte nicht entfernt werden. Versuch es noch einmal.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function handleSave() {
     const parsed = parseSetDraft({ weight: shownWeight, reps: draft.reps, duration: draft.duration }, tracking, unit)
     if (parsed.kind === 'invalid') {
@@ -200,9 +215,10 @@ export function SetRow(props: Props) {
             isSaved ? 'border-yellow-400 bg-yellow-400 text-neutral-950' : 'border-neutral-700 text-neutral-400'
           }`}
           type="button"
-          aria-label={isSaved ? `${label} gespeichert, erneut speichern` : `${label} speichern`}
+          aria-label={isSaved ? `${label} gespeichert, Haken entfernen` : `${label} speichern`}
+          aria-pressed={isSaved}
           disabled={busy}
-          onClick={() => void handleSave()}
+          onClick={() => void (isSaved ? handleUncheck() : handleSave())}
         >
           ✓
         </button>
