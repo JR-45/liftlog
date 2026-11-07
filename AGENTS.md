@@ -59,6 +59,11 @@ Local env: `.env.local` (gitignored) with `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 Diagrams: `docs/database.puml` / `docs/database.png` and `docs/code-dependencies.puml`.
 
+## Workout stopwatch
+
+- `workouts.started_at` / `finished_at` drive the stopwatch in the hero card: `started_at` null = not started or reset, `finished_at` null = running, both set = done. `created_at` is only the row creation time and must never be rewritten (`last_performance` orders same-day workouts by it).
+- The clock starts with "Training starten" or the first saved set; it stops on its own when all exercises are done or skipped.
+
 ## Auth
 
 - Email + password via Supabase Auth with **PKCE** (`flowType: 'pkce'`, `detectSessionInUrl: true` in `src/lib/supabase.ts`). Links from confirmation and password mails return to the app root with `?code=`; `App.tsx` reads the redirect once (`readAuthRedirect` in `src/domain/auth.ts`), shows `NewPasswordForm` on `PASSWORD_RECOVERY`, then clears the URL.

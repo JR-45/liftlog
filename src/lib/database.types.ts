@@ -187,14 +187,14 @@ isOneToOne: false
                   ]
                 },"workouts": {
                   Row: {
-                    "created_at": string,"finished_at": string | null,"id": string,"performed_on": string,"plan_day_id": string | null,"user_id": string
+                    "created_at": string,"finished_at": string | null,"id": string,"performed_on": string,"plan_day_id": string | null,"started_at": string | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on": string,"plan_day_id"?: string | null,"user_id"?: string
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on": string,"plan_day_id"?: string | null,"started_at"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on"?: string,"plan_day_id"?: string | null,"user_id"?: string
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"performed_on"?: string,"plan_day_id"?: string | null,"started_at"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {

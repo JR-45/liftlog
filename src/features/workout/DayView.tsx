@@ -14,7 +14,7 @@ import {
   loadDay,
   type PlanEntry,
   resetWorkoutClock,
-  restartWorkoutClock,
+  startWorkoutClock,
   setWorkoutFinished,
 } from './api'
 import { ExerciseCard } from './ExerciseCard'
@@ -107,10 +107,8 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
         const saved = Object.fromEntries(data.todaySets.map((set) => [setKey(set.exercise_id, set.set_number), set]))
         const all = data.entries.flatMap((entry) => (entry.alternative ? [entry.exercise, entry.alternative] : [entry.exercise]))
         workoutId.current = data.workoutId
-        // Ende gleich Start heißt: Die Uhr wurde zurückgesetzt und steht auf 0:00.
-        const wasReset = data.workoutStartedAt !== null && data.workoutStartedAt === data.workoutFinishedAt
-        setStartedAt(data.workoutStartedAt && !wasReset ? Date.parse(data.workoutStartedAt) : null)
-        setFinishedAt(data.workoutFinishedAt && !wasReset ? Date.parse(data.workoutFinishedAt) : null)
+        setStartedAt(data.workoutStartedAt ? Date.parse(data.workoutStartedAt) : null)
+        setFinishedAt(data.workoutFinishedAt ? Date.parse(data.workoutFinishedAt) : null)
         latestSaved.current = saved
         setSavedSets(saved)
         setExercises(Object.fromEntries(all.map((exercise) => [exercise.id, exercise])))
@@ -128,14 +126,26 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
     }
   }, [planDayId, userId, today, attempt])
 
-  // Das Workout entsteht erst mit dem ersten gespeicherten Satz. Bloßes Ansehen legt nichts an.
+  // Das Workout entsteht erst mit „Training starten“ oder dem ersten Satz. Bloßes Ansehen legt nichts an.
+  // Beim Anlegen startet auch die Stoppuhr, falls sie noch nicht läuft.
   async function getWorkoutId(): Promise<string> {
     if (workoutId.current === null) {
       const workout = await ensureWorkout(planDayId, today)
       workoutId.current = workout.id
-      setStartedAt((current) => current ?? Date.parse(workout.startedAt))
+      if (workout.startedAt) {
+        setStartedAt((current) => current ?? Date.parse(workout.startedAt as string))
+      } else {
+        startClock(workout.id)
+      }
     }
     return workoutId.current
+  }
+
+  function startClock(id: string) {
+    const start = Date.now()
+    setStartedAt(start)
+    setFinishedAt(null)
+    startWorkoutClock(id, new Date(start).toISOString()).catch(() => setStartedAt(null))
   }
 
   function scrollTo(id: string) {
@@ -305,11 +315,8 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
    */
   async function handleStart() {
     if (workoutId.current !== null && startedAt === null) {
-      // Das Workout gibt es schon (zurückgesetzte Uhr oder nur Sätze): Die Uhr startet jetzt neu.
-      const start = Date.now()
-      setStartedAt(start)
-      setFinishedAt(null)
-      restartWorkoutClock(workoutId.current, new Date(start).toISOString()).catch(() => setStartedAt(null))
+      // Das Workout gibt es schon, die Uhr wurde aber zurückgesetzt: Sie startet jetzt neu.
+      startClock(workoutId.current)
     } else {
       // Legt das Workout an und startet damit die Stoppuhr. Scheitert das, startet sie mit dem ersten Satz.
       getWorkoutId().catch(() => {})
