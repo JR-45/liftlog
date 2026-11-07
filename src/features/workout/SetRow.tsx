@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   type DurationUnit,
   parseSetDraft,
@@ -27,6 +27,7 @@ type Props = {
   /** Wert vom letzten Training als Orientierung. Er wird nicht gespeichert. */
   placeholder: string
   onSave: (setNumber: number, values: SetValues | null) => Promise<void>
+  onWeightInput: (text: string) => void
 }
 
 function draftFromSaved(saved: SetValues, unit: DurationUnit): SetDraft {
@@ -53,9 +54,10 @@ export function SetRow(props: Props) {
     initialDraft,
     placeholder,
     onSave,
+    onWeightInput,
   } = props
 
-  // weight === null: Das Feld folgt dem Arbeitsgewicht, bis der Satz abweicht oder gespeichert ist.
+  // weight === null: Das Feld folgt dem Arbeitsgewicht. Eingetippte Werte gelten bis zum nächsten + oder −.
   const [draft, setDraft] = useState<{ weight: string | null; reps: string; duration: string }>(() => {
     if (initialDraft) return initialDraft
     if (saved) return draftFromSaved(saved, unit)
@@ -67,6 +69,23 @@ export function SetRow(props: Props) {
 
   const workingWeightText = workingWeight === null ? '' : String(workingWeight).replace('.', ',')
   const shownWeight = draft.weight ?? workingWeightText
+
+  // + und − gelten für alle offenen Sätze. Gespeicherte behalten ihr Gewicht, sonst stimmt die Historie nicht.
+  const [followedWeight, setFollowedWeight] = useState(workingWeight)
+  if (followedWeight !== workingWeight) {
+    setFollowedWeight(workingWeight)
+    if (!saved) setDraft({ ...draft, weight: null })
+  }
+
+  // Hält den Entwurf eines offenen Satzes aktuell, damit er auch nach + oder − das Schließen der App übersteht.
+  useEffect(() => {
+    if (!dirty || saved) return
+    writeDraft(userId, date, exerciseId, setNumber, {
+      weight: shownWeight,
+      reps: draft.reps,
+      duration: draft.duration,
+    })
+  }, [dirty, saved, shownWeight, draft.reps, draft.duration, userId, date, exerciseId, setNumber])
 
   function change(changes: Partial<SetDraft>) {
     const next = { ...draft, ...changes }
@@ -128,7 +147,10 @@ export function SetRow(props: Props) {
                 aria-label={`${label} ${tracking === 'assisted_reps' ? 'Gewichtshilfe' : 'Gewicht'} in kg`}
                 inputMode="decimal"
                 value={shownWeight}
-                onChange={(event) => change({ weight: event.target.value })}
+                onChange={(event) => {
+                  change({ weight: event.target.value })
+                  onWeightInput(event.target.value)
+                }}
               />
             )}
             <input

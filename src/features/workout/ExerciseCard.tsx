@@ -6,6 +6,7 @@ import {
   formatPerformance,
   formatRange,
   formatWeight,
+  parseWeightInput,
   parseWeightStep,
   setKey,
   type SetValues,
@@ -53,6 +54,8 @@ export function ExerciseCard(props: Props) {
   // null: Das Feld zeigt den gespeicherten Wert, sonst die laufende Eingabe.
   const [stepText, setStepText] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  // Zuletzt eingetipptes Gewicht: Ausgangswert für + und −, solange es kein Arbeitsgewicht gibt.
+  const [typedWeight, setTypedWeight] = useState<number | null>(null)
   const cardRef = useRef<HTMLLIElement>(null)
   const wasOpen = useRef(open)
 
@@ -97,6 +100,14 @@ export function ExerciseCard(props: Props) {
     return set ? [set] : []
   })
   const done = logged.length >= entry.sets_min
+  const baseWeight = exercise.current_weight_kg ?? typedWeight
+
+  function handleWeightStep(direction: 1 | -1) {
+    setTypedWeight(null)
+    void applyExerciseChange({
+      current_weight_kg: stepWeight(baseWeight, exercise.weight_step_kg, direction),
+    })
+  }
 
   /** Speichert zuerst und ändert die Anzeige nur bei Erfolg. */
   async function applyExerciseChange(
@@ -258,6 +269,7 @@ export function ExerciseCard(props: Props) {
                       const alternative = entry.alternative as Exercise
                       setActiveId(activeId === entry.exercise.id ? alternative.id : entry.exercise.id)
                       setStepText(null)
+                      setTypedWeight(null)
                       setError(null)
                     }}
                   >
@@ -289,12 +301,8 @@ export function ExerciseCard(props: Props) {
                     className={stepButtonClass}
                     type="button"
                     aria-label={`${weightName} um ${exercise.weight_step_kg} kg senken`}
-                    disabled={busy || !exercise.current_weight_kg}
-                    onClick={() =>
-                      void applyExerciseChange({
-                        current_weight_kg: stepWeight(exercise.current_weight_kg, exercise.weight_step_kg, -1),
-                      })
-                    }
+                    disabled={busy || !baseWeight}
+                    onClick={() => handleWeightStep(-1)}
                   >
                     −
                   </button>
@@ -306,11 +314,7 @@ export function ExerciseCard(props: Props) {
                     type="button"
                     aria-label={`${weightName} um ${exercise.weight_step_kg} kg erhöhen`}
                     disabled={busy}
-                    onClick={() =>
-                      void applyExerciseChange({
-                        current_weight_kg: stepWeight(exercise.current_weight_kg, exercise.weight_step_kg, 1),
-                      })
-                    }
+                    onClick={() => handleWeightStep(1)}
                   >
                     +
                   </button>
@@ -362,6 +366,7 @@ export function ExerciseCard(props: Props) {
                     initialDraft={readDraft(userId, today, activeId, setNumber)}
                     placeholder={String(placeholderValue).replace('.', ',')}
                     onSave={handleSaveSet}
+                    onWeightInput={(text) => setTypedWeight(parseWeightInput(text))}
                   />
                 )
               })}

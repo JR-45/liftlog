@@ -4,6 +4,7 @@ import {
   formatPerformance,
   localDateString,
   parseSetDraft,
+  parseWeightInput,
   parseWeightStep,
   setKey,
   type SetValues,
@@ -35,6 +36,18 @@ describe('stepWeight', () => {
 
   it('vermeidet Rundungsfehler', () => {
     expect(stepWeight(0.1, 0.2, 1)).toBe(0.3)
+  })
+})
+
+describe('parseWeightInput', () => {
+  it('liest Punkt und Komma', () => {
+    expect(parseWeightInput('27,5')).toBe(27.5)
+    expect(parseWeightInput('60')).toBe(60)
+    expect(parseWeightInput('0')).toBe(0)
+  })
+
+  it.each(['', '  ', 'abc', '-1', '10000'])('lehnt "%s" ab', (input) => {
+    expect(parseWeightInput(input)).toBeNull()
   })
 })
 

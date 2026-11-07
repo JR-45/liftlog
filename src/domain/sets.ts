@@ -77,6 +77,13 @@ export function usesWeight(tracking: TrackingType): boolean {
   return tracking === 'weight_reps' || tracking === 'assisted_reps'
 }
 
+/** Liest ein eingetipptes Gewicht. Leere oder ungültige Eingaben ergeben null. */
+export function parseWeightInput(input: string): number | null {
+  if (input.trim() === '') return null
+  const weight = parseNumber(input)
+  return Number.isFinite(weight) && weight >= 0 && weight <= MAX_WEIGHT_KG ? weight : null
+}
+
 /** Nächstes Arbeitsgewicht nach einem Klick auf + oder −. Ohne Gewicht startet + bei einer Schrittweite. */
 export function stepWeight(current: number | null, step: number, direction: 1 | -1): number | null {
   if (current === null) return direction === 1 ? step : null
