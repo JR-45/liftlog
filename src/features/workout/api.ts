@@ -141,6 +141,24 @@ export async function ensureWorkout(planDayId: string, today: string): Promise<{
   return { id: data.id, startedAt: data.created_at }
 }
 
+/**
+ * Zurückgesetzte Stoppuhr: Ende gleich Start. So bleibt sie auch nach dem Neuladen und auf
+ * anderen Geräten auf 0:00, ohne eigene Spalte.
+ */
+export async function resetWorkoutClock(workoutId: string): Promise<void> {
+  // Den exakten Wert aus der Datenbank nehmen, im Browser gehen die Mikrosekunden verloren.
+  const { data, error: readError } = await supabase.from('workouts').select('created_at').eq('id', workoutId).single()
+  if (readError) throw readError
+  const { error } = await supabase.from('workouts').update({ finished_at: data.created_at }).eq('id', workoutId)
+  if (error) throw error
+}
+
+/** Startet die Stoppuhr eines schon angelegten Workouts neu bei jetzt. */
+export async function restartWorkoutClock(workoutId: string, now: string): Promise<void> {
+  const { error } = await supabase.from('workouts').update({ created_at: now, finished_at: null }).eq('id', workoutId)
+  if (error) throw error
+}
+
 /** Stoppt die Stoppuhr. null setzt sie wieder auf „läuft“. */
 export async function setWorkoutFinished(workoutId: string, finishedAt: string | null): Promise<void> {
   const { error } = await supabase.from('workouts').update({ finished_at: finishedAt }).eq('id', workoutId)
