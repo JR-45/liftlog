@@ -228,3 +228,35 @@ button.bg-neon:not(:disabled):active { transform: scale(0.98); }
 
 /* Überschriften bekommen per Skript den Fokus (für Screenreader), aber keinen sichtbaren Rahmen. */
 [tabindex="-1"]:focus-visible { outline: none; }
+
+/* „DONE“-Stempel: knallt groß und schräg auf die Karte, kurzer grüner Blitz, dann ausblenden. */
+.done-stamp-layer { animation: done-flash 1.5s ease-out both; }
+.done-stamp { transform: rotate(-12deg); animation: done-slam 1.5s cubic-bezier(.2, .9, .3, 1.2) both; }
+.done-stamp-ring { opacity: 0; animation: done-ring .6s ease-out .12s both; }
+@keyframes done-flash {
+  0% { background: transparent; }
+  14% { background: rgb(48 209 88 / 0.18); }
+  40% { background: transparent; }
+  100% { background: transparent; }
+}
+@keyframes done-slam {
+  0% { opacity: 0; transform: rotate(-24deg) scale(3); }
+  14% { opacity: 1; transform: rotate(-12deg) scale(.88); }
+  22% { transform: rotate(-11deg) scale(1.06); }
+  30% { transform: rotate(-12deg) scale(1); }
+  78% { opacity: 1; transform: rotate(-12deg) scale(1); }
+  100% { opacity: 0; transform: rotate(-12deg) scale(1.04); }
+}
+@keyframes done-ring {
+  0% { opacity: .7; transform: scale(.6); }
+  100% { opacity: 0; transform: scale(4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .done-stamp { animation: done-fade 1.2s ease-out both; }
+  .done-stamp-layer { animation: done-fade 1.2s ease-out both; background: transparent; }
+  .done-stamp-ring { display: none; }
+}
+@keyframes done-fade {
+  0%, 100% { opacity: 0; }
+  15%, 75% { opacity: 1; }
+}
