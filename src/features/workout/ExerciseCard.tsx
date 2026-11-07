@@ -18,16 +18,20 @@ import {
   deleteExerciseSets,
   deletePlanEntry,
   deleteSet,
+  deleteSetAndShift,
   type Exercise,
   type LoggedSet,
   type PlanEntry,
   saveSet,
   updateExercise,
   updateNextWeights,
+  updatePlanSets,
 } from './api'
-import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
-import { readDraft, removeDraft } from './drafts'
+import { CheckIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from '../../lib/icons'
+import { ConfirmDeleteButton } from './ConfirmDeleteButton'
+import { readDraft, removeDraft, writeDraft } from './drafts'
 import { SetRow } from './SetRow'
+import { SwipeToDelete } from './SwipeToDelete'
 
 const fieldClass =
   'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
@@ -60,6 +64,10 @@ type Props = {
   onExerciseChange: (exerciseId: string, changes: Partial<Exercise>) => void
   onActiveChange: (exerciseId: string) => void
   onRemoveEntry?: () => void
+  /** Neue Satzanzahl im Plan, z. B. nach „Satz hinzufügen“. */
+  onEntryChange: (changes: Pick<PlanEntry, 'sets_min' | 'sets_max'>) => void
+  /** Ein Satz wurde gelöscht, die gespeicherten Sätze dahinter rücken eine Nummer auf. */
+  onSetDeleted: (exerciseId: string, setNumber: number) => void
 }
 
 export function ExerciseCard(props: Props) {
@@ -80,6 +88,8 @@ export function ExerciseCard(props: Props) {
     onExerciseChange,
     onActiveChange,
     onRemoveEntry,
+    onEntryChange,
+    onSetDeleted,
   } = props
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -239,6 +249,71 @@ export function ExerciseCard(props: Props) {
     }
   }
 
+  async function handleRemoveEntry() {
+    if (!onRemoveEntry) return
+    setBusy(true)
+    setError(null)
+    try {
+      await deletePlanEntry(entry.id)
+      onRemoveEntry()
+    } catch {
+      setError('Übung konnte nicht aus dem Tag entfernt werden.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** Fügt einen neuen Satz hinzu und speichert die neue Satzanzahl im Trainingsplan. */
+  async function handleAddSet() {
+    if (entry.sets_max >= 20) return
+    setBusy(true)
+    setError(null)
+    const nextMax = entry.sets_max + 1
+    // Wenn vorher sets_min === sets_max war, ziehen wir sets_min mit hoch; bei Bereichen (z. B. 3–4 Runden) wächst nur das Maximum.
+    const nextMin = entry.sets_min === entry.sets_max ? nextMax : entry.sets_min
+    try {
+      await updatePlanSets(entry.id, nextMin, nextMax)
+      onEntryChange({ sets_min: nextMin, sets_max: nextMax })
+    } catch {
+      setError('Der Satz konnte nicht hinzugefügt werden. Versuch es noch einmal.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** Löscht einen Satz, rückt folgende Sätze und Entwürfe eins vor und reduziert die Satzanzahl im Plan. */
+  async function handleDeleteSet(setNumber: number) {
+    if (entry.sets_max <= 1) return
+    setBusy(true)
+    setError(null)
+    const nextMax = entry.sets_max - 1
+    const nextMin = Math.max(1, Math.min(entry.sets_min, nextMax))
+    try {
+      const savedNumbers = rows.filter((num) => savedSets[setKey(activeId, num)] !== undefined)
+      if (savedNumbers.some((num) => num >= setNumber)) {
+        const workoutId = await getWorkoutId()
+        await deleteSetAndShift(workoutId, activeId, setNumber, savedNumbers)
+      }
+      await updatePlanSets(entry.id, nextMin, nextMax)
+
+      // Entwürfe für dahinterliegende Sätze eine Nummer nach vorne verschieben.
+      for (let num = setNumber; num < entry.sets_max; num++) {
+        const nextDraft = readDraft(userId, today, activeId, num + 1)
+        if (nextDraft) writeDraft(userId, today, activeId, num, nextDraft)
+        else removeDraft(userId, today, activeId, num)
+      }
+      removeDraft(userId, today, activeId, entry.sets_max)
+
+      onSetDeleted(activeId, setNumber)
+      onEntryChange({ sets_min: nextMin, sets_max: nextMax })
+      setRowGeneration((current) => current + 1)
+    } catch {
+      setError('Der Satz konnte nicht gelöscht werden. Versuch es noch einmal.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function handleStepBlur() {
     if (stepText === null) return
     const step = parseWeightStep(stepText)
@@ -291,7 +366,7 @@ export function ExerciseCard(props: Props) {
 
   const settingsButton = showSettingsButton && (
     <button
-      className={`mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors active:scale-95 ${
+      className={`mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors active:scale-95 ${
         showSettings ? 'bg-[#2C2C2E] text-white' : 'text-[#8E8E93] hover:text-white'
       }`}
       type="button"
@@ -303,7 +378,17 @@ export function ExerciseCard(props: Props) {
     </button>
   )
 
-  const header = isDetail ? (
+  const desktopDeleteButton = onRemoveEntry && layout !== 'stacked' && (
+    <div className="mr-2 shrink-0">
+      <ConfirmDeleteButton
+        label={`${exercise.name} aus diesem Tag entfernen`}
+        disabled={busy}
+        onConfirm={() => void handleRemoveEntry()}
+      />
+    </div>
+  )
+
+  const rawHeader = isDetail ? (
     <div className="flex items-center">
       <div className="flex min-h-16 min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 pr-2">
         {statusIcon}
@@ -313,9 +398,10 @@ export function ExerciseCard(props: Props) {
         </div>
       </div>
       {settingsButton}
+      {desktopDeleteButton}
     </div>
   ) : (
-    <div className="flex items-center">
+    <div className="flex items-center bg-[#1C1C1E]">
       <button
         className="flex min-h-16 min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 pr-2 text-left transition-opacity active:opacity-75"
         type="button"
@@ -344,8 +430,22 @@ export function ExerciseCard(props: Props) {
         />
       </button>
       {settingsButton}
+      {desktopDeleteButton}
     </div>
   )
+
+  const header =
+    layout === 'stacked' ? (
+      <SwipeToDelete
+        label={`${exercise.name} aus diesem Tag entfernen`}
+        enabled={onRemoveEntry !== undefined && !busy}
+        onDelete={() => void handleRemoveEntry()}
+      >
+        {rawHeader}
+      </SwipeToDelete>
+    ) : (
+      rawHeader
+    )
 
   const answer = showAnswer && (
     <div className="px-4 pb-3.5">
@@ -458,14 +558,7 @@ export function ExerciseCard(props: Props) {
                 className="min-h-11 text-sm font-medium text-[#FF453A] disabled:opacity-50"
                 type="button"
                 disabled={busy}
-                onClick={() => {
-                  setBusy(true)
-                  setError(null)
-                  deletePlanEntry(entry.id)
-                    .then(() => onRemoveEntry())
-                    .catch(() => setError('Übung konnte nicht aus dem Tag entfernt werden.'))
-                    .finally(() => setBusy(false))
-                }}
+                onClick={() => void handleRemoveEntry()}
               >
                 Übung aus diesem Tag entfernen
               </button>
@@ -494,10 +587,10 @@ export function ExerciseCard(props: Props) {
         ) : (
           <>
             {weighted && <span className="flex-[2]">{assisted ? 'Hilfe (kg)' : 'kg'}</span>}
-            <span className="flex-1">Wdh.</span>
+            <span className="flex-[1.35]">Wdh.</span>
           </>
         )}
-        <span className="w-11 shrink-0" />
+        <span className={isDetail && entry.sets_max > 1 ? 'w-[5.75rem] shrink-0' : 'w-11 shrink-0'} />
       </div>
 
       <ul>
@@ -529,12 +622,26 @@ export function ExerciseCard(props: Props) {
               plannedWeight={lastSet && lastSet.is_assisted === assisted && weighted ? plannedWeight(lastSet) : null}
               resetRequest={resetRequest}
               weightStep={exercise.weight_step_kg}
+              deleteMode={isDetail ? 'button' : 'swipe'}
               onSave={handleSaveSet}
               onEdit={() => setHasEdits(true)}
+              onDelete={entry.sets_max > 1 ? () => void handleDeleteSet(setNumber) : undefined}
             />
           )
         })}
       </ul>
+
+      {entry.sets_max < 20 && (
+        <button
+          className="mt-2.5 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/[0.12] bg-[#2C2C2E]/40 px-3 text-sm font-medium text-[#EBEBF5]/85 transition-colors hover:border-white/25 hover:bg-[#2C2C2E] active:scale-[0.99] disabled:opacity-50"
+          type="button"
+          disabled={busy}
+          onClick={() => void handleAddSet()}
+        >
+          <PlusIcon className="h-4 w-4 text-[#FFD60A]" />
+          {isRounds ? 'Runde hinzufügen' : 'Satz hinzufügen'}
+        </button>
+      )}
 
       {(logged.length > 0 || hasEdits) &&
         (confirmingReset ? (
@@ -590,7 +697,7 @@ export function ExerciseCard(props: Props) {
     <li
       ref={cardRef}
       aria-label={exercise.name}
-      className={`scroll-mt-16 rounded-2xl border transition-colors duration-300 motion-reduce:transition-none ${
+      className={`scroll-mt-16 overflow-hidden rounded-2xl border transition-colors duration-300 motion-reduce:transition-none ${
         open ? openStyle : 'border-white/[0.06] bg-[#1C1C1E]/80'
       }`}
     >

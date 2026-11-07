@@ -175,6 +175,38 @@ export async function deletePlanEntry(entryId: string): Promise<void> {
   if (error) throw error
 }
 
+/** Ändert die Anzahl der Sätze im Plan. Gilt auch für alle kommenden Trainings. */
+export async function updatePlanSets(entryId: string, setsMin: number, setsMax: number): Promise<void> {
+  const { error } = await supabase
+    .from('plan_exercises')
+    .update({ sets_min: setsMin, sets_max: setsMax })
+    .eq('id', entryId)
+  if (error) throw error
+}
+
+/**
+ * Löscht einen Satz und lässt die gespeicherten Sätze dahinter eine Nummer aufrücken.
+ * Aufsteigend, damit die Unique-Regel (workout, exercise, set_number) nie verletzt wird.
+ */
+export async function deleteSetAndShift(
+  workoutId: string,
+  exerciseId: string,
+  setNumber: number,
+  savedNumbers: number[],
+): Promise<void> {
+  await deleteSet(workoutId, exerciseId, setNumber)
+  const later = savedNumbers.filter((number) => number > setNumber).sort((a, b) => a - b)
+  for (const number of later) {
+    const { error } = await supabase
+      .from('sets')
+      .update({ set_number: number - 1 })
+      .eq('workout_id', workoutId)
+      .eq('exercise_id', exerciseId)
+      .eq('set_number', number)
+    if (error) throw error
+  }
+}
+
 export async function addExerciseToPlanDay(input: {
   planDayId: string
   name: string
