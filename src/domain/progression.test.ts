@@ -24,14 +24,14 @@ describe('progressionHint', () => {
     expect(progressionHint({ ...base, lastSets: [set(13), set(12), set(14)] })).toBe('increase_weight')
   })
 
-  it('schweigt, wenn schon pro Satz entschieden wurde', () => {
+  it('schweigt, wenn nach der Übung mit Ja entschieden wurde', () => {
     const lastSets = [{ ...set(12), next_weight_kg: 62.5 }, set(12), set(12)]
     expect(progressionHint({ ...base, lastSets })).toBeNull()
   })
 
-  it('empfiehlt weiter, wenn die Entscheidung dem Gewicht entspricht', () => {
+  it('schweigt, wenn nach der Übung mit Nein entschieden wurde', () => {
     const lastSets = [{ ...set(12), next_weight_kg: 60 }, set(12), set(12)]
-    expect(progressionHint({ ...base, lastSets })).toBe('increase_weight')
+    expect(progressionHint({ ...base, lastSets })).toBeNull()
   })
 
   it('schweigt, wenn ein Satz die obere Grenze verfehlt', () => {

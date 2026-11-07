@@ -24,8 +24,8 @@ export function progressionHint(input: Input): ProgressionHint {
   // Ohne Wiederholungsbereich, z. B. fest 15 Situps, gibt es keine obere Grenze zu erreichen.
   if (repsMin === null || repsMax === null || repsMin === repsMax) return null
   if (lastSets.length < setsMin) return null
-  // Wurde schon pro Satz entschieden, braucht es keine Empfehlung mehr.
-  if (lastSets.some((set) => set.next_weight_kg != null && set.next_weight_kg !== set.weight_kg)) return null
+  // Wurde nach der Übung schon entschieden, auch mit Nein, braucht es keine Empfehlung mehr.
+  if (lastSets.some((set) => set.next_weight_kg != null)) return null
   if (!lastSets.every((set) => set.reps !== null && set.reps >= repsMax)) return null
 
   // Sätze aus einer anderen Erfassungsart, z. B. vor dem Wechsel auf Hilfe, sind nicht vergleichbar.

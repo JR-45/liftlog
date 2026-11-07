@@ -118,6 +118,26 @@ export async function saveSet(workoutId: string, exerciseId: string, setNumber: 
   if (error) throw error
 }
 
+/** Speichert die Antwort auf „Geschafft?“ für jeden Satz der Übung. null nimmt die Antwort zurück. */
+export async function updateNextWeights(
+  workoutId: string,
+  exerciseId: string,
+  updates: { setNumber: number; nextWeight: number | null }[],
+): Promise<void> {
+  const results = await Promise.all(
+    updates.map(({ setNumber, nextWeight }) =>
+      supabase
+        .from('sets')
+        .update({ next_weight_kg: nextWeight })
+        .eq('workout_id', workoutId)
+        .eq('exercise_id', exerciseId)
+        .eq('set_number', setNumber),
+    ),
+  )
+  const failed = results.find((result) => result.error)
+  if (failed?.error) throw failed.error
+}
+
 export async function deleteSet(workoutId: string, exerciseId: string, setNumber: number): Promise<void> {
   const { error } = await supabase
     .from('sets')

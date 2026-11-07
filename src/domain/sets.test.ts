@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   countLoggedSets,
   formatPerformance,
+  formatPlanned,
   localDateString,
   parseSetDraft,
   parseWeightInput,
@@ -64,6 +65,28 @@ describe('plannedWeight', () => {
 
   it('bleibt ohne Gewicht leer', () => {
     expect(plannedWeight(set(null))).toBeNull()
+  })
+})
+
+describe('formatPlanned', () => {
+  const set = (weight: number | null, next?: number | null): SetValues => ({
+    weight_kg: weight,
+    reps: 12,
+    duration_seconds: null,
+    is_assisted: false,
+    next_weight_kg: next,
+  })
+
+  it('fasst gleiche Gewichte zusammen', () => {
+    expect(formatPlanned([set(60, 62.5), set(60, 62.5)])).toBe('62,5 kg')
+  })
+
+  it('zeigt unterschiedliche Gewichte pro Satz', () => {
+    expect(formatPlanned([set(60, 62.5), set(62.5, 65), set(55)])).toBe('62,5 / 65 / 55 kg')
+  })
+
+  it('bleibt ohne Gewicht leer', () => {
+    expect(formatPlanned([set(null)])).toBe('')
   })
 })
 

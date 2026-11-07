@@ -4,15 +4,26 @@ import {
   countLoggedSets,
   type DurationUnit,
   formatPerformance,
+  formatPlanned,
   formatRange,
+  formatWeight,
   parseWeightStep,
   plannedWeight,
   setKey,
   type SetValues,
+  stepWeight,
   type TrackingType,
   usesWeight,
 } from '../../domain/sets'
-import { deleteSet, type Exercise, type LoggedSet, type PlanEntry, saveSet, updateExercise } from './api'
+import {
+  deleteSet,
+  type Exercise,
+  type LoggedSet,
+  type PlanEntry,
+  saveSet,
+  updateExercise,
+  updateNextWeights,
+} from './api'
 import { readDraft } from './drafts'
 import { SetRow } from './SetRow'
 
@@ -94,6 +105,58 @@ export function ExerciseCard(props: Props) {
     return set ? [set] : []
   })
   const done = logged.length >= entry.sets_min
+  const direction = assisted ? -1 : 1
+  const answered = logged.length > 0 && logged.every((set) => set.next_weight_kg != null)
+  // Empfehlung: Dieselbe Regel wie beim Hinweis, nur mit den heutigen Sätzen.
+  const recommended =
+    done &&
+    progressionHint({
+      tracking: exercise.tracking_type,
+      currentWeight: null,
+      setsMin: entry.sets_min,
+      repsMin: entry.reps_min,
+      repsMax: entry.reps_max,
+      lastSets: logged.map((set) => ({ ...set, next_weight_kg: null })),
+    }) !== null
+  const yesSets = logged.map((set) => ({
+    ...set,
+    next_weight_kg: set.weight_kg === null ? null : stepWeight(set.weight_kg, exercise.weight_step_kg, direction),
+  }))
+  const yesPlanned = formatPlanned(yesSets)
+  const sameWeight = new Set(logged.map((set) => set.weight_kg)).size === 1
+  const stepLabel = `${assisted ? '−' : '+'}${formatWeight(exercise.weight_step_kg)}`
+  const yesLabel = sameWeight ? `Ja, ${assisted ? 'Hilfe auf' : 'auf'} ${yesPlanned}` : `Ja, ${stepLabel}`
+  const noLabel = assisted ? 'Nein, Hilfe lassen' : 'Nein, Gewicht lassen'
+
+  /** Speichert „Geschafft?“ für alle gespeicherten Sätze der Übung. */
+  async function applyAnswer(nextFor: (set: SetValues) => number | null) {
+    setBusy(true)
+    setError(null)
+    try {
+      const updates = rows.flatMap((setNumber) => {
+        const set = savedSets[setKey(activeId, setNumber)]
+        return set ? [{ setNumber, set, nextWeight: nextFor(set) }] : []
+      })
+      await updateNextWeights(await getWorkoutId(), activeId, updates)
+      for (const { setNumber, set, nextWeight } of updates) {
+        onSetChange(activeId, setNumber, { ...set, next_weight_kg: nextWeight })
+      }
+      // Das Arbeitsgewicht folgt dem schwersten Satz der Entscheidung.
+      const planned = updates.flatMap(({ set, nextWeight }) => {
+        const value = nextWeight ?? set.weight_kg
+        return value === null ? [] : [value]
+      })
+      if (planned.length > 0) {
+        const heaviest = assisted ? Math.min(...planned) : Math.max(...planned)
+        await updateExercise(activeId, { current_weight_kg: heaviest })
+        setExercises((current) => ({ ...current, [activeId]: { ...current[activeId], current_weight_kg: heaviest } }))
+      }
+    } catch {
+      setError('Deine Antwort wurde nicht gespeichert. Versuch es noch einmal.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   /** Speichert zuerst und ändert die Anzeige nur bei Erfolg. */
   async function applyExerciseChange(
@@ -133,11 +196,12 @@ export function ExerciseCard(props: Props) {
   async function handleSaveSet(setNumber: number, values: SetValues | null) {
     const workoutId = await getWorkoutId()
     if (values) {
-      await saveSet(workoutId, activeId, setNumber, values)
+      await saveSet(workoutId, activeId, setNumber, { ...values, next_weight_kg: null })
     } else {
       await deleteSet(workoutId, activeId, setNumber)
     }
-    onSetChange(activeId, setNumber, values)
+    // Ein neuer oder geänderter Satz macht eine frühere Antwort ungültig, die Frage kommt dann neu.
+    onSetChange(activeId, setNumber, values && { ...values, next_weight_kg: null })
     // Das Arbeitsgewicht ist der schwerste Satz. Es füllt noch leere Sätze und steuert den Hinweis.
     const weight = values?.weight_kg
     const current = exercise.current_weight_kg
@@ -207,6 +271,56 @@ export function ExerciseCard(props: Props) {
           </button>
         )}
       </div>
+
+      {done && weighted && (
+        <div className="px-4 pb-3">
+          {answered ? (
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 text-sm text-neutral-300">
+                Nächstes Mal: <span className="font-medium tabular-nums text-neutral-100">{formatPlanned(logged)}</span>
+              </p>
+              <button
+                className="min-h-11 shrink-0 px-2 text-sm text-neutral-400 underline disabled:opacity-50"
+                type="button"
+                disabled={busy}
+                onClick={() => void applyAnswer(() => null)}
+              >
+                Ändern
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-neutral-100">
+                Geschafft?
+                {recommended && <span className="ml-2 font-normal text-yellow-300">Erhöhen empfohlen</span>}
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  className="min-h-11 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-2 text-sm text-neutral-200 disabled:opacity-50"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void applyAnswer((set) => set.weight_kg)}
+                >
+                  {noLabel}
+                </button>
+                <button
+                  className="min-h-11 rounded-lg bg-yellow-400 px-2 py-2 text-sm font-semibold tabular-nums text-neutral-950 disabled:opacity-50"
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void applyAnswer((set) =>
+                      set.weight_kg === null ? null : stepWeight(set.weight_kg, exercise.weight_step_kg, direction),
+                    )
+                  }
+                >
+                  {yesLabel}
+                </button>
+              </div>
+            </>
+          )}
+          {error && !open && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
+        </div>
+      )}
 
       {/* Die Höhe von 0fr auf 1fr animiert das Aufklappen ohne feste Pixelwerte. */}
       <div
@@ -281,7 +395,7 @@ export function ExerciseCard(props: Props) {
               </p>
             )}
 
-            {error && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
+            {error && open && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
 
             <div className="mt-3 flex gap-1.5 text-center text-xs text-neutral-500" aria-hidden="true">
               <span className="w-4 shrink-0">{isRounds ? 'R' : '#'}</span>

@@ -85,14 +85,14 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     const entry = day.entries[index]
     if (!entry) return
 
-    // Mit dem letzten Satz öffnet sich die nächste Übung.
+    // Mit dem letzten Satz öffnet sich die nächste Übung. Die fertige bleibt oben im Bild,
+    // damit die Frage „Geschafft?“ direkt zu sehen ist.
     const ids = entryIds(entry)
     const finishedEntry =
       countLoggedSets(next, ids) >= entry.sets_max && countLoggedSets(previous, ids) < entry.sets_max
     if (finishedEntry) {
-      const nextId = nextOpenEntry(day.entries, next, index)
-      setOpenId(nextId)
-      if (nextId) scrollTo(nextId)
+      setOpenId(nextOpenEntry(day.entries, next, index))
+      scrollTo(entry.id)
     }
 
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.

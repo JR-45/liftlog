@@ -91,6 +91,17 @@ export function plannedWeight(set: SetValues): number | null {
   return set.next_weight_kg ?? set.weight_kg
 }
 
+/** „62,5 kg“ bei gleichem Gewicht, sonst „62,5 / 65 / 57,5 kg“. */
+export function formatPlanned(sets: SetValues[]): string {
+  const weights = sets.flatMap((set) => {
+    const weight = plannedWeight(set)
+    return weight === null ? [] : [weight]
+  })
+  if (weights.length === 0) return ''
+  if (new Set(weights).size === 1) return formatWeight(weights[0])
+  return `${weights.map(formatNumber).join(' / ')} kg`
+}
+
 /** Nächstes Arbeitsgewicht nach einem Klick auf + oder −. Ohne Gewicht startet + bei einer Schrittweite. */
 export function stepWeight(current: number | null, step: number, direction: 1 | -1): number | null {
   if (current === null) return direction === 1 ? step : null
