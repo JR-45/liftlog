@@ -49,17 +49,17 @@ Die Oberfläche passt sich der Fenstergröße an: Smartphones haben eine Navigat
 Notebooks ab 1024 Pixeln eine Seitenleiste.
 Die Darstellung berücksichtigt Bildschirmränder mit Aussparungen, Tastaturbedienung und reduzierte Animationen.
 
-Unter **Trainingsplan → Vorlage** tippst du auf einen Wochentag und legst Name und Übungen fest. **Tag speichern** speichert
+Unter **Trainingsplan** steht oben die Wochenplanung und darunter die **Wochenvorlage**. In der Vorlage tippst du auf einen Wochentag und legst Name und Übungen fest. **Tag speichern** speichert
 den Tag direkt im Konto. Zurück/Weiter und horizontales Wischen wechseln zwischen den Übungen. Eigene Übungen, Erfassung
 und Satzbereiche stehen unter **Mehr Optionen**.
 
 Im Training kommt die Satzanzahl jeder Übung aus dem Trainingsplan. Du änderst sie im Planeditor, nicht während des
 Trainings. Einen gespeicherten Satz nimmst du mit dem Haken zurück, die ganze Übung mit „Übung zurücksetzen“.
 
-Unter **Trainingsplan → Wochenplanung** wählst du eine Kalenderwoche und planst Training und Ruhetage für jeden Tag.
+In der **Wochenplanung** wählst du eine Kalenderwoche und planst Training und Ruhetage für jeden Tag.
 Neue Wochen übernehmen zunächst die gespeicherte Vorlage. **Woche speichern** speichert nur diese Kalenderwoche.
-Unter **Vorlage** öffnet jeder Tagesbutton ein eigenes Popup: Dort erstellst du den Trainingsplan für
-diesen Tag oder machst ihn zum Ruhetag. Gelb markierte Tagesbuttons enthalten eine Einheit. Im Bereich **Training**
+In der **Wochenvorlage** öffnet jeder Tagesbutton ein eigenes Popup: Dort erstellst du den Trainingsplan für
+diesen Tag oder machst ihn zum Ruhetag. Farbig markierte Tagesbuttons enthalten eine Einheit. Im Bereich **Training**
 bleiben die bisherige Tagesauswahl und die Satzeingabe für heute erhalten.
 
 ## Befehle

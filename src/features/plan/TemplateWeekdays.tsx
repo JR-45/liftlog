@@ -75,15 +75,17 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
 
   return <section className="mt-4" aria-label="Wochentage der Vorlage">
     <p className="mb-3 text-sm text-muted">Tippe auf einen Tag, um sein Training festzulegen.</p>
-    <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+    {/* Alle sieben Tage in einer Reihe. Am Handy reicht der Platz nur für Kürzel und Anzahl. */}
+    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
       {ORDER.map((weekday) => {
         const day = days.find((item) => item.weekday === weekday)
-        return <button key={weekday} className={`min-h-24 min-w-0 rounded-xl px-1 py-3 text-center transition-transform active:scale-95 ${day ? 'bg-neon/10 text-accent-ink ring-1 ring-neon/60' : 'bg-surface text-muted ring-1 ring-line/[0.08]'}`}
+        return <button key={weekday} className={`min-h-16 min-w-0 rounded-xl px-0.5 py-2.5 text-center sm:min-h-24 sm:px-1 sm:py-3 transition-transform active:scale-95 ${day ? 'bg-neon/10 text-accent-ink ring-1 ring-neon/60' : 'bg-surface text-muted ring-1 ring-line/[0.08]'}`}
           type="button" aria-label={`${WEEKDAYS[weekday]} bearbeiten`} aria-pressed={Boolean(day)} aria-haspopup="dialog"
           title={day ? `${WEEKDAYS[weekday]}: ${day.name}` : `${WEEKDAYS[weekday]}: Ruhetag`} onClick={() => open(weekday)}>
           <span className="block font-semibold">{WEEKDAYS[weekday].slice(0, 2)}</span>
-          <span className="mt-2 block truncate px-0.5 text-xs">{day ? day.name : 'Ruhetag'}</span>
-          {day && <span className="mt-0.5 block text-xs tabular-nums opacity-70">{day.exercises.length} {day.exercises.length === 1 ? 'Übung' : 'Übungen'}</span>}
+          <span className="mt-1 block truncate text-[11px] tabular-nums opacity-80 sm:hidden">{day ? `${day.exercises.length} Üb.` : '–'}</span>
+          <span className="mt-2 hidden truncate px-0.5 text-xs sm:block">{day ? day.name : 'Ruhetag'}</span>
+          {day && <span className="mt-0.5 hidden text-xs tabular-nums opacity-70 sm:block">{day.exercises.length} {day.exercises.length === 1 ? 'Übung' : 'Übungen'}</span>}
         </button>
       })}
     </div>
