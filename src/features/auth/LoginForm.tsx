@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { type AuthRedirect, authErrorMessage, MIN_PASSWORD_LENGTH, passwordProblem } from '../../domain/auth'
 import { Wordmark } from '../../lib/Wordmark'
-import { resendConfirmation, sendPasswordReset, signIn, signUp } from './api'
+import { ACCOUNT_DELETED_FLAG, resendConfirmation, sendPasswordReset, signIn, signUp } from './api'
 
 const inputClass =
   'mt-1.5 w-full rounded-xl border border-transparent bg-control px-3.5 py-3 text-base text-foreground outline-none transition-colors focus:border-neon focus:bg-control-hover'
@@ -24,9 +24,19 @@ export function LoginForm({ redirect }: { redirect: AuthRedirect }) {
   const [repeat, setRepeat] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(redirect?.kind === 'error' ? redirect.message : null)
-  const [info, setInfo] = useState<string | null>(
-    redirect?.kind === 'confirmed' ? 'Deine E-Mail ist bestätigt. Melde dich jetzt an.' : null,
-  )
+  const [info, setInfo] = useState<string | null>(() => {
+    if (redirect?.kind === 'confirmed') return 'Deine E-Mail ist bestätigt. Melde dich jetzt an.'
+    try {
+      // Einmalige Bestätigung direkt nach dem Löschen des Kontos.
+      if (sessionStorage.getItem(ACCOUNT_DELETED_FLAG)) {
+        sessionStorage.removeItem(ACCOUNT_DELETED_FLAG)
+        return 'Dein Konto und alle Daten wurden gelöscht.'
+      }
+    } catch {
+      // Ohne Speicherzugriff keine Meldung.
+    }
+    return null
+  })
   const [unconfirmed, setUnconfirmed] = useState(false)
 
   function switchTo(next: Mode) {

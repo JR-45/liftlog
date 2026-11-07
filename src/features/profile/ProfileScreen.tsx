@@ -6,6 +6,7 @@ import { formatWeight } from '../../domain/sets'
 import { CameraIcon, CheckIcon, TrashIcon, TrophyIcon } from '../../lib/icons'
 import { loadExportRows } from '../stats/api'
 import { ExportCard } from '../stats/ExportCard'
+import { DeleteAccountCard } from './DeleteAccountCard'
 import { BodyCard } from './BodyCard'
 import {
   cropSquareAvatar,
@@ -469,6 +470,8 @@ function ProfileView({
           </button>
         </div>
       </div>
+
+      {user.email && <DeleteAccountCard email={user.email} />}
     </section>
   )
 }
