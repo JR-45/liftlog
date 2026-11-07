@@ -70,11 +70,19 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     }
   }
 
-  function handleSetChange(exerciseId: string, setNumber: number, values: SetValues | null) {
+  function handleContinue(index: number) {
+    if (!day) return
+    const nextId = nextOpenEntry(day.entries, latestSaved.current, index)
+    setOpenId(nextId)
+    if (nextId) scrollTo(nextId)
+  }
+
+  function handleSetChange(exerciseId: string, setNumber: number, values: SetValues | null, autoAdvance: boolean) {
     const previous = latestSaved.current
     const key = setKey(exerciseId, setNumber)
     const next = { ...previous }
-    if (values) next[key] = values
+    // Beim erneuten Speichern bleibt die Entscheidung fürs nächste Mal erhalten.
+    if (values) next[key] = { ...previous[key], ...values }
     else delete next[key]
     latestSaved.current = next
     setSavedSets(next)
@@ -84,15 +92,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     const entry = day.entries[index]
     if (!entry) return
 
-    // Mit dem letzten Satz öffnet sich die nächste Übung. Die fertige bleibt oben im Bild,
-    // damit der Knopf zum Erhöhen direkt zu sehen ist.
+    // Ohne Gewicht gibt es nichts mehr zu entscheiden: Mit dem letzten Satz öffnet sich die nächste Übung.
     const ids = entryIds(entry)
     const finishedEntry =
       countLoggedSets(next, ids) >= entry.sets_max && countLoggedSets(previous, ids) < entry.sets_max
-    if (finishedEntry) {
-      setOpenId(nextOpenEntry(day.entries, next, index))
-      scrollTo(entry.id)
-    }
+    if (finishedEntry && autoAdvance) handleContinue(index)
 
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.
     const trainingDone = day.entries.every((current) => isDone(current, next))
@@ -144,7 +148,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       </div>
 
       <ul className="mt-2 space-y-2">
-        {day.entries.map((entry) => (
+        {day.entries.map((entry, index) => (
           <ExerciseCard
             key={entry.id}
             entry={entry}
@@ -156,6 +160,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
             lastSets={day.lastSets}
             getWorkoutId={getWorkoutId}
             onToggle={() => handleToggle(entry.id)}
+            onContinue={() => handleContinue(index)}
             onSetChange={handleSetChange}
           />
         ))}

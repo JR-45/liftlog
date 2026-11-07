@@ -8,13 +8,22 @@ import {
   formatWeight,
   parseWeightInput,
   parseWeightStep,
+  plannedWeight,
   setKey,
   type SetValues,
   stepWeight,
   type TrackingType,
   usesWeight,
 } from '../../domain/sets'
-import { deleteSet, type Exercise, type LoggedSet, type PlanEntry, saveSet, updateExercise } from './api'
+import {
+  deleteSet,
+  type Exercise,
+  type LoggedSet,
+  type PlanEntry,
+  saveSet,
+  updateExercise,
+  updateNextWeight,
+} from './api'
 import { readDraft } from './drafts'
 import { SetRow } from './SetRow'
 
@@ -35,11 +44,13 @@ type Props = {
   lastSets: LoggedSet[]
   getWorkoutId: () => Promise<string>
   onToggle: () => void
-  onSetChange: (exerciseId: string, setNumber: number, values: SetValues | null) => void
+  onContinue: () => void
+  onSetChange: (exerciseId: string, setNumber: number, values: SetValues | null, autoAdvance: boolean) => void
 }
 
 export function ExerciseCard(props: Props) {
-  const { entry, userId, today, open, scrollRequest, savedSets, lastSets, getWorkoutId, onToggle, onSetChange } = props
+  const { entry, userId, today, open, scrollRequest, savedSets, lastSets, getWorkoutId, onToggle, onContinue, onSetChange } =
+    props
   const [exercises, setExercises] = useState<Record<string, Exercise>>(() => {
     const all = entry.alternative ? [entry.exercise, entry.alternative] : [entry.exercise]
     return Object.fromEntries(all.map((exercise) => [exercise.id, exercise]))
@@ -58,6 +69,7 @@ export function ExerciseCard(props: Props) {
   const [showSettings, setShowSettings] = useState(false)
   // Zuletzt eingetipptes Gewicht: Ausgangswert für + und −, solange es kein Arbeitsgewicht gibt.
   const [typedWeight, setTypedWeight] = useState<number | null>(null)
+  const [followRequest, setFollowRequest] = useState(0)
   const cardRef = useRef<HTMLLIElement>(null)
 
   // Erst nach der Animation scrollen, sonst verschiebt die sich schließende Karte das Ziel.
@@ -101,25 +113,32 @@ export function ExerciseCard(props: Props) {
   const done = logged.length >= entry.sets_min
   const baseWeight = exercise.current_weight_kg ?? typedWeight
   const assisted = exercise.tracking_type === 'assisted_reps'
-  // Heute alle Sätze an der oberen Grenze: Dieselbe Regel wie beim Hinweis, nur mit den heutigen Sätzen.
-  const goalReached =
-    done &&
-    progressionHint({
-      tracking: exercise.tracking_type,
-      currentWeight: exercise.current_weight_kg,
-      setsMin: entry.sets_min,
-      repsMin: entry.reps_min,
-      repsMax: entry.reps_max,
-      lastSets: logged,
-    }) !== null
-  const goalDirection = assisted ? -1 : 1
-  const goalWeight = formatWeight(stepWeight(exercise.current_weight_kg, exercise.weight_step_kg, goalDirection))
+  const allLogged = logged.length >= entry.sets_max
+  const topReps = entry.reps_min !== null && entry.reps_min !== entry.reps_max ? entry.reps_max : null
 
   function handleWeightStep(direction: 1 | -1) {
     setTypedWeight(null)
+    setFollowRequest((current) => current + 1)
     void applyExerciseChange({
       current_weight_kg: stepWeight(baseWeight, exercise.weight_step_kg, direction),
     })
+  }
+
+  async function handleNextWeight(setNumber: number, nextWeight: number) {
+    const saved = savedSets[setKey(activeId, setNumber)]
+    if (!saved) return
+    await updateNextWeight(await getWorkoutId(), activeId, setNumber, nextWeight)
+    const updated = { ...saved, next_weight_kg: nextWeight }
+    onSetChange(activeId, setNumber, updated, false)
+
+    // Das Arbeitsgewicht zeigt den schwersten Satz: das höchste Gewicht bzw. die wenigste Hilfe.
+    const planned = logged.flatMap((set, index) => {
+      const value = plannedWeight(rows[index] === setNumber ? updated : set)
+      return value === null ? [] : [value]
+    })
+    if (planned.length > 0) {
+      await applyExerciseChange({ current_weight_kg: assisted ? Math.min(...planned) : Math.max(...planned) })
+    }
   }
 
   /** Speichert zuerst und ändert die Anzeige nur bei Erfolg. */
@@ -141,6 +160,7 @@ export function ExerciseCard(props: Props) {
   function handleTrackingChange(next: TrackingType) {
     // Hilfe und Gewicht bedeuten Gegenteiliges: 30 kg Hilfe dürfen nicht zu 30 kg Zusatzgewicht werden.
     const assistChanged = (exercise.tracking_type === 'assisted_reps') !== (next === 'assisted_reps')
+    if (assistChanged) setFollowRequest((current) => current + 1)
     void applyExerciseChange(assistChanged ? { tracking_type: next, current_weight_kg: null } : { tracking_type: next })
   }
 
@@ -163,7 +183,8 @@ export function ExerciseCard(props: Props) {
     } else {
       await deleteSet(workoutId, activeId, setNumber)
     }
-    onSetChange(activeId, setNumber, values)
+    // Bei Übungen mit Gewicht bleibt die Karte offen, damit du pro Satz fürs nächste Mal entscheiden kannst.
+    onSetChange(activeId, setNumber, values, !weighted)
     // Das erste Gewicht wird zum Arbeitsgewicht, damit niemand bis 60 kg klicken muss. Danach zieht es bei
     // einem schwereren Satz nach. Ein leichterer Satz, z. B. ein Absenken am Ende, ändert es nicht.
     const weight = values?.weight_kg
@@ -234,49 +255,6 @@ export function ExerciseCard(props: Props) {
           </button>
         )}
       </div>
-
-      {done && weighted && (
-        <div className="px-4 pb-3">
-          {goalReached ? (
-            <button
-              className="min-h-11 w-full rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50"
-              type="button"
-              disabled={busy}
-              onClick={() => handleWeightStep(goalDirection)}
-            >
-              Geschafft! {assisted ? `Hilfe auf ${goalWeight} senken` : `Auf ${goalWeight} erhöhen`}
-            </button>
-          ) : (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-neutral-300">Nächstes Mal</span>
-              <div className="flex items-center gap-1">
-                <button
-                  className={stepButtonClass}
-                  type="button"
-                  aria-label={`${weightName} um ${exercise.weight_step_kg} kg senken`}
-                  disabled={busy || !baseWeight}
-                  onClick={() => handleWeightStep(-1)}
-                >
-                  −
-                </button>
-                <span className="w-20 text-center font-medium tabular-nums text-neutral-100" aria-live="polite">
-                  {formatWeight(exercise.current_weight_kg)}
-                </span>
-                <button
-                  className={stepButtonClass}
-                  type="button"
-                  aria-label={`${weightName} um ${exercise.weight_step_kg} kg erhöhen`}
-                  disabled={busy}
-                  onClick={() => handleWeightStep(1)}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          )}
-          {error && !open && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
-        </div>
-      )}
 
       {/* Die Höhe von 0fr auf 1fr animiert das Aufklappen ohne feste Pixelwerte. */}
       <div
@@ -424,12 +402,27 @@ export function ExerciseCard(props: Props) {
                     saved={savedSets[setKey(activeId, setNumber)] ?? null}
                     initialDraft={readDraft(userId, today, activeId, setNumber)}
                     placeholder={String(placeholderValue).replace('.', ',')}
+                    plannedWeight={lastSet && weighted ? plannedWeight(lastSet) : null}
+                    followRequest={followRequest}
+                    weightStep={exercise.weight_step_kg}
+                    topReps={topReps}
                     onSave={handleSaveSet}
+                    onNextWeight={handleNextWeight}
                     onWeightInput={(text) => setTypedWeight(parseWeightInput(text))}
                   />
                 )
               })}
             </ul>
+
+            {weighted && allLogged && (
+              <button
+                className="mt-3 min-h-11 w-full rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-neutral-950"
+                type="button"
+                onClick={onContinue}
+              >
+                Fertig, nächste Übung
+              </button>
+            )}
           </div>
         </div>
       </div>

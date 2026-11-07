@@ -82,7 +82,7 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
   if (workoutId) {
     const { data, error } = await supabase
       .from('sets')
-      .select('exercise_id, set_number, weight_kg, reps, duration_seconds, is_assisted')
+      .select('exercise_id, set_number, weight_kg, reps, duration_seconds, is_assisted, next_weight_kg')
       .eq('workout_id', workoutId)
     if (error) throw error
     todaySets = data
@@ -115,6 +115,21 @@ export async function saveSet(workoutId: string, exerciseId: string, setNumber: 
       { workout_id: workoutId, exercise_id: exerciseId, set_number: setNumber, ...values },
       { onConflict: 'workout_id,exercise_id,set_number' },
     )
+  if (error) throw error
+}
+
+export async function updateNextWeight(
+  workoutId: string,
+  exerciseId: string,
+  setNumber: number,
+  nextWeight: number | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('sets')
+    .update({ next_weight_kg: nextWeight })
+    .eq('workout_id', workoutId)
+    .eq('exercise_id', exerciseId)
+    .eq('set_number', setNumber)
   if (error) throw error
 }
 

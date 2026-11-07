@@ -6,6 +6,7 @@ import {
   parseSetDraft,
   parseWeightInput,
   parseWeightStep,
+  plannedWeight,
   setKey,
   type SetValues,
   stepWeight,
@@ -36,6 +37,33 @@ describe('stepWeight', () => {
 
   it('vermeidet Rundungsfehler', () => {
     expect(stepWeight(0.1, 0.2, 1)).toBe(0.3)
+  })
+})
+
+describe('plannedWeight', () => {
+  const set = (weight: number | null, next?: number | null): SetValues => ({
+    weight_kg: weight,
+    reps: 12,
+    duration_seconds: null,
+    is_assisted: false,
+    next_weight_kg: next,
+  })
+
+  it('nimmt die Entscheidung fürs nächste Mal', () => {
+    expect(plannedWeight(set(60, 62.5))).toBe(62.5)
+  })
+
+  it('bleibt ohne Entscheidung beim gestemmten Gewicht', () => {
+    expect(plannedWeight(set(60, null))).toBe(60)
+    expect(plannedWeight(set(60))).toBe(60)
+  })
+
+  it('kennt eine Entscheidung auf 0 kg', () => {
+    expect(plannedWeight(set(5, 0))).toBe(0)
+  })
+
+  it('bleibt ohne Gewicht leer', () => {
+    expect(plannedWeight(set(null))).toBeNull()
   })
 })
 

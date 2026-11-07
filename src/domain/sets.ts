@@ -9,6 +9,8 @@ export type SetValues = {
   reps: number | null
   duration_seconds: number | null
   is_assisted: boolean
+  /** Gewicht fürs nächste Mal. Leer heißt: gleiches Gewicht wie dieser Satz. */
+  next_weight_kg?: number | null
 }
 export type ParseResult =
   | { kind: 'empty' }
@@ -82,6 +84,11 @@ export function parseWeightInput(input: string): number | null {
   if (input.trim() === '') return null
   const weight = parseNumber(input)
   return Number.isFinite(weight) && weight >= 0 && weight <= MAX_WEIGHT_KG ? weight : null
+}
+
+/** Gewicht, mit dem dieser Satz beim nächsten Training startet. */
+export function plannedWeight(set: SetValues): number | null {
+  return set.next_weight_kg ?? set.weight_kg
 }
 
 /** Nächstes Arbeitsgewicht nach einem Klick auf + oder −. Ohne Gewicht startet + bei einer Schrittweite. */
