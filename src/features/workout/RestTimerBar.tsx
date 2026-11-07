@@ -4,14 +4,15 @@ import type { RestTimer } from './useRestTimer'
 const OPTIONS = [60, 90]
 const iconButtonClass = 'h-11 min-w-11 rounded-lg px-3 text-sm font-medium'
 
-export function RestTimerBar({ timer }: { timer: RestTimer }) {
+/** bar: Leiste unten auf Handy und Tablet. panel: Kasten in der Seitenleiste am Laptop. */
+export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'bar' | 'panel' }) {
   const { duration, endsAt, totalMs, now, start, stop, addSeconds, chooseDuration } = timer
   const left = endsAt === null ? null : restSecondsLeft(endsAt, now)
   const overtime = left !== null && left <= 0
 
   return (
     <div
-      className={`border-t transition-colors ${
+      className={`transition-colors ${variant === 'bar' ? 'border-t' : 'overflow-hidden rounded-xl border'} ${
         overtime ? 'border-yellow-300 bg-yellow-400 text-neutral-950' : 'border-neutral-800 bg-neutral-950 text-neutral-100'
       }`}
     >
@@ -24,7 +25,13 @@ export function RestTimerBar({ timer }: { timer: RestTimer }) {
         </div>
       )}
 
-      <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-4 py-2">
+      <div
+        className={
+          variant === 'bar'
+            ? 'mx-auto flex max-w-md items-center justify-between gap-2 px-4 py-2 md:max-w-2xl'
+            : 'flex flex-wrap items-center justify-between gap-2 p-3'
+        }
+      >
         {left === null ? (
           <>
             <span className="text-sm text-neutral-400">Pause</span>
