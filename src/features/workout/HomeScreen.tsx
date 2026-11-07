@@ -57,7 +57,6 @@ export function HomeScreen({ session }: { session: Session }) {
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [today, setToday] = useState(() => localDateString())
-  const [planMode, setPlanMode] = useState<'weekly' | 'template'>('weekly')
   const [tab, setTab] = useState<Tab>('training')
   const [planVersion, setPlanVersion] = useState(0)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -170,7 +169,6 @@ export function HomeScreen({ session }: { session: Session }) {
   const timerRunning = restTimer.endsAt !== null
   const showTimer = planDays !== null && (timerRunning || (tab === 'training' && planDays.length > 0))
   const planArea = tab === 'plan' || (tab === 'training' && planDays?.length === 0)
-  const editingPlan = planArea && (planDays?.length === 0 || planMode === 'template')
 
   const streak = weekStreak(trainedDates, today)
   const streakChip = streak > 0 && (
@@ -318,34 +316,28 @@ export function HomeScreen({ session }: { session: Session }) {
                 {nameHint}
               </div>
             )}
-            {tab === 'plan' && planDays.length > 0 && <nav className="mt-4 flex max-w-xl gap-1 rounded-2xl bg-surface p-1 ring-1 ring-line/[0.06]" aria-label="Trainingsplan-Bereich">
-              <button type="button" className={`min-h-11 flex-1 rounded-xl px-2 text-sm transition-all ${planMode === 'weekly' ? 'bg-neon font-semibold text-black' : 'text-muted'}`}
-                aria-pressed={planMode === 'weekly'} onClick={() => setPlanMode('weekly')}>Wochenplanung</button>
-              <button type="button" className={`min-h-11 flex-1 rounded-xl px-2 text-sm transition-all ${planMode === 'template' ? 'bg-neon font-semibold text-black' : 'text-muted'}`}
-                aria-pressed={planMode === 'template'} onClick={() => setPlanMode('template')}>Vorlage</button>
-            </nav>}
-            {editingPlan && (
+            {/* Bleibt beim Tab-Wechsel erhalten, damit Eingaben und offene Übung nicht verloren gehen. */}
+            {planDays.length > 0 && <div className={tab === 'training' ? '' : 'hidden'}>
+              <TrainingDays key={planVersion} today={today} userId={userId} planDays={planDays} restSeconds={restTimer.duration} onSetLogged={handleSetLogged} />
+            </div>}
+            {/* Wochenplanung und Vorlage stehen auf einer Seite: oben die Woche, darunter die Vorlage. */}
+            {planDays.length > 0 && <div className={tab === 'plan' ? '' : 'hidden'}>
+              <WeekPlanning key={planVersion} today={today} planDays={planDays} active={tab === 'plan'} />
+            </div>}
+            {planArea && (
               <PlanEditor
                 key={planVersion}
                 hasPlan={planDays.length > 0}
                 onSaved={() => {
-                  // Bleibt in der Vorlage, damit sich mehrere Tage nacheinander bearbeiten lassen.
+                  // Bleibt im Trainingsplan, damit sich mehrere Tage nacheinander bearbeiten lassen.
                   // Pause und noch nicht gespeicherte Trainingseingaben laufen weiter.
                   setPlanDays(null)
-                  setPlanMode('template')
                   setTab('plan')
                   setPlanVersion((value) => value + 1)
                   setAttempt((value) => value + 1)
                 }}
               />
             )}
-            {/* Bleibt beim Tab-Wechsel erhalten, damit Eingaben und offene Übung nicht verloren gehen. */}
-            {planDays.length > 0 && <div className={tab === 'training' ? '' : 'hidden'}>
-              <TrainingDays key={planVersion} today={today} userId={userId} planDays={planDays} restSeconds={restTimer.duration} onSetLogged={handleSetLogged} />
-            </div>}
-            {planDays.length > 0 && <div className={tab === 'plan' && planMode === 'weekly' ? '' : 'hidden'}>
-              <WeekPlanning key={planVersion} today={today} planDays={planDays} active={tab === 'plan' && planMode === 'weekly'} />
-            </div>}
 
             {/* Wird bei jedem Öffnen neu geladen und zeigt so auch gerade gespeicherte Sätze. */}
             {tab === 'stats' && (

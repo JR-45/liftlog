@@ -23,7 +23,7 @@ Wochenplan als Vorlage. Änderungen betreffen nur die ausgewählte Woche.
   trainierte Tage mit einem Haken, die Sätze selbst stehen im Kalender der Statistik.
 - Die Statistik berücksichtigt ausdrücklich geplante Ruhetage und ungeplante Tage. Diese gelten nicht als verpasst.
 - Die Übungsseiten bleiben verfügbar.
-- Unter „Vorlage“ stehen sieben Tagesbuttons. Ein Klick öffnet das Popup zur Erstellung oder
+- Unter der Wochenplanung steht die Wochenvorlage mit sieben Tagesbuttons in einer Reihe. Ein Klick öffnet das Popup zur Erstellung oder
   Bearbeitung der Einheit dieses Tages. Tage ohne Einheit sind Ruhetage. Einheiten lassen sich von anderen Tagen
   unabhängig kopieren. „Tag speichern“ aktualisiert die Vorlage direkt im Konto.
 
