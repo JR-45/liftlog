@@ -598,7 +598,7 @@ export function ExerciseCard(props: Props) {
 
   if (isDetail) {
     return (
-      <section aria-label={exercise.name} className="rounded-2xl border border-line/[0.08] bg-surface shadow-lg">
+      <section data-entry={entry.id} aria-label={exercise.name} className="scroll-mt-4 rounded-2xl border border-line/[0.08] bg-surface shadow-lg">
         {header}
         {answer}
         {body}
@@ -614,6 +614,7 @@ export function ExerciseCard(props: Props) {
   return (
     <li
       ref={cardRef}
+      data-entry={entry.id}
       aria-label={exercise.name}
       className={`scroll-mt-16 overflow-hidden rounded-2xl border transition-colors duration-300 motion-reduce:transition-none ${
         open ? openStyle : 'border-line/[0.06] bg-surface/80'

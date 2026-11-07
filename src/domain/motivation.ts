@@ -42,3 +42,12 @@ export function estimateMinutes(totalSets: number, restSeconds: number): number 
   const minutes = (totalSets * (45 + restSeconds)) / 60
   return Math.max(5, Math.round(minutes / 5) * 5)
 }
+
+/** Stoppuhr-Anzeige: „4:07“, ab einer Stunde „1:04:07“. Negative Werte gelten als 0. */
+export function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = String(total % 60).padStart(2, '0')
+  return hours > 0 ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}` : `${minutes}:${seconds}`
+}

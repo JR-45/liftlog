@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateMinutes, weekStreak } from './motivation'
+import { estimateMinutes, formatElapsed, weekStreak } from './motivation'
 
 describe('weekStreak', () => {
   // 2026-11-07 ist ein Samstag, die Woche beginnt am Montag, 2026-11-02.
@@ -35,5 +35,20 @@ describe('estimateMinutes', () => {
 
   it('zeigt mindestens 5 Minuten', () => {
     expect(estimateMinutes(0, 90)).toBe(5)
+  })
+})
+
+describe('formatElapsed', () => {
+  it('zeigt Minuten und Sekunden', () => {
+    expect(formatElapsed(0)).toBe('0:00')
+    expect(formatElapsed(247_000)).toBe('4:07')
+  })
+
+  it('zeigt ab einer Stunde auch die Stunden', () => {
+    expect(formatElapsed(3_847_000)).toBe('1:04:07')
+  })
+
+  it('zeigt bei negativer Zeit 0:00, z. B. bei leicht falsch gehender Uhr', () => {
+    expect(formatElapsed(-5_000)).toBe('0:00')
   })
 })

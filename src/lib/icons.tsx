@@ -137,3 +137,12 @@ export function FlameIcon({ className = 'h-5 w-5' }: IconProps) {
     </svg>
   )
 }
+
+export function StopwatchIcon({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <circle cx="12" cy="14" r="8" />
+      <path d="M12 10v4l2.5 2M10 2h4M12 2v4M19 6l1.5-1.5" />
+    </SvgIcon>
+  )
+}
