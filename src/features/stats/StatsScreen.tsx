@@ -4,7 +4,7 @@ import type { ExportRow } from '../../domain/export'
 import { buildDayHistory } from '../../domain/progress'
 import { localDateString } from '../../domain/sets'
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '../../lib/icons'
-import { loadTrainedDates, type PlanDay } from '../workout/api'
+import { loadScheduledDays, loadTrainedDates, type PlanDay } from '../workout/api'
 import { deleteDayMark, loadDayMarks, loadExportRows, saveDayMark } from './api'
 import { ExerciseProgressCard } from './ExerciseProgressCard'
 
@@ -111,7 +111,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
   const currentIndex = monthIndex(today)
   const firstIndex = Math.min(monthIndex(startDate), currentIndex)
   const [shownIndex, setShownIndex] = useState(currentIndex)
-  const [loaded, setLoaded] = useState<{ index: number; dates: Set<string>; marks: Map<string, DayMarkKind> } | null>(
+  const [loaded, setLoaded] = useState<{ index: number; dates: Set<string>; marks: Map<string, DayMarkKind>; planned: Map<string, boolean> } | null>(
     null,
   )
   const [failedIndex, setFailedIndex] = useState<number | null>(null)
@@ -142,10 +142,10 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
     let cancelled = false
     const from = localDateString(new Date(year, month, 1))
     const to = localDateString(new Date(year, month + 1, 0))
-    Promise.all([loadTrainedDates(from, to), loadDayMarks(from, to)])
-      .then(([dates, marks]) => {
+    Promise.all([loadTrainedDates(from, to), loadDayMarks(from, to), loadScheduledDays(from, to)])
+      .then(([dates, marks, scheduled]) => {
         if (cancelled) return
-        setLoaded({ index: shownIndex, dates, marks })
+        setLoaded({ index: shownIndex, dates, marks, planned: new Map(scheduled.map((day) => [day.day_date, day.plan_day_id !== null])) })
         setFailedIndex(null)
       })
       .catch(() => {
@@ -167,6 +167,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
       trainedDates: current.dates,
       marks: current.marks,
       plannedWeekdays: new Set(planDays.map((day) => day.weekday)),
+      plannedDates: current.planned,
     })
   }, [current, year, month, today, startDate, planDays])
 

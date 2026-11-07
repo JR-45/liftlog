@@ -29,6 +29,7 @@ type Input = {
   trainedDates: ReadonlySet<string>
   plannedWeekdays: ReadonlySet<number>
   marks?: ReadonlyMap<string, DayMarkKind>
+  plannedDates?: ReadonlyMap<string, boolean>
 }
 
 function statusOf(date: string, weekday: number, input: Input): DayStatus {
@@ -39,7 +40,8 @@ function statusOf(date: string, weekday: number, input: Input): DayStatus {
   // Heute ist noch nichts verpasst.
   if (date === input.today) return 'today'
   if (date < input.startDate) return 'before_start'
-  return input.plannedWeekdays.has(weekday) ? 'missed' : 'rest'
+  const planned = input.plannedDates?.get(date) ?? input.plannedWeekdays.has(weekday)
+  return planned ? 'missed' : 'rest'
 }
 
 export function buildMonth(input: Input): CalendarMonth {
@@ -59,7 +61,7 @@ export function buildMonth(input: Input): CalendarMonth {
     if (status === 'trained') trained += 1
     if (status === 'missed') missed += 1
     if (status === 'marked') marked += 1
-    const planned = input.plannedWeekdays.has(value.getDay())
+    const planned = input.plannedDates?.get(date) ?? input.plannedWeekdays.has(value.getDay())
     const canMark =
       status === 'missed' || status === 'marked' || ((status === 'today' || status === 'future') && planned)
     cells.push({ date, day, status, mark: status === 'marked' ? (input.marks?.get(date) ?? null) : null, canMark })

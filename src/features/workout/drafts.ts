@@ -4,6 +4,23 @@ import type { SetDraft } from '../../domain/sets'
 // Der Speicher kann blockiert sein, z. B. im privaten Modus. Die App läuft dann ohne Entwürfe weiter.
 const PREFIX = 'liftlog:draft:'
 
+export function readSetCount(userId: string, date: string, entryId: string): number | null {
+  try {
+    const raw = localStorage.getItem(`${PREFIX}${userId}:${date}:rows:${entryId}`)
+    return raw === null ? null : Number(raw)
+  } catch {
+    return null
+  }
+}
+
+export function writeSetCount(userId: string, date: string, entryId: string, count: number): void {
+  try {
+    localStorage.setItem(`${PREFIX}${userId}:${date}:rows:${entryId}`, String(count))
+  } catch {
+    // Ohne Speicher bleibt die Satzanzahl nur für die aktuelle Ansicht erhalten.
+  }
+}
+
 function draftKey(userId: string, date: string, exerciseId: string, setNumber: number): string {
   return `${PREFIX}${userId}:${date}:${exerciseId}:${setNumber}`
 }
@@ -33,10 +50,10 @@ export function removeDraft(userId: string, date: string, exerciseId: string, se
   }
 }
 
-/** Entfernt alle Entwürfe, außer denen des angegebenen Users und Tages. */
-export function clearDrafts(keep?: { userId: string; date: string }): void {
+/** Entfernt fremde Entwürfe. Optional bleiben nur die Entwürfe eines bestimmten Tages erhalten. */
+export function clearDrafts(keep?: { userId: string; date?: string }): void {
   try {
-    const keepPrefix = keep ? `${PREFIX}${keep.userId}:${keep.date}:` : null
+    const keepPrefix = keep ? `${PREFIX}${keep.userId}:${keep.date ? `${keep.date}:` : ''}` : null
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith(PREFIX) && !(keepPrefix && key.startsWith(keepPrefix))) {
         localStorage.removeItem(key)

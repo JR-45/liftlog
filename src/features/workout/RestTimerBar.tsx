@@ -70,7 +70,7 @@ export function RestTimerBar({ timer, variant }: { timer: RestTimer; variant: 'b
           </>
         ) : (
           <>
-            <div role="timer" aria-label="Pausentimer" className="flex items-baseline gap-2">
+            <div role="timer" aria-label="Pausentimer" className="flex min-w-0 flex-wrap items-baseline gap-x-2">
               <span className="text-2xl font-bold tracking-tight tabular-nums">
                 {overtime ? `+${formatClock(left)}` : formatClock(left)}
               </span>

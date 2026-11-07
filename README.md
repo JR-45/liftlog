@@ -41,7 +41,30 @@ Die App hat keine Registrierung. Lege ein lokales Konto in Supabase Studio an:
 2. Geh zu **Authentication → Users → Add user → Create new user**.
 3. Gib eine beliebige E-Mail und ein Passwort ein und melde dich damit in der App an.
 
-Beim ersten Login wird automatisch der Standard-Trainingsplan angelegt.
+Beim ersten Login öffnet sich die Trainingsplan-Erstellung. Lege Trainingstage mit Übungen, Satzanzahl und optionalen
+Wiederholungs- oder Dauervorgaben an. Der Plan wird im Benutzerkonto gespeichert. Unter **Trainingsplan** kannst du ihn
+später bearbeiten, löschen und neu anlegen. Bisherige Trainingsdaten bleiben dabei erhalten.
+
+Trainingsmethoden und Übungen wählst du getrennt: Die Methode zeigt einen anpassbaren Beispielplan mit Übungen und
+Vorgaben. Die Planaufteilung bietet Ganzkörper, Oberkörper/Unterkörper und Push/Pull/Beine. **Vorschlag übernehmen**
+ersetzt den Entwurf; **Trainingsplan speichern** speichert ihn zusammen mit Methode und Aufteilung im Konto.
+Der Übungskatalog lässt sich nach Namen und Bereichen durchsuchen. Eigene Übungen kannst du weiterhin eintragen.
+Supersätze, Zirkel und Intervalle enthalten Ablaufempfehlungen; die Trainingserfassung bleibt bei einzelnen Übungen und Sätzen.
+
+Die Oberfläche passt sich der Fenstergröße an: Smartphones haben eine Navigation unten, Tablets mehrspaltige Inhalte und
+Notebooks ab 1024 Pixeln eine Seitenleiste. Auf großen Bildschirmen stehen Empfehlungen und Planeditor nebeneinander.
+Die Darstellung berücksichtigt Bildschirmränder mit Aussparungen, Tastaturbedienung und reduzierte Animationen.
+
+Im Planeditor blätterst du pro Trainingstag zwischen den Übungen. Neue Übungen öffnen sich auf einer eigenen Seite;
+die bisherigen Eingaben bleiben erhalten. Zurück/Weiter, Direktauswahl und horizontales Wischen wechseln die Seite.
+Im Training startet jede Übung mit drei Sätzen. Du kannst Sätze hinzufügen oder den letzten Satz einschließlich seiner
+gespeicherten Werte löschen. Die angepasste Anzahl gilt für den aktuellen Tag und bleibt auf dem Gerät beim Neuladen erhalten.
+
+Unter **Trainingsplan → Wochenplanung** wählst du eine Kalenderwoche und planst Training und Ruhetage für jeden Tag.
+Neue Wochen übernehmen zunächst die gespeicherte Vorlage. **Woche speichern** speichert nur diese Kalenderwoche.
+Unter **Wochenvorlage bearbeiten** öffnet jeder Tagesbutton ein eigenes Popup: Dort erstellst du den Trainingsplan für
+diesen Tag oder markierst ihn als Ruhetag. Gelb markierte Tagesbuttons enthalten eine Einheit. Im Bereich **Training**
+bleiben die bisherige Tagesauswahl und die Satzeingabe für heute erhalten.
 
 ## Befehle
 

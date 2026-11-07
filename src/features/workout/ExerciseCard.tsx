@@ -57,6 +57,8 @@ type Props = {
   /** Ändert sich der Wert, scrollt die Karte an den oberen Rand. */
   scrollRequest: number | null
   savedSets: Record<string, SetValues>
+  setCount: number
+  onSetCountChange: (count: number) => void
   lastSets: LoggedSet[]
   getWorkoutId: () => Promise<string>
   onToggle: () => void
@@ -81,6 +83,8 @@ export function ExerciseCard(props: Props) {
     open,
     scrollRequest,
     savedSets,
+    setCount,
+    onSetCountChange,
     lastSets,
     getWorkoutId,
     onToggle,
@@ -92,6 +96,8 @@ export function ExerciseCard(props: Props) {
     onSetDeleted,
   } = props
   const [busy, setBusy] = useState(false)
+  const [changingCount, setChangingCount] = useState(false)
+  const [savingSets, setSavingSets] = useState(0)
   const [error, setError] = useState<string | null>(null)
   // null: Das Feld zeigt den gespeicherten Wert, sonst die laufende Eingabe.
   const [stepText, setStepText] = useState<string | null>(null)
@@ -101,7 +107,7 @@ export function ExerciseCard(props: Props) {
   // Ein neuer Wert baut die Satzzeilen neu auf, damit auch ihre Eingaben verschwinden.
   const [rowGeneration, setRowGeneration] = useState(0)
   const hasDraftsFor = (exerciseId: string) =>
-    Array.from({ length: entry.sets_max }, (_, index) => index + 1).some(
+    Array.from({ length: setCount }, (_, index) => index + 1).some(
       (setNumber) => readDraft(userId, today, exerciseId, setNumber) !== null,
     )
   const [hasEdits, setHasEdits] = useState(() => hasDraftsFor(activeId))
@@ -123,7 +129,7 @@ export function ExerciseCard(props: Props) {
   const isRounds = entry.sets_min !== entry.sets_max
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min, entry.duration_max)
-  const sets = formatRange(entry.sets_min, entry.sets_max)
+  const sets = String(setCount)
   const target = reps
     ? `${sets}${isRounds ? ' Runden' : ''} × ${reps}`
     : duration
@@ -133,19 +139,19 @@ export function ExerciseCard(props: Props) {
   const hint = progressionHint({
     tracking: exercise.tracking_type,
     currentWeight: exercise.current_weight_kg,
-    setsMin: entry.sets_min,
+    setsMin: setCount,
     repsMin: entry.reps_min,
     repsMax: entry.reps_max,
     lastSets: last,
   })
   const hintText = hint === 'increase_weight' ? 'Gewicht erhöhen empfohlen' : 'Gewichtshilfe senken empfohlen'
 
-  const rows = Array.from({ length: entry.sets_max }, (_, index) => index + 1)
+  const rows = Array.from({ length: setCount }, (_, index) => index + 1)
   const logged = rows.flatMap((setNumber) => {
     const set = savedSets[setKey(activeId, setNumber)]
     return set ? [set] : []
   })
-  const done = logged.length >= entry.sets_min
+  const done = logged.length >= setCount
   const direction = assisted ? -1 : 1
   const answered = logged.length > 0 && logged.every((set) => set.next_weight_kg != null)
   // Empfehlung: Dieselbe Regel wie beim Hinweis, nur mit den heutigen Sätzen.
@@ -154,7 +160,7 @@ export function ExerciseCard(props: Props) {
     progressionHint({
       tracking: exercise.tracking_type,
       currentWeight: null,
-      setsMin: entry.sets_min,
+      setsMin: setCount,
       repsMin: entry.reps_min,
       repsMax: entry.reps_max,
       lastSets: logged.map((set) => ({ ...set, next_weight_kg: null })),
@@ -231,6 +237,7 @@ export function ExerciseCard(props: Props) {
 
   /** Setzt die Übung für heute zurück: gespeicherte Sätze, Antwort auf „Geschafft?“ und Entwürfe. */
   async function handleResetExercise() {
+    if (changingCount || savingSets > 0 || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -327,19 +334,48 @@ export function ExerciseCard(props: Props) {
   }
 
   async function handleSaveSet(setNumber: number, values: SetValues | null) {
-    const workoutId = await getWorkoutId()
-    if (values) {
-      await saveSet(workoutId, activeId, setNumber, { ...values, next_weight_kg: null })
-    } else {
-      await deleteSet(workoutId, activeId, setNumber)
+    setSavingSets((count) => count + 1)
+    try {
+      const workoutId = await getWorkoutId()
+      if (values) {
+        await saveSet(workoutId, activeId, setNumber, { ...values, next_weight_kg: null })
+      } else {
+        await deleteSet(workoutId, activeId, setNumber)
+      }
+      // Ein neuer oder geänderter Satz macht eine frühere Antwort ungültig, die Frage kommt dann neu.
+      onSetChange(activeId, setNumber, values && { ...values, next_weight_kg: null })
+      // Das Arbeitsgewicht ist der schwerste Satz. Es füllt noch leere Sätze und steuert den Hinweis.
+      const weight = values?.weight_kg
+      const current = exercise.current_weight_kg
+      if (weight != null && (current === null || (assisted ? weight < current : weight > current))) {
+        await applyExerciseChange({ current_weight_kg: weight })
+      }
+    } finally {
+      setSavingSets((count) => count - 1)
     }
-    // Ein neuer oder geänderter Satz macht eine frühere Antwort ungültig, die Frage kommt dann neu.
-    onSetChange(activeId, setNumber, values && { ...values, next_weight_kg: null })
-    // Das Arbeitsgewicht ist der schwerste Satz. Es füllt noch leere Sätze und steuert den Hinweis.
-    const weight = values?.weight_kg
-    const current = exercise.current_weight_kg
-    if (weight != null && (current === null || (assisted ? weight < current : weight > current))) {
-      await applyExerciseChange({ current_weight_kg: weight })
+  }
+
+  async function removeLastSet() {
+    if (setCount <= 1 || changingCount || busy || savingSets > 0) return
+    setChangingCount(true)
+    setError(null)
+    try {
+      // Beide Alternativen teilen dieselbe Satzanzahl; vorhandene Sätze werden nie versteckt.
+      const ids = entry.alternative ? [entry.exercise.id, entry.alternative.id] : [entry.exercise.id]
+      const savedIds = ids.filter((id) => savedSets[setKey(id, setCount)])
+      if (savedIds.length > 0) {
+        const workoutId = await getWorkoutId()
+        for (const id of savedIds) {
+          await deleteSet(workoutId, id, setCount)
+          onSetChange(id, setCount, null)
+        }
+      }
+      for (const id of ids) removeDraft(userId, today, id, setCount)
+      onSetCountChange(setCount - 1)
+    } catch {
+      setError('Der Satz konnte nicht gelöscht werden. Bitte erneut versuchen.')
+    } finally {
+      setChangingCount(false)
     }
   }
 
@@ -593,6 +629,7 @@ export function ExerciseCard(props: Props) {
         <span className={isDetail && entry.sets_max > 1 ? 'w-[5.75rem] shrink-0' : 'w-11 shrink-0'} />
       </div>
 
+      <fieldset disabled={changingCount || busy} aria-label="Sätze">
       <ul>
         {rows.map((setNumber) => {
           const lastSet = last.find((set) => set.set_number === setNumber)
@@ -630,6 +667,18 @@ export function ExerciseCard(props: Props) {
           )
         })}
       </ul>
+      </fieldset>
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-700 pt-3">
+        <span className="mr-auto text-sm text-neutral-400" aria-live="polite">{setCount} {isRounds ? 'Runden' : 'Sätze'}</span>
+        <button className="min-h-11 rounded-lg bg-neutral-900 px-3 py-2 text-sm text-red-300 disabled:opacity-40"
+          type="button" disabled={setCount <= 1 || busy || changingCount || savingSets > 0} onClick={() => void removeLastSet()}>
+          {changingCount ? 'Wird gelöscht …' : `${isRounds ? 'Runde' : 'Satz'} ${setCount} löschen`}
+        </button>
+        <button className="min-h-11 rounded-lg bg-neutral-900 px-3 py-2 text-sm text-yellow-300 disabled:opacity-40"
+          type="button" disabled={setCount >= 100 || busy || changingCount || savingSets > 0} onClick={() => onSetCountChange(setCount + 1)}>
+          + {isRounds ? 'Runde' : 'Satz'} hinzufügen
+        </button>
+      </div>
 
       {entry.sets_max < 20 && (
         <button
