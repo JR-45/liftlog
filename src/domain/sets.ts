@@ -73,6 +73,13 @@ export function stepWeight(current: number | null, step: number, direction: 1 | 
   return Math.max(0, Math.round((current + direction * step) * 100) / 100)
 }
 
+/** Liest eine Schrittweite. Die Datenbank erlaubt mehr als 0 und höchstens 99,99 kg. */
+export function parseWeightStep(input: string): number | null {
+  if (input.trim() === '') return null
+  const rounded = Math.round(parseNumber(input) * 100) / 100
+  return Number.isFinite(rounded) && rounded > 0 && rounded <= 99.99 ? rounded : null
+}
+
 function formatNumber(value: number): string {
   return String(value).replace('.', ',')
 }

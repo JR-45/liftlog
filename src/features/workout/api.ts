@@ -117,7 +117,7 @@ export async function deleteSet(workoutId: string, exerciseId: string, setNumber
 
 export async function updateExercise(
   exerciseId: string,
-  changes: { current_weight_kg?: number | null; tracking_type?: TrackingType },
+  changes: { current_weight_kg?: number | null; tracking_type?: TrackingType; weight_step_kg?: number },
 ): Promise<void> {
   const { error } = await supabase.from('exercises').update(changes).eq('id', exerciseId)
   if (error) throw error

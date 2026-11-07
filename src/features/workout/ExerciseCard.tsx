@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { progressionHint } from '../../domain/progression'
 import {
   type DurationUnit,
   formatPerformance,
   formatRange,
   formatWeight,
+  parseWeightStep,
   type SetValues,
   stepWeight,
   type TrackingType,
@@ -45,6 +47,8 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // null: Das Feld zeigt den gespeicherten Wert, sonst die laufende Eingabe.
+  const [stepText, setStepText] = useState<string | null>(null)
 
   const exercise = exercises[activeId]
   const weightName = exercise.tracking_type === 'assisted_reps' ? 'Gewichtshilfe' : 'Arbeitsgewicht'
@@ -59,9 +63,19 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
       ? `${sets} × ${duration} Sek.`
       : 'Dauer frei'
   const last = lastSets.filter((set) => set.exercise_id === activeId)
+  const hint = progressionHint({
+    tracking: exercise.tracking_type,
+    currentWeight: exercise.current_weight_kg,
+    setsMin: entry.sets_min,
+    repsMin: entry.reps_min,
+    repsMax: entry.reps_max,
+    lastSets: last,
+  })
 
   /** Speichert zuerst und ändert die Anzeige nur bei Erfolg. */
-  async function applyExerciseChange(changes: Partial<Pick<Exercise, 'current_weight_kg' | 'tracking_type'>>) {
+  async function applyExerciseChange(
+    changes: Partial<Pick<Exercise, 'current_weight_kg' | 'tracking_type' | 'weight_step_kg'>>,
+  ) {
     setBusy(true)
     setError(null)
     try {
@@ -78,6 +92,18 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
     // Hilfe und Gewicht bedeuten Gegenteiliges: 30 kg Hilfe dürfen nicht zu 30 kg Zusatzgewicht werden.
     const assistChanged = (exercise.tracking_type === 'assisted_reps') !== (next === 'assisted_reps')
     void applyExerciseChange(assistChanged ? { tracking_type: next, current_weight_kg: null } : { tracking_type: next })
+  }
+
+  function handleStepBlur() {
+    if (stepText === null) return
+    const step = parseWeightStep(stepText)
+    if (step === null) {
+      setError('Schrittweite prüfen: mehr als 0 und höchstens 99,99 kg.')
+      return
+    }
+    setStepText(null)
+    if (step !== exercise.weight_step_kg) void applyExerciseChange({ weight_step_kg: step })
+    else setError(null)
   }
 
   async function handleSaveSet(setNumber: number, values: SetValues | null) {
@@ -115,6 +141,7 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
           onClick={() => {
             const alternative = entry.alternative as Exercise
             setActiveId(activeId === entry.exercise.id ? alternative.id : entry.exercise.id)
+            setStepText(null)
             setError(null)
           }}
         >
@@ -125,6 +152,12 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
       <p className="mt-1 text-sm text-neutral-400">
         {last.length > 0 ? `Letztes Mal: ${formatPerformance(last, unit)}` : 'Noch kein letztes Training'}
       </p>
+
+      {hint && (
+        <p className="mt-1 text-sm font-medium text-emerald-300">
+          {hint === 'increase_weight' ? 'Gewicht erhöhen empfohlen' : 'Gewichtshilfe senken empfohlen'}
+        </p>
+      )}
 
       {exercise.tracking_type !== 'duration' && (
         <label className="mt-3 flex min-h-11 items-center justify-between gap-3 text-sm text-neutral-300">
@@ -177,6 +210,23 @@ export function ExerciseCard({ entry, userId, today, todaySets, lastSets, getWor
             </button>
           </div>
         </div>
+      )}
+
+      {usesWeight(exercise.tracking_type) && (
+        <label className="mt-2 flex items-center justify-between text-sm text-neutral-300">
+          Schrittweite
+          <span className="flex items-center gap-2 text-neutral-400">
+            <input
+              className="h-11 w-20 rounded-lg border border-neutral-700 bg-neutral-800 px-2 text-center text-base text-neutral-100 outline-none focus:border-neutral-400"
+              aria-label="Schrittweite in kg"
+              inputMode="decimal"
+              value={stepText ?? String(exercise.weight_step_kg).replace('.', ',')}
+              onChange={(event) => setStepText(event.target.value)}
+              onBlur={handleStepBlur}
+            />
+            kg
+          </span>
+        </label>
       )}
 
       {error && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
