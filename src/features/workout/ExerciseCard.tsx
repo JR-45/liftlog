@@ -14,8 +14,8 @@ import {
   type TrackingType,
   usesWeight,
 } from '../../domain/sets'
-import { deleteSet, type Exercise, type LoggedSet, type PlanEntry, saveSet, updateExercise, updateNextWeights } from './api'
-import { readDraft } from './drafts'
+import { deleteExerciseSets, deleteSet, type Exercise, type LoggedSet, type PlanEntry, saveSet, updateExercise, updateNextWeights } from './api'
+import { readDraft, removeDraft } from './drafts'
 import { SetRow } from './SetRow'
 
 const fieldClass =
@@ -74,6 +74,14 @@ export function ExerciseCard(props: Props) {
   const [stepText, setStepText] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [resetRequest, setResetRequest] = useState(0)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+  // Ein neuer Wert baut die Satzzeilen neu auf, damit auch ihre Eingaben verschwinden.
+  const [rowGeneration, setRowGeneration] = useState(0)
+  const hasDraftsFor = (exerciseId: string) =>
+    Array.from({ length: entry.sets_max }, (_, index) => index + 1).some(
+      (setNumber) => readDraft(userId, today, exerciseId, setNumber) !== null,
+    )
+  const [hasEdits, setHasEdits] = useState(() => hasDraftsFor(activeId))
   const cardRef = useRef<HTMLLIElement>(null)
 
   // Erst nach der Animation scrollen, sonst verschiebt die sich schließende Karte das Ziel.
@@ -196,6 +204,26 @@ export function ExerciseCard(props: Props) {
     const assistChanged = assisted !== (next === 'assisted_reps')
     if (assistChanged) setResetRequest((current) => current + 1)
     void applyExerciseChange(assistChanged ? { tracking_type: next, current_weight_kg: null } : { tracking_type: next })
+  }
+
+  /** Setzt die Übung für heute zurück: gespeicherte Sätze, Antwort auf „Geschafft?“ und Entwürfe. */
+  async function handleResetExercise() {
+    setBusy(true)
+    setError(null)
+    try {
+      if (logged.length > 0) await deleteExerciseSets(await getWorkoutId(), activeId)
+      for (const setNumber of rows) {
+        removeDraft(userId, today, activeId, setNumber)
+        if (savedSets[setKey(activeId, setNumber)]) onSetChange(activeId, setNumber, null)
+      }
+      setRowGeneration((current) => current + 1)
+      setHasEdits(false)
+      setConfirmingReset(false)
+    } catch {
+      setError('Die Übung konnte nicht zurückgesetzt werden. Versuch es noch einmal.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   function handleStepBlur() {
@@ -398,7 +426,10 @@ export function ExerciseCard(props: Props) {
               type="button"
               onClick={() => {
                 const alternative = entry.alternative as Exercise
-                onActiveChange(activeId === entry.exercise.id ? alternative.id : entry.exercise.id)
+                const nextId = activeId === entry.exercise.id ? alternative.id : entry.exercise.id
+                onActiveChange(nextId)
+                setHasEdits(hasDraftsFor(nextId))
+                setConfirmingReset(false)
                 setStepText(null)
                 setError(null)
               }}
@@ -449,7 +480,7 @@ export function ExerciseCard(props: Props) {
               : (lastSet?.reps ?? '')
           return (
             <SetRow
-              key={setKey(activeId, setNumber)}
+              key={`${setKey(activeId, setNumber)}:${rowGeneration}`}
               label={isRounds ? `Runde ${setNumber}` : `Satz ${setNumber}`}
               rowNumber={setNumber}
               userId={userId}
@@ -466,10 +497,44 @@ export function ExerciseCard(props: Props) {
               resetRequest={resetRequest}
               weightStep={exercise.weight_step_kg}
               onSave={handleSaveSet}
+              onEdit={() => setHasEdits(true)}
             />
           )
         })}
       </ul>
+
+      {(logged.length > 0 || hasEdits) &&
+        (confirmingReset ? (
+          <div className="mt-3 rounded-lg bg-neutral-900/60 p-3">
+            <p className="text-sm text-neutral-200">Eingaben und heutige Sätze dieser Übung löschen?</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                className="min-h-11 rounded-lg border border-neutral-700 px-2 text-sm text-neutral-200 disabled:opacity-50"
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirmingReset(false)}
+              >
+                Abbrechen
+              </button>
+              <button
+                className="min-h-11 rounded-lg bg-red-400 px-2 text-sm font-semibold text-neutral-950 disabled:opacity-50"
+                type="button"
+                disabled={busy}
+                onClick={() => void handleResetExercise()}
+              >
+                Ja, zurücksetzen
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className="mt-3 min-h-11 w-full text-sm text-neutral-400 underline"
+            type="button"
+            onClick={() => setConfirmingReset(true)}
+          >
+            Übung zurücksetzen
+          </button>
+        ))}
     </div>
   )
 

@@ -36,6 +36,8 @@ type Props = {
   resetRequest: number
   weightStep: number
   onSave: (setNumber: number, values: SetValues | null) => Promise<void>
+  /** Meldet der Karte, dass es jetzt Eingaben gibt, die sich zurücksetzen lassen. */
+  onEdit: () => void
 }
 
 function draftFromSaved(saved: SetValues, unit: DurationUnit): SetDraft {
@@ -65,6 +67,7 @@ export function SetRow(props: Props) {
     resetRequest,
     weightStep,
     onSave,
+    onEdit,
   } = props
 
   // weight === null: Das Feld zeigt das Arbeitsgewicht, z. B. im ersten Training nach dem ersten Satz.
@@ -102,6 +105,7 @@ export function SetRow(props: Props) {
     setDraft({ ...draft, ...changes })
     setDirty(true)
     setError(null)
+    onEdit()
   }
 
   function handleWeightStep(direction: 1 | -1) {
@@ -117,6 +121,7 @@ export function SetRow(props: Props) {
       await onSave(setNumber, null)
       setDraft((current) => ({ ...current, weight: shownWeight }))
       setDirty(true)
+      onEdit()
     } catch {
       setError('Der Haken konnte nicht entfernt werden. Versuch es noch einmal.')
     } finally {

@@ -138,6 +138,12 @@ export async function updateNextWeights(
   if (failed?.error) throw failed.error
 }
 
+/** Löscht alle Sätze einer Übung in diesem Training. */
+export async function deleteExerciseSets(workoutId: string, exerciseId: string): Promise<void> {
+  const { error } = await supabase.from('sets').delete().eq('workout_id', workoutId).eq('exercise_id', exerciseId)
+  if (error) throw error
+}
+
 export async function deleteSet(workoutId: string, exerciseId: string, setNumber: number): Promise<void> {
   const { error } = await supabase
     .from('sets')
