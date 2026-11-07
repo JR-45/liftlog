@@ -5,30 +5,17 @@ import {
   type DurationUnit,
   formatPerformance,
   formatRange,
-  formatWeight,
-  parseWeightInput,
   parseWeightStep,
   plannedWeight,
   setKey,
   type SetValues,
-  stepWeight,
   type TrackingType,
   usesWeight,
 } from '../../domain/sets'
-import {
-  deleteSet,
-  type Exercise,
-  type LoggedSet,
-  type PlanEntry,
-  saveSet,
-  updateExercise,
-  updateNextWeight,
-} from './api'
+import { deleteSet, type Exercise, type LoggedSet, type PlanEntry, saveSet, updateExercise } from './api'
 import { readDraft } from './drafts'
 import { SetRow } from './SetRow'
 
-const stepButtonClass =
-  'h-11 w-11 rounded-lg border border-neutral-700 bg-neutral-900 text-xl text-neutral-100 disabled:opacity-40'
 const fieldClass =
   'h-11 rounded-lg border border-neutral-700 bg-neutral-900 px-2 text-base text-neutral-100 outline-none focus:border-yellow-400 disabled:opacity-50'
 const OPEN_ANIMATION_MS = 300
@@ -44,13 +31,11 @@ type Props = {
   lastSets: LoggedSet[]
   getWorkoutId: () => Promise<string>
   onToggle: () => void
-  onContinue: () => void
-  onSetChange: (exerciseId: string, setNumber: number, values: SetValues | null, autoAdvance: boolean) => void
+  onSetChange: (exerciseId: string, setNumber: number, values: SetValues | null) => void
 }
 
 export function ExerciseCard(props: Props) {
-  const { entry, userId, today, open, scrollRequest, savedSets, lastSets, getWorkoutId, onToggle, onContinue, onSetChange } =
-    props
+  const { entry, userId, today, open, scrollRequest, savedSets, lastSets, getWorkoutId, onToggle, onSetChange } = props
   const [exercises, setExercises] = useState<Record<string, Exercise>>(() => {
     const all = entry.alternative ? [entry.exercise, entry.alternative] : [entry.exercise]
     return Object.fromEntries(all.map((exercise) => [exercise.id, exercise]))
@@ -67,9 +52,7 @@ export function ExerciseCard(props: Props) {
   // null: Das Feld zeigt den gespeicherten Wert, sonst die laufende Eingabe.
   const [stepText, setStepText] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  // Zuletzt eingetipptes Gewicht: Ausgangswert für + und −, solange es kein Arbeitsgewicht gibt.
-  const [typedWeight, setTypedWeight] = useState<number | null>(null)
-  const [followRequest, setFollowRequest] = useState(0)
+  const [resetRequest, setResetRequest] = useState(0)
   const cardRef = useRef<HTMLLIElement>(null)
 
   // Erst nach der Animation scrollen, sonst verschiebt die sich schließende Karte das Ziel.
@@ -83,7 +66,7 @@ export function ExerciseCard(props: Props) {
 
   const exercise = exercises[activeId]
   const weighted = usesWeight(exercise.tracking_type)
-  const weightName = exercise.tracking_type === 'assisted_reps' ? 'Gewichtshilfe' : 'Arbeitsgewicht'
+  const assisted = exercise.tracking_type === 'assisted_reps'
   const unit: DurationUnit = entry.duration_min === null ? 'minutes' : 'seconds'
   const isRounds = entry.sets_min !== entry.sets_max
   const reps = formatRange(entry.reps_min, entry.reps_max)
@@ -111,35 +94,6 @@ export function ExerciseCard(props: Props) {
     return set ? [set] : []
   })
   const done = logged.length >= entry.sets_min
-  const baseWeight = exercise.current_weight_kg ?? typedWeight
-  const assisted = exercise.tracking_type === 'assisted_reps'
-  const allLogged = logged.length >= entry.sets_max
-  const topReps = entry.reps_min !== null && entry.reps_min !== entry.reps_max ? entry.reps_max : null
-
-  function handleWeightStep(direction: 1 | -1) {
-    setTypedWeight(null)
-    setFollowRequest((current) => current + 1)
-    void applyExerciseChange({
-      current_weight_kg: stepWeight(baseWeight, exercise.weight_step_kg, direction),
-    })
-  }
-
-  async function handleNextWeight(setNumber: number, nextWeight: number) {
-    const saved = savedSets[setKey(activeId, setNumber)]
-    if (!saved) return
-    await updateNextWeight(await getWorkoutId(), activeId, setNumber, nextWeight)
-    const updated = { ...saved, next_weight_kg: nextWeight }
-    onSetChange(activeId, setNumber, updated, false)
-
-    // Das Arbeitsgewicht zeigt den schwersten Satz: das höchste Gewicht bzw. die wenigste Hilfe.
-    const planned = logged.flatMap((set, index) => {
-      const value = plannedWeight(rows[index] === setNumber ? updated : set)
-      return value === null ? [] : [value]
-    })
-    if (planned.length > 0) {
-      await applyExerciseChange({ current_weight_kg: assisted ? Math.min(...planned) : Math.max(...planned) })
-    }
-  }
 
   /** Speichert zuerst und ändert die Anzeige nur bei Erfolg. */
   async function applyExerciseChange(
@@ -159,8 +113,8 @@ export function ExerciseCard(props: Props) {
 
   function handleTrackingChange(next: TrackingType) {
     // Hilfe und Gewicht bedeuten Gegenteiliges: 30 kg Hilfe dürfen nicht zu 30 kg Zusatzgewicht werden.
-    const assistChanged = (exercise.tracking_type === 'assisted_reps') !== (next === 'assisted_reps')
-    if (assistChanged) setFollowRequest((current) => current + 1)
+    const assistChanged = assisted !== (next === 'assisted_reps')
+    if (assistChanged) setResetRequest((current) => current + 1)
     void applyExerciseChange(assistChanged ? { tracking_type: next, current_weight_kg: null } : { tracking_type: next })
   }
 
@@ -183,10 +137,8 @@ export function ExerciseCard(props: Props) {
     } else {
       await deleteSet(workoutId, activeId, setNumber)
     }
-    // Bei Übungen mit Gewicht bleibt die Karte offen, damit du pro Satz fürs nächste Mal entscheiden kannst.
-    onSetChange(activeId, setNumber, values, !weighted)
-    // Das erste Gewicht wird zum Arbeitsgewicht, damit niemand bis 60 kg klicken muss. Danach zieht es bei
-    // einem schwereren Satz nach. Ein leichterer Satz, z. B. ein Absenken am Ende, ändert es nicht.
+    onSetChange(activeId, setNumber, values)
+    // Das Arbeitsgewicht ist der schwerste Satz. Es füllt noch leere Sätze und steuert den Hinweis.
     const weight = values?.weight_kg
     const current = exercise.current_weight_kg
     if (weight != null && (current === null || (assisted ? weight < current : weight > current))) {
@@ -306,7 +258,6 @@ export function ExerciseCard(props: Props) {
                       const alternative = entry.alternative as Exercise
                       setActiveId(activeId === entry.exercise.id ? alternative.id : entry.exercise.id)
                       setStepText(null)
-                      setTypedWeight(null)
                       setError(null)
                     }}
                   >
@@ -330,50 +281,19 @@ export function ExerciseCard(props: Props) {
               </p>
             )}
 
-            {weighted && !done && (
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-neutral-300">{weightName}</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    className={stepButtonClass}
-                    type="button"
-                    aria-label={`${weightName} um ${exercise.weight_step_kg} kg senken`}
-                    disabled={busy || !baseWeight}
-                    onClick={() => handleWeightStep(-1)}
-                  >
-                    −
-                  </button>
-                  <span className="w-20 text-center font-medium tabular-nums text-neutral-100" aria-live="polite">
-                    {formatWeight(exercise.current_weight_kg)}
-                  </span>
-                  <button
-                    className={stepButtonClass}
-                    type="button"
-                    aria-label={`${weightName} um ${exercise.weight_step_kg} kg erhöhen`}
-                    disabled={busy}
-                    onClick={() => handleWeightStep(1)}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            )}
-
             {error && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
 
-            <div className="mt-3 flex gap-2 text-center text-xs text-neutral-500" aria-hidden="true">
-              <span className="w-6 shrink-0">{isRounds ? 'R' : '#'}</span>
+            <div className="mt-3 flex gap-1.5 text-center text-xs text-neutral-500" aria-hidden="true">
+              <span className="w-4 shrink-0">{isRounds ? 'R' : '#'}</span>
               {exercise.tracking_type === 'duration' ? (
                 <span className="flex-1">{unit === 'minutes' ? 'Minuten' : 'Sekunden'}</span>
               ) : (
                 <>
-                  {weighted && (
-                    <span className="flex-1">{exercise.tracking_type === 'assisted_reps' ? 'Hilfe (kg)' : 'kg'}</span>
-                  )}
+                  {weighted && <span className="flex-[2]">{assisted ? 'Hilfe (kg)' : 'kg'}</span>}
                   <span className="flex-1">Wdh.</span>
                 </>
               )}
-              <span className="w-11 shrink-0" />
+              <span className="w-10 shrink-0" />
             </div>
 
             <ul>
@@ -402,27 +322,14 @@ export function ExerciseCard(props: Props) {
                     saved={savedSets[setKey(activeId, setNumber)] ?? null}
                     initialDraft={readDraft(userId, today, activeId, setNumber)}
                     placeholder={String(placeholderValue).replace('.', ',')}
-                    plannedWeight={lastSet && weighted ? plannedWeight(lastSet) : null}
-                    followRequest={followRequest}
+                    plannedWeight={lastSet && lastSet.is_assisted === assisted && weighted ? plannedWeight(lastSet) : null}
+                    resetRequest={resetRequest}
                     weightStep={exercise.weight_step_kg}
-                    topReps={topReps}
                     onSave={handleSaveSet}
-                    onNextWeight={handleNextWeight}
-                    onWeightInput={(text) => setTypedWeight(parseWeightInput(text))}
                   />
                 )
               })}
             </ul>
-
-            {weighted && allLogged && (
-              <button
-                className="mt-3 min-h-11 w-full rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-neutral-950"
-                type="button"
-                onClick={onContinue}
-              >
-                Fertig, nächste Übung
-              </button>
-            )}
           </div>
         </div>
       </div>

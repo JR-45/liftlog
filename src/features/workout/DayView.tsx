@@ -70,14 +70,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     }
   }
 
-  function handleContinue(index: number) {
-    if (!day) return
-    const nextId = nextOpenEntry(day.entries, latestSaved.current, index)
-    setOpenId(nextId)
-    if (nextId) scrollTo(nextId)
-  }
-
-  function handleSetChange(exerciseId: string, setNumber: number, values: SetValues | null, autoAdvance: boolean) {
+  function handleSetChange(exerciseId: string, setNumber: number, values: SetValues | null) {
     const previous = latestSaved.current
     const key = setKey(exerciseId, setNumber)
     const next = { ...previous }
@@ -92,11 +85,15 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     const entry = day.entries[index]
     if (!entry) return
 
-    // Ohne Gewicht gibt es nichts mehr zu entscheiden: Mit dem letzten Satz öffnet sich die nächste Übung.
+    // Mit dem letzten Satz öffnet sich die nächste Übung.
     const ids = entryIds(entry)
     const finishedEntry =
       countLoggedSets(next, ids) >= entry.sets_max && countLoggedSets(previous, ids) < entry.sets_max
-    if (finishedEntry && autoAdvance) handleContinue(index)
+    if (finishedEntry) {
+      const nextId = nextOpenEntry(day.entries, next, index)
+      setOpenId(nextId)
+      if (nextId) scrollTo(nextId)
+    }
 
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.
     const trainingDone = day.entries.every((current) => isDone(current, next))
@@ -148,7 +145,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       </div>
 
       <ul className="mt-2 space-y-2">
-        {day.entries.map((entry, index) => (
+        {day.entries.map((entry) => (
           <ExerciseCard
             key={entry.id}
             entry={entry}
@@ -160,7 +157,6 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
             lastSets={day.lastSets}
             getWorkoutId={getWorkoutId}
             onToggle={() => handleToggle(entry.id)}
-            onContinue={() => handleContinue(index)}
             onSetChange={handleSetChange}
           />
         ))}

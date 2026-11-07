@@ -118,21 +118,6 @@ export async function saveSet(workoutId: string, exerciseId: string, setNumber: 
   if (error) throw error
 }
 
-export async function updateNextWeight(
-  workoutId: string,
-  exerciseId: string,
-  setNumber: number,
-  nextWeight: number | null,
-): Promise<void> {
-  const { error } = await supabase
-    .from('sets')
-    .update({ next_weight_kg: nextWeight })
-    .eq('workout_id', workoutId)
-    .eq('exercise_id', exerciseId)
-    .eq('set_number', setNumber)
-  if (error) throw error
-}
-
 export async function deleteSet(workoutId: string, exerciseId: string, setNumber: number): Promise<void> {
   const { error } = await supabase
     .from('sets')

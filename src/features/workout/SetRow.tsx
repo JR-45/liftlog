@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   type DurationUnit,
-  formatWeight,
   parseSetDraft,
-  plannedWeight as plannedWeightOf,
+  parseWeightInput,
   type SetDraft,
   type SetValues,
   stepWeight,
@@ -13,7 +12,9 @@ import {
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
-  'h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-900 px-2 text-center text-base tabular-nums text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-yellow-400'
+  'h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-900 px-1 text-center text-base tabular-nums text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-yellow-400'
+const stepClass =
+  'h-11 w-9 shrink-0 rounded-lg border border-neutral-700 bg-neutral-900 text-lg text-neutral-100 disabled:opacity-40'
 
 type Props = {
   label: string
@@ -29,16 +30,12 @@ type Props = {
   initialDraft: SetDraft | null
   /** Wert vom letzten Training als Orientierung. Er wird nicht gespeichert. */
   placeholder: string
-  /** Vom letzten Training geplantes Gewicht dieses Satzes. */
+  /** Gewicht dieses Satzes vom letzten Training, damit jeder Satz dort weitermacht. */
   plannedWeight: number | null
-  /** Zählt jeden Klick auf das gemeinsame + oder −. Offene Sätze übernehmen dann das Arbeitsgewicht. */
-  followRequest: number
+  /** Ändert sich bei einem Wechsel der Erfassungsart. Offene Sätze verwerfen dann ihr altes Gewicht. */
+  resetRequest: number
   weightStep: number
-  /** Obere Wiederholungszahl, falls die Vorgabe einen Bereich hat. */
-  topReps: number | null
   onSave: (setNumber: number, values: SetValues | null) => Promise<void>
-  onNextWeight: (setNumber: number, nextWeight: number) => Promise<void>
-  onWeightInput: (text: string) => void
 }
 
 function draftFromSaved(saved: SetValues, unit: DurationUnit): SetDraft {
@@ -65,51 +62,51 @@ export function SetRow(props: Props) {
     initialDraft,
     placeholder,
     plannedWeight,
-    followRequest,
+    resetRequest,
     weightStep,
-    topReps,
     onSave,
-    onNextWeight,
-    onWeightInput,
   } = props
 
-  // weight === null: Das Feld folgt dem Arbeitsgewicht. Geplante und eingetippte Werte bleiben bis zum nächsten + oder −.
+  // weight === null: Das Feld zeigt das Arbeitsgewicht, z. B. im ersten Training nach dem ersten Satz.
   const [draft, setDraft] = useState<{ weight: string | null; reps: string; duration: string }>(() => {
     if (initialDraft) return initialDraft
     if (saved) return draftFromSaved(saved, unit)
     return { weight: plannedWeight === null ? null : String(plannedWeight).replace('.', ','), reps: '', duration: '' }
   })
-  const [nextBusy, setNextBusy] = useState(false)
   const [dirty, setDirty] = useState(initialDraft !== null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const workingWeightText = workingWeight === null ? '' : String(workingWeight).replace('.', ',')
   const shownWeight = draft.weight ?? workingWeightText
+  const weightValue = parseWeightInput(shownWeight)
+  const weightName = tracking === 'assisted_reps' ? 'Gewichtshilfe' : 'Gewicht'
 
-  // + und − gelten für alle offenen Sätze. Gespeicherte behalten ihr Gewicht, sonst stimmt die Historie nicht.
-  const [followedRequest, setFollowedRequest] = useState(followRequest)
-  if (followedRequest !== followRequest) {
-    setFollowedRequest(followRequest)
+  const [followedRequest, setFollowedRequest] = useState(resetRequest)
+  if (followedRequest !== resetRequest) {
+    setFollowedRequest(resetRequest)
     if (!saved) setDraft({ ...draft, weight: null })
   }
 
-  // Hält den Entwurf eines offenen Satzes aktuell, damit er auch nach + oder − das Schließen der App übersteht.
+  // Hält den Entwurf aktuell, damit er auch das Schließen der App übersteht.
   useEffect(() => {
-    if (!dirty || saved) return
+    if (!dirty) return
     writeDraft(userId, date, exerciseId, setNumber, {
       weight: shownWeight,
       reps: draft.reps,
       duration: draft.duration,
     })
-  }, [dirty, saved, shownWeight, draft.reps, draft.duration, userId, date, exerciseId, setNumber])
+  }, [dirty, shownWeight, draft.reps, draft.duration, userId, date, exerciseId, setNumber])
 
   function change(changes: Partial<SetDraft>) {
-    const next = { ...draft, ...changes }
-    setDraft(next)
+    setDraft({ ...draft, ...changes })
     setDirty(true)
     setError(null)
-    writeDraft(userId, date, exerciseId, setNumber, { ...next, weight: next.weight ?? shownWeight })
+  }
+
+  function handleWeightStep(direction: 1 | -1) {
+    const next = stepWeight(weightValue, weightStep, direction)
+    if (next !== null) change({ weight: String(next).replace('.', ',') })
   }
 
   async function handleSave() {
@@ -129,39 +126,22 @@ export function SetRow(props: Props) {
     setError(null)
     try {
       await onSave(setNumber, parsed.kind === 'ok' ? parsed.values : null)
+      setDirty(false)
       removeDraft(userId, date, exerciseId, setNumber)
       setDraft((current) => ({ ...current, weight: parsed.kind === 'ok' ? shownWeight : null }))
-      setDirty(false)
     } catch {
       setError('Nicht gespeichert. Deine Eingabe bleibt erhalten, tippe noch einmal auf den Haken.')
-      writeDraft(userId, date, exerciseId, setNumber, { weight: shownWeight, reps: draft.reps, duration: draft.duration })
     } finally {
       setBusy(false)
     }
   }
 
   const isSaved = saved !== null && !dirty
-  const nextWeight = saved ? plannedWeightOf(saved) : null
-  const reachedTop = topReps !== null && saved?.reps != null && saved.reps >= topReps
-
-  async function handleNextStep(direction: 1 | -1) {
-    const next = stepWeight(nextWeight, weightStep, direction)
-    if (next === null) return
-    setNextBusy(true)
-    setError(null)
-    try {
-      await onNextWeight(setNumber, next)
-    } catch {
-      setError('Das Gewicht fürs nächste Mal wurde nicht gespeichert. Versuch es noch einmal.')
-    } finally {
-      setNextBusy(false)
-    }
-  }
 
   return (
     <li className="mt-2">
-      <div className="flex items-center gap-2">
-        <span className="w-6 shrink-0 text-center text-sm tabular-nums text-neutral-500">{rowNumber}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="w-4 shrink-0 text-center text-sm tabular-nums text-neutral-500">{rowNumber}</span>
 
         {tracking === 'duration' ? (
           <input
@@ -175,30 +155,48 @@ export function SetRow(props: Props) {
         ) : (
           <>
             {usesWeight(tracking) && (
+              <div className="flex min-w-0 flex-[2] items-center gap-1">
+                <button
+                  className={stepClass}
+                  type="button"
+                  aria-label={`${label} ${weightName} um ${weightStep} kg senken`}
+                  disabled={!weightValue}
+                  onClick={() => handleWeightStep(-1)}
+                >
+                  −
+                </button>
+                <input
+                  className={inputClass}
+                  aria-label={`${label} ${weightName} in kg`}
+                  inputMode="decimal"
+                  value={shownWeight}
+                  onChange={(event) => change({ weight: event.target.value })}
+                />
+                <button
+                  className={stepClass}
+                  type="button"
+                  aria-label={`${label} ${weightName} um ${weightStep} kg erhöhen`}
+                  onClick={() => handleWeightStep(1)}
+                >
+                  +
+                </button>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
               <input
                 className={inputClass}
-                aria-label={`${label} ${tracking === 'assisted_reps' ? 'Gewichtshilfe' : 'Gewicht'} in kg`}
-                inputMode="decimal"
-                value={shownWeight}
-                onChange={(event) => {
-                  change({ weight: event.target.value })
-                  onWeightInput(event.target.value)
-                }}
+                aria-label={`${label} Wiederholungen`}
+                inputMode="numeric"
+                placeholder={placeholder}
+                value={draft.reps}
+                onChange={(event) => change({ reps: event.target.value })}
               />
-            )}
-            <input
-              className={inputClass}
-              aria-label={`${label} Wiederholungen`}
-              inputMode="numeric"
-              placeholder={placeholder}
-              value={draft.reps}
-              onChange={(event) => change({ reps: event.target.value })}
-            />
+            </div>
           </>
         )}
 
         <button
-          className={`h-11 w-11 shrink-0 rounded-lg border text-lg transition-colors disabled:opacity-50 ${
+          className={`h-11 w-10 shrink-0 rounded-lg border text-lg transition-colors disabled:opacity-50 ${
             isSaved ? 'border-yellow-400 bg-yellow-400 text-neutral-950' : 'border-neutral-700 text-neutral-400'
           }`}
           type="button"
@@ -209,36 +207,6 @@ export function SetRow(props: Props) {
           ✓
         </button>
       </div>
-      {saved && nextWeight !== null && usesWeight(tracking) && (
-        <div className="mb-1 mt-1 flex items-center justify-between gap-2 pl-8">
-          <span className={`text-sm ${reachedTop ? 'font-medium text-yellow-300' : 'text-neutral-400'}`}>
-            {reachedTop ? 'Geschafft! Nächstes Mal' : 'Nächstes Mal'}
-          </span>
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              className="h-11 w-11 rounded-lg border border-neutral-700 bg-neutral-900 text-lg text-neutral-100 disabled:opacity-40"
-              type="button"
-              aria-label={`${label} nächstes Mal senken`}
-              disabled={nextBusy || nextWeight === 0}
-              onClick={() => void handleNextStep(-1)}
-            >
-              −
-            </button>
-            <span className="w-16 text-center text-sm font-medium tabular-nums text-neutral-100" aria-label={`${label} nächstes Mal`}>
-              {formatWeight(nextWeight)}
-            </span>
-            <button
-              className="h-11 w-11 rounded-lg border border-neutral-700 bg-neutral-900 text-lg text-neutral-100 disabled:opacity-40"
-              type="button"
-              aria-label={`${label} nächstes Mal erhöhen`}
-              disabled={nextBusy}
-              onClick={() => void handleNextStep(1)}
-            >
-              +
-            </button>
-          </div>
-        </div>
-      )}
       {error && <p role="alert" className="mt-1 text-sm text-red-300">{error}</p>}
     </li>
   )
