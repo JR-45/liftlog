@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "exercises": {
+            "day_marks": {
+                  Row: {
+                    "created_at": string,"day": string,"kind": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"day": string,"kind": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"day"?: string,"kind"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"exercises": {
                   Row: {
                     "created_at": string,"current_weight_kg": number | null,"id": string,"name": string,"tracking_type": string,"user_id": string,"weight_step_kg": number
                   }
