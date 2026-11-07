@@ -290,10 +290,10 @@ export function ExerciseCard(props: Props) {
 
   /** Löscht einen Satz, rückt folgende Sätze und Entwürfe eins vor und reduziert die Satzanzahl im Plan. */
   async function handleDeleteSet(setNumber: number) {
-    if (entry.sets_max <= 1) return
+    if (setCount <= 1 || busy || changingCount || savingSets > 0) return
     setBusy(true)
     setError(null)
-    const nextMax = entry.sets_max - 1
+    const nextMax = setCount - 1
     const nextMin = Math.max(1, Math.min(entry.sets_min, nextMax))
     try {
       const savedNumbers = rows.filter((num) => savedSets[setKey(activeId, num)] !== undefined)
@@ -304,15 +304,16 @@ export function ExerciseCard(props: Props) {
       await updatePlanSets(entry.id, nextMin, nextMax)
 
       // Entwürfe für dahinterliegende Sätze eine Nummer nach vorne verschieben.
-      for (let num = setNumber; num < entry.sets_max; num++) {
+      for (let num = setNumber; num < setCount; num++) {
         const nextDraft = readDraft(userId, today, activeId, num + 1)
         if (nextDraft) writeDraft(userId, today, activeId, num, nextDraft)
         else removeDraft(userId, today, activeId, num)
       }
-      removeDraft(userId, today, activeId, entry.sets_max)
+      removeDraft(userId, today, activeId, setCount)
 
       onSetDeleted(activeId, setNumber)
       onEntryChange({ sets_min: nextMin, sets_max: nextMax })
+      onSetCountChange(nextMax)
       setRowGeneration((current) => current + 1)
     } catch {
       setError('Der Satz konnte nicht gelöscht werden. Versuch es noch einmal.')
@@ -662,7 +663,7 @@ export function ExerciseCard(props: Props) {
               deleteMode={isDetail ? 'button' : 'swipe'}
               onSave={handleSaveSet}
               onEdit={() => setHasEdits(true)}
-              onDelete={entry.sets_max > 1 ? () => void handleDeleteSet(setNumber) : undefined}
+              onDelete={setCount > 1 ? () => void handleDeleteSet(setNumber) : undefined}
             />
           )
         })}
