@@ -3,6 +3,18 @@ import { validatePlanDraft, trainingSetCount } from './planEditing'
 import { recommendPlan } from './trainingPlan'
 
 describe('validatePlanDraft', () => {
+  it('beschränkt benannte Übungsgruppen auf ihre eigenen Übungen', () => {
+    const day = recommendPlan('classic', 'full_body')[0]
+    day.name = 'Bizeps'
+    day.exercises = [day.exercises[0]]
+    expect(validatePlanDraft([day], true)).toMatchObject({ day: 0, exercise: 0 })
+    day.exercises[0].name = 'Kabelcurls'
+    expect(validatePlanDraft([day], true)).toBeNull()
+  })
+  it('erhält gemischte Pläne mit eigenen Tagesnamen', () => {
+    const days = recommendPlan('classic', 'full_body')
+    expect(validatePlanDraft(days, true)).toBeNull()
+  })
   it('akzeptiert vollständige Pläne', () => {
     expect(validatePlanDraft(recommendPlan('classic', 'full_body'))).toBeNull()
   })

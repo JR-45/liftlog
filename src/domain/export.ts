@@ -9,6 +9,7 @@ export type ExportRow = {
   is_assisted: boolean
   reps: number | null
   duration_seconds: number | null
+  distance_km?: number | null
 }
 
 const HEADER = ['Datum', 'Trainingstag', 'Übung', 'Satz', 'Gewicht (kg)', 'Gewichtshilfe', 'Wiederholungen', 'Dauer (Sek.)']
@@ -34,6 +35,7 @@ function compareRows(a: ExportRow, b: ExportRow): number {
 
 /** Älteste Trainings zuerst. Die Marke am Anfang lässt Excel die Umlaute richtig lesen. */
 export function buildCsv(rows: ExportRow[]): string {
+  const withDistance = rows.some(row => row.distance_km != null)
   const lines = [...rows].sort(compareRows).map((row) =>
     [
       row.performed_on,
@@ -44,9 +46,10 @@ export function buildCsv(rows: ExportRow[]): string {
       row.is_assisted ? 'ja' : 'nein',
       numberCell(row.reps),
       numberCell(row.duration_seconds),
+      ...(withDistance ? [numberCell(row.distance_km ?? null)] : []),
     ].join(';'),
   )
-  return `${BYTE_ORDER_MARK}${[HEADER.join(';'), ...lines].join('\r\n')}\r\n`
+  return `${BYTE_ORDER_MARK}${[[...HEADER, ...(withDistance ? ['Strecke (km)'] : [])].join(';'), ...lines].join('\r\n')}\r\n`
 }
 
 export function exportFileName(today: string): string {
