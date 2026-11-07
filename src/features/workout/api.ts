@@ -1,4 +1,5 @@
 import type { SetValues, TrackingType } from '../../domain/sets'
+import { isCardioExercise } from '../../domain/cardio'
 import { supabase } from '../../lib/supabase'
 import type { ScheduledDay } from '../../domain/week'
 
@@ -110,7 +111,7 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
   if (workoutId) {
     const { data, error } = await supabase
       .from('sets')
-      .select('exercise_id, set_number, weight_kg, reps, duration_seconds, is_assisted, next_weight_kg')
+      .select('exercise_id, set_number, weight_kg, reps, duration_seconds, distance_km, is_assisted, next_weight_kg')
       .eq('workout_id', workoutId)
     if (error) throw error
     todaySets = data
@@ -118,7 +119,9 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
 
   return {
     // Die generierten Typen kennen weder die zusammengesetzten FKs noch die erlaubten tracking_type-Werte.
-    entries: entries.data as unknown as PlanEntry[],
+    entries: (entries.data as unknown as PlanEntry[]).map(entry =>
+      entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name)
+        ? { ...entry, sets_min: 1, sets_max: 1 } : entry),
     workoutId,
     workoutStartedAt: workout.data?.created_at ?? null,
     workoutFinishedAt: workout.data?.finished_at ?? null,

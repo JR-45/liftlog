@@ -1,5 +1,8 @@
+import { TimeWheelInput } from '../../components/TimeWheelInput'
+import { NumberWheelInput } from '../../components/NumberWheelInput'
 import { useEffect, useRef, useState } from 'react'
-import { EXERCISE_CATALOG } from '../../domain/exerciseCatalog'
+import { findExercises } from '../../domain/exerciseCatalog'
+import { exerciseDefaults, isCardioExercise } from '../../domain/cardio'
 import type { TrackingType } from '../../domain/sets'
 import type { PlanExerciseDraft } from '../../domain/trainingPlan'
 import { newExercise } from './api'
@@ -7,7 +10,6 @@ import { newExercise } from './api'
 const INPUT = 'mt-1 h-11 w-full min-w-0 rounded-xl bg-control px-3 text-base text-foreground outline-none focus:ring-2 focus:ring-neon'
 const BUTTON = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-40'
 const LABEL = 'block text-sm text-muted'
-const GROUPS = [...new Set(EXERCISE_CATALOG.map((exercise) => exercise.group))]
 const CUSTOM = '__eigene_uebung__'
 
 function numberOrNull(value: string): number | null {
@@ -22,9 +24,10 @@ function trackingChanges(tracking_type: TrackingType): Partial<PlanExerciseDraft
   }
 }
 
-export function ExercisePages({ exercises, onChange, reveal }: {
+export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
   exercises: PlanExerciseDraft[]; onChange: (exercises: PlanExerciseDraft[]) => void
   reveal?: { index: number }
+  exerciseGroup?: string
 }) {
   const [page, setPage] = useState(0)
   const [lastReveal, setLastReveal] = useState(reveal)
@@ -33,8 +36,11 @@ export function ExercisePages({ exercises, onChange, reveal }: {
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const index = Math.min(page, exercises.length - 1)
   const exercise = exercises[index]
-  const inCatalog = EXERCISE_CATALOG.some((item) => item.name === exercise.name)
+  const available = findExercises('', exerciseGroup)
+  const groups = [...new Set(available.map(item => item.group))]
+  const inCatalog = available.some((item) => item.name === exercise.name)
   const isDuration = exercise.tracking_type === 'duration'
+  const cardio = isDuration && isCardioExercise(exercise.name)
 
   if (reveal !== lastReveal) {
     setLastReveal(reveal)
@@ -62,8 +68,10 @@ export function ExercisePages({ exercises, onChange, reveal }: {
       setShowMore(true)
       return
     }
-    const selected = EXERCISE_CATALOG.find((item) => item.name === value)
-    if (selected) update({ name: selected.name, ...trackingChanges(selected.tracking_type) })
+    const selected = available.find((item) => item.name === value)
+    if (selected) update({ name: selected.name, ...exerciseDefaults(selected.name, selected.tracking_type),
+      ...(!cardio && !isCardioExercise(selected.name) ? { sets_min: exercise.sets_min, sets_max: exercise.sets_max } : {}),
+    })
   }
 
   function updateSets(value: number) {
@@ -97,40 +105,46 @@ export function ExercisePages({ exercises, onChange, reveal }: {
           if (dx > 0 && index > 0) turn(index - 1)
         }}>
         <label className={LABEL}>Übung
-          <select className={INPUT} value={inCatalog || exercise.name ? exercise.name : ''} onChange={(event) => selectExercise(event.target.value)}>
+          <select aria-label="Übung" className={INPUT} value={exerciseGroup && !inCatalog ? '' : inCatalog || exercise.name ? exercise.name : ''} onChange={(event) => selectExercise(event.target.value)}>
             <option value="">Bitte auswählen …</option>
-            {exercise.name && !inCatalog && <option value={exercise.name}>{exercise.name}</option>}
-            {GROUPS.map((group) => <optgroup key={group} label={group}>
-              {EXERCISE_CATALOG.filter((item) => item.group === group).map((item) => <option key={item.name}>{item.name}</option>)}
+            {!exerciseGroup && exercise.name && !inCatalog && <option value={exercise.name}>{exercise.name}</option>}
+            {groups.map((group) => <optgroup key={group} label={group}>
+              {available.filter((item) => item.group === group).map((item) => <option key={item.name}>{item.name}</option>)}
             </optgroup>)}
-            <option value={CUSTOM}>Eigene Übung …</option>
+            {!exerciseGroup && <option value={CUSTOM}>Eigene Übung …</option>}
           </select>
         </label>
+        {exerciseGroup && exercise.name && !inCatalog && <p className="text-sm text-danger" role="status">
+          „{exercise.name}“ gehört nicht zu „{exerciseGroup}“. Wähle eine passende Übung aus.
+        </p>}
 
         <div className="flex items-end gap-2">
-          <label className={`${LABEL} w-20 shrink-0`}>Sätze
-            <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_max || ''}
-              onChange={(event) => updateSets(Number(event.target.value))} />
-          </label>
-          {isDuration ? <>
-            <label className={`${LABEL} min-w-0 flex-1`}>Sek. von
-              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="86400" step="1" value={exercise.duration_min ?? ''}
-                onChange={(event) => update({ duration_min: numberOrNull(event.target.value) })} />
+          {!cardio && <label className={`${LABEL} w-20 shrink-0`}>Sätze
+            <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.sets_max || ''}
+              onValueChange={(value) => updateSets(Number(value))} />
+          </label>}
+          {cardio ? <label className={`${LABEL} min-w-0 flex-1`}>Dauer
+            <TimeWheelInput className={`${INPUT} text-center tabular-nums`} valueSeconds={exercise.duration_min ?? exercise.duration_max}
+              onSecondsChange={seconds => update({ duration_min: seconds, duration_max: seconds })} />
+          </label> : isDuration ? <>
+            <label className={`${LABEL} min-w-0 flex-1`}>Dauer von (optional)
+              <TimeWheelInput className={`${INPUT} text-center tabular-nums`} valueSeconds={exercise.duration_min}
+                onSecondsChange={seconds => update({ duration_min: seconds })} />
             </label>
             <span className="pb-3 text-muted" aria-hidden="true">–</span>
             <label className={`${LABEL} min-w-0 flex-1`}>bis
-              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="86400" step="1" value={exercise.duration_max ?? ''}
-                onChange={(event) => update({ duration_max: numberOrNull(event.target.value) })} />
+              <TimeWheelInput className={`${INPUT} text-center tabular-nums`} valueSeconds={exercise.duration_max}
+                onSecondsChange={seconds => update({ duration_max: seconds })} />
             </label>
           </> : <>
             <label className={`${LABEL} min-w-0 flex-1`}>Wdh. von
-              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_min ?? ''}
-                onChange={(event) => update({ reps_min: numberOrNull(event.target.value) })} />
+              <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.reps_min ?? ''}
+                onValueChange={(value) => update({ reps_min: numberOrNull(value) })} />
             </label>
             <span className="pb-3 text-muted" aria-hidden="true">–</span>
             <label className={`${LABEL} min-w-0 flex-1`}>bis
-              <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_max ?? ''}
-                onChange={(event) => update({ reps_max: numberOrNull(event.target.value) })} />
+              <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.reps_max ?? ''}
+                onValueChange={(value) => update({ reps_max: numberOrNull(value) })} />
             </label>
           </>}
         </div>
@@ -140,22 +154,22 @@ export function ExercisePages({ exercises, onChange, reveal }: {
         </button>
 
         {showMore && <div className="space-y-3 border-t border-line/[0.06] pt-3">
-          <label className={LABEL}>Eigener Name
+          {!exerciseGroup && <label className={LABEL}>Eigener Name
             <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Bankdrücken"
               onChange={(event) => update({ name: event.target.value })} />
-          </label>
-          <label className={LABEL}>Erfassung
+          </label>}
+          {!cardio && <label className={LABEL}>Erfassung
             <select className={INPUT} value={exercise.tracking_type} onChange={(event) => update(trackingChanges(event.target.value as TrackingType))}>
               <option value="weight_reps">Gewicht + Wiederholungen</option>
               <option value="assisted_reps">Gewichtshilfe + Wiederholungen</option>
               <option value="reps">Nur Wiederholungen</option>
               <option value="duration">Dauer</option>
             </select>
-          </label>
-          <label className={LABEL}>Mindestens Sätze (für Bereiche wie 4–5 Runden)
-            <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
-              onChange={(event) => update({ sets_min: Number(event.target.value) })} />
-          </label>
+          </label>}
+          {!cardio && <label className={LABEL}>Mindestens Sätze (für Bereiche wie 4–5 Runden)
+            <NumberWheelInput className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="20" step="1" value={exercise.sets_min || ''}
+              onValueChange={(value) => update({ sets_min: Number(value) })} />
+          </label>}
           <button className="min-h-11 text-sm font-medium text-danger disabled:opacity-40" type="button" disabled={exercises.length === 1} onClick={() => {
             onChange(exercises.filter((_, i) => i !== index))
             turn(Math.max(0, index - 1))
