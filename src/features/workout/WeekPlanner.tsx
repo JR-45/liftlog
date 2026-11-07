@@ -1,62 +1,69 @@
 import type { ScheduledDay } from '../../domain/week'
 import { shiftDate, weekStart } from '../../domain/week'
+import { CheckIcon } from '../../lib/icons'
 import type { PlanDay, WeekWorkout } from './api'
 
 const DAY = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 const SHORT = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' })
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-const BUTTON = 'min-h-11 rounded-lg border border-neutral-700 px-3 py-2 text-sm disabled:opacity-40'
+const NAV = 'min-h-11 rounded-xl bg-[#2C2C2E] px-3 py-2 text-sm font-medium text-white disabled:opacity-40'
+const LINK = 'min-h-11 px-2 text-sm font-medium text-[#8E8E93] disabled:opacity-40'
 
-export function WeekPlanner({ selectedDate, today, days, planDays, workouts, editable, dirty, busy, onDate, onChange, onSave, onDiscard, onTemplate }: {
+export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dirty, busy, onDate, onChange, onSave, onDiscard, onTemplate }: {
   selectedDate: string; today: string; days: ScheduledDay[]; planDays: PlanDay[]; workouts: WeekWorkout[]
-  editable: boolean; dirty: boolean; busy: boolean
+  dirty: boolean; busy: boolean
   onDate: (date: string) => void; onChange: (index: number, value: string) => void
   onSave: () => void; onDiscard: () => void; onTemplate: () => void
 }) {
   const start = weekStart(selectedDate)
-  return <section aria-label="Wochenplanung" className="mt-5">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-xl font-semibold">{editable ? 'Deine Wochenplanung' : 'Deine Trainingswoche'}</h2>
-        <p className="mt-1 text-sm text-neutral-400">{SHORT.format(new Date(`${start}T12:00:00`))} – {SHORT.format(new Date(`${shiftDate(start, 6)}T12:00:00`))} {start.slice(0, 4)}</p></div>
-      <div className="flex gap-2">
-        <button className={BUTTON} type="button" aria-label="Vorherige Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, -7))}>‹</button>
-        <button className={BUTTON} type="button" disabled={dirty || busy} onClick={() => onDate(today)}>Diese Woche</button>
-        <button className={BUTTON} type="button" aria-label="Nächste Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, 7))}>›</button>
+  return <section aria-label="Wochenplanung" className="mt-4">
+    <div className="flex items-center justify-between gap-2">
+      <button className={NAV} type="button" aria-label="Vorherige Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, -7))}>‹</button>
+      <div className="min-w-0 text-center">
+        <h2 className="font-semibold tracking-tight text-white">Deine Wochenplanung</h2>
+        <p className="text-sm tabular-nums text-[#8E8E93]">{SHORT.format(new Date(`${start}T12:00:00`))} – {SHORT.format(new Date(`${shiftDate(start, 6)}T12:00:00`))}</p>
       </div>
+      <button className={NAV} type="button" aria-label="Nächste Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, 7))}>›</button>
     </div>
-    <label className="mt-4 block max-w-xs text-sm text-neutral-400">Woche auswählen
-      <input className="mt-1 min-h-11 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 text-base text-neutral-100 disabled:opacity-40"
-        type="date" value={selectedDate} min="1900-01-01" max="2199-12-31" disabled={dirty || busy}
-        onChange={(event) => { if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) onDate(event.target.value) }} />
-    </label>
-    {editable && <p className="mt-3 text-sm text-neutral-400">Jede neue Woche übernimmt deinen gespeicherten Wochenplan. Du entscheidest für jeden Tag selbst, ob und was du trainierst.</p>}
-    <div className={`mt-4 grid gap-2 ${editable ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4' : 'grid-cols-4 md:grid-cols-7'}`}>
+    {weekStart(today) !== start && (
+      <div className="mt-2 text-center">
+        <button className={LINK} type="button" disabled={dirty || busy} onClick={() => onDate(today)}>Zurück zu dieser Woche</button>
+      </div>
+    )}
+
+    <ul className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-[#1C1C1E] px-3 ring-1 ring-white/[0.08] md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0">
       {days.map((day, index) => {
-        const plan = planDays.find((item) => item.id === day.plan_day_id)
-        const label = DAY.format(new Date(`${day.day_date}T12:00:00`))
+        const date = new Date(`${day.day_date}T12:00:00`)
         const trained = workouts.some((workout) => workout.performed_on === day.day_date)
-        return <div key={day.day_date} className={`min-w-0 rounded-xl border ${selectedDate === day.day_date ? 'border-yellow-400 bg-yellow-400/5' : 'border-neutral-800 bg-neutral-800/30'}`}>
-          <button className="min-h-16 w-full p-3 text-left" type="button" aria-pressed={selectedDate === day.day_date} aria-label={`${label} auswählen`} disabled={busy} onClick={() => onDate(day.day_date)}>
-            <span className={`block text-sm font-medium ${selectedDate === day.day_date ? 'text-yellow-300' : ''}`}>{WEEKDAYS[new Date(`${day.day_date}T12:00:00`).getDay()]} {SHORT.format(new Date(`${day.day_date}T12:00:00`))}</span>
-            <span className="mt-1 block break-words text-xs text-neutral-400">{plan?.name ?? (day.is_rest_day ? 'Ruhetag' : 'Ungeplant')}</span>
-            {trained && <span className="mt-1 block text-xs text-yellow-300">✓ Trainiert</span>}
-            {day.day_date === today && <span className="block text-xs text-neutral-400">Heute</span>}
-          </button>
-          {editable && <label className="block px-3 pb-3 text-xs text-neutral-400">Plan für {label}
-            <select className="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100" disabled={busy}
-              value={day.plan_day_id ?? (day.is_rest_day ? 'rest' : 'unplanned')} onChange={(event) => onChange(index, event.target.value)}>
-              <option value="unplanned">Ungeplant</option><option value="rest">Ruhetag</option>
-              {planDays.map((item) => <option key={item.id} value={item.id}>{item.name} · Vorlage {WEEKDAYS[item.weekday]}</option>)}
-            </select>
-          </label>}
-        </div>
+        const isToday = day.day_date === today
+        return <li key={day.day_date} className="flex items-center gap-3 py-2">
+          <span className="w-16 shrink-0">
+            <span className={`block text-sm font-semibold ${isToday ? 'text-neon' : 'text-white'}`}>{WEEKDAYS[date.getDay()]}</span>
+            <span className="block text-xs tabular-nums text-[#8E8E93]">{SHORT.format(date)}</span>
+          </span>
+          <select className="h-11 min-w-0 flex-1 rounded-xl bg-[#2C2C2E] px-2 text-sm text-white outline-none focus:ring-2 focus:ring-neon" disabled={busy}
+            aria-label={`Plan für ${DAY.format(date)}`}
+            value={day.plan_day_id ?? (day.is_rest_day ? 'rest' : 'unplanned')} onChange={(event) => onChange(index, event.target.value)}>
+            <option value="unplanned">Ungeplant</option>
+            <option value="rest">Ruhetag</option>
+            {planDays.map((item) => <option key={item.id} value={item.id}>{item.name} ({WEEKDAYS[item.weekday]})</option>)}
+          </select>
+          <span className="flex w-5 shrink-0 justify-center text-[#30D158]" role={trained ? 'img' : undefined} aria-label={trained ? 'Trainiert' : undefined}>
+            {trained && <CheckIcon className="h-4 w-4 stroke-[3]" />}
+          </span>
+        </li>
       })}
-    </div>
-    {editable && <div className="mt-4 flex flex-wrap gap-2">
-      <button className="min-h-11 rounded-lg bg-yellow-400 px-4 py-2 font-semibold text-neutral-950 disabled:opacity-40" type="button" disabled={busy} onClick={onSave}>{busy ? 'Wird gespeichert …' : 'Woche speichern'}</button>
-      <button className={BUTTON} type="button" disabled={busy || !dirty} onClick={onDiscard}>Änderungen verwerfen</button>
-      <button className={BUTTON} type="button" disabled={busy} onClick={onTemplate}>Wochenvorlage übernehmen</button>
-    </div>}
-    {dirty && <p role="status" className="mt-3 text-sm text-yellow-300">Ungespeicherte Woche: Speichere oder verwirf die Änderungen vor dem Wochenwechsel.</p>}
+    </ul>
+
+    {dirty ? (
+      <div className="mt-3 flex items-center gap-2">
+        <button className="min-h-12 flex-1 rounded-xl bg-neon px-4 py-2 font-semibold text-black disabled:opacity-40" type="button" disabled={busy} onClick={onSave}>
+          {busy ? 'Wird gespeichert …' : 'Woche speichern'}
+        </button>
+        <button className={LINK} type="button" disabled={busy} onClick={onDiscard}>Verwerfen</button>
+      </div>
+    ) : (
+      <button className={`${LINK} mt-2`} type="button" disabled={busy} onClick={onTemplate}>Vorlage übernehmen</button>
+    )}
   </section>
 }

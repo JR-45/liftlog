@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { dayProgress } from '../../domain/dayProgress'
 import { countLoggedSets, setKey, type SetValues } from '../../domain/sets'
 import { summarizeWorkout } from '../../domain/summary'
 import { TrophyIcon } from '../../lib/icons'
 import { trainingSetCount } from '../../domain/planEditing'
-import { readSetCount, writeSetCount } from './drafts'
+import { readSkippedEntries, writeSkippedEntries } from './drafts'
 import { DESKTOP_QUERY, useMediaQuery } from '../../lib/useMediaQuery'
-import { AddExerciseForm } from './AddExerciseForm'
 import { type DayData, ensureWorkout, type Exercise, loadDay, type PlanEntry } from './api'
 import { ExerciseCard } from './ExerciseCard'
 import { WorkoutSummary } from './WorkoutSummary'
@@ -17,14 +17,29 @@ function entryIds(entry: PlanEntry): string[] {
   return entry.alternative ? [entry.exercise.id, entry.alternative.id] : [entry.exercise.id]
 }
 
-function isDone(entry: PlanEntry, saved: SavedSets, targets: Record<string, number>): boolean {
-  return countLoggedSets(saved, entryIds(entry)) >= (targets[entry.id] ?? 3)
+function isDone(entry: PlanEntry, saved: SavedSets): boolean {
+  return countLoggedSets(saved, entryIds(entry)) >= entry.sets_min
+}
+
+/** Die Satzanzahl kommt aus dem Plan. Heute schon mehr gespeicherte Sätze bleiben sichtbar. */
+function setCountFor(entry: PlanEntry, saved: SavedSets): number {
+  const ids = entryIds(entry)
+  const numbers = Object.keys(saved).flatMap((key) => {
+    const [id, setNumber] = key.split(':')
+    return ids.includes(id) ? [Number(setNumber)] : []
+  })
+  return trainingSetCount(entry.sets_max, numbers)
 }
 
 /** Nächste offene Übung nach der angegebenen Position, sonst die erste offene überhaupt. */
-function nextOpenEntry(entries: PlanEntry[], saved: SavedSets, afterIndex: number, targets: Record<string, number>): string | null {
+function nextOpenEntry(
+  entries: PlanEntry[],
+  saved: SavedSets,
+  afterIndex: number,
+  skipped: ReadonlySet<string>,
+): string | null {
   const ordered = [...entries.slice(afterIndex + 1), ...entries.slice(0, afterIndex + 1)]
-  return ordered.find((entry) => !isDone(entry, saved, targets))?.id ?? null
+  return ordered.find((entry) => !isDone(entry, saved) && !skipped.has(entry.id))?.id ?? null
 }
 
 /** Wurde heute schon die Alternative trainiert, startet die Übung direkt mit ihr. */
@@ -39,11 +54,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [day, setDay] = useState<DayData | null>(null)
   const [savedSets, setSavedSets] = useState<SavedSets>({})
-  const [setCounts, setSetCounts] = useState<Record<string, number>>({})
   // Liegen hier statt in der Karte, damit Liste und Detail am Laptop denselben Stand zeigen.
   const [exercises, setExercises] = useState<Record<string, Exercise>>({})
   const [activeIds, setActiveIds] = useState<Record<string, string>>({})
   const [openId, setOpenId] = useState<string | null>(null)
+  const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set())
   const [scrollTarget, setScrollTarget] = useState<{ id: string; request: number } | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -61,14 +76,11 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         workoutId.current = data.workoutId
         latestSaved.current = saved
         setSavedSets(saved)
-        const counts = Object.fromEntries(data.entries.map((entry) => [entry.id, trainingSetCount(
-          readSetCount(userId, today, entry.id),
-          data.todaySets.filter((set) => entryIds(entry).includes(set.exercise_id)).map((set) => set.set_number),
-        )]))
-        setSetCounts(counts)
         setExercises(Object.fromEntries(all.map((exercise) => [exercise.id, exercise])))
         setActiveIds(Object.fromEntries(data.entries.map((entry) => [entry.id, initialActiveId(entry, saved)])))
-        setOpenId(nextOpenEntry(data.entries, saved, -1, counts))
+        const skippedToday = readSkippedEntries(userId, today)
+        setSkipped(skippedToday)
+        setOpenId(nextOpenEntry(data.entries, saved, -1, skippedToday))
         setDay(data)
       })
       .catch(() => {
@@ -105,6 +117,21 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     setExercises((current) => ({ ...current, [exerciseId]: { ...current[exerciseId], ...changes } }))
   }
 
+  function handleSkipChange(entryId: string, skip: boolean) {
+    if (!day) return
+    const next = new Set(skipped)
+    if (skip) next.add(entryId)
+    else next.delete(entryId)
+    setSkipped(next)
+    writeSkippedEntries(userId, today, next)
+    if (skip && openId === entryId) {
+      const index = day.entries.findIndex((entry) => entry.id === entryId)
+      const nextId = nextOpenEntry(day.entries, latestSaved.current, index, next)
+      setOpenId(nextId)
+      if (nextId) scrollTo(nextId)
+    }
+  }
+
   function handleSetChange(exerciseId: string, setNumber: number, values: SetValues | null) {
     const previous = latestSaved.current
     const key = setKey(exerciseId, setNumber)
@@ -120,18 +147,28 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     const entry = day.entries[index]
     if (!entry) return
 
+    // Wer eine übersprungene Übung doch trainiert, hat sie nicht mehr übersprungen.
+    let nowSkipped = skipped
+    if (skipped.has(entry.id)) {
+      const without = new Set(skipped)
+      without.delete(entry.id)
+      nowSkipped = without
+      setSkipped(without)
+      writeSkippedEntries(userId, today, without)
+    }
+
     // Mit dem letzten Satz öffnet sich die nächste Übung. Die fertige bleibt oben im Bild,
     // damit die Frage „Geschafft?“ direkt zu sehen ist.
     const ids = entryIds(entry)
     const finishedEntry =
-      countLoggedSets(next, ids) >= (setCounts[entry.id] ?? 3) && countLoggedSets(previous, ids) < (setCounts[entry.id] ?? 3)
+      countLoggedSets(next, ids) >= entry.sets_max && countLoggedSets(previous, ids) < entry.sets_max
     if (finishedEntry) {
-      setOpenId(nextOpenEntry(day.entries, next, index, setCounts))
+      setOpenId(nextOpenEntry(day.entries, next, index, nowSkipped))
       scrollTo(entry.id)
     }
 
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.
-    const trainingDone = day.entries.every((current) => isDone(current, next, setCounts))
+    const trainingDone = day.entries.every((current) => isDone(current, next) || nowSkipped.has(current.id))
     if (!(key in previous) && !trainingDone) onSetLogged()
   }
 
@@ -155,10 +192,10 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
 
   if (day === null) return <p className="mt-6 text-sm text-[#8E8E93]">Übungen werden geladen …</p>
 
-  const total = day.entries.length
-  const done = day.entries.filter((entry) => isDone(entry, savedSets, setCounts)).length
+  const { done, total, finished } = dayProgress(
+    day.entries.map((entry) => ({ done: isDone(entry, savedSets), skipped: skipped.has(entry.id) })),
+  )
   const openEntry = day.entries.find((entry) => entry.id === openId)
-  const finished = total > 0 && done === total
 
   const summary = summarizeWorkout({
     exercises: day.entries.map((entry) => {
@@ -178,50 +215,6 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     lastSets: day.lastSets,
   })
 
-  function handleEntryAdded(entry: PlanEntry) {
-    const count = trainingSetCount(entry.sets_max, [])
-    setSetCounts((current) => ({ ...current, [entry.id]: count }))
-    writeSetCount(userId, today, entry.id, count)
-    setExercises((current) => ({ ...current, [entry.exercise.id]: entry.exercise }))
-    setActiveIds((current) => ({ ...current, [entry.id]: entry.exercise.id }))
-    setDay((current) => (current ? { ...current, entries: [...current.entries, entry] } : current))
-    setOpenId(entry.id)
-  }
-
-  function handleEntryRemoved(entryId: string) {
-    setDay((current) => (current ? { ...current, entries: current.entries.filter((e) => e.id !== entryId) } : current))
-    if (openId === entryId) setOpenId(null)
-  }
-
-  function handleEntryChange(entryId: string, changes: Pick<PlanEntry, 'sets_min' | 'sets_max'>) {
-    setDay((current) =>
-      current
-        ? {
-            ...current,
-            entries: current.entries.map((entry) => (entry.id === entryId ? { ...entry, ...changes } : entry)),
-          }
-        : current,
-    )
-  }
-
-  function handleSetDeleted(exerciseId: string, deletedSetNumber: number) {
-    const previous = latestSaved.current
-    const next: SavedSets = {}
-    for (const [key, values] of Object.entries(previous)) {
-      const [id, numStr] = key.split(':')
-      const num = Number(numStr)
-      if (id !== exerciseId || num < deletedSetNumber) {
-        next[key] = values
-      } else if (num > deletedSetNumber) {
-        next[setKey(id, num - 1)] = values
-      }
-    }
-    latestSaved.current = next
-    setSavedSets(next)
-  }
-
-  const nextPos = day.entries.reduce((max, e) => Math.max(max, e.position), 0) + 1
-
   function card(entry: PlanEntry, layout: 'stacked' | 'summary' | 'detail') {
     return (
       <ExerciseCard
@@ -235,20 +228,15 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         open={openId === entry.id}
         scrollRequest={layout === 'stacked' && scrollTarget?.id === entry.id ? scrollTarget.request : null}
         savedSets={savedSets}
-        setCount={setCounts[entry.id] ?? 3}
-        onSetCountChange={(count) => {
-          setSetCounts((current) => ({ ...current, [entry.id]: count }))
-          writeSetCount(userId, today, entry.id, count)
-        }}
+        setCount={setCountFor(entry, savedSets)}
         lastSets={day?.lastSets ?? []}
         getWorkoutId={getWorkoutId}
         onToggle={() => handleToggle(entry.id)}
         onSetChange={handleSetChange}
         onExerciseChange={handleExerciseChange}
         onActiveChange={(exerciseId) => setActiveIds((current) => ({ ...current, [entry.id]: exerciseId }))}
-        onRemoveEntry={total > 1 ? () => handleEntryRemoved(entry.id) : undefined}
-        onEntryChange={(changes) => handleEntryChange(entry.id, changes)}
-        onSetDeleted={handleSetDeleted}
+        skipped={skipped.has(entry.id)}
+        onSkipChange={(skip) => handleSkipChange(entry.id, skip)}
       />
     )
   }
@@ -258,10 +246,10 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       <div className="flex items-center justify-between">
         <span
           className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider ${
-            done === total ? 'text-[#30D158]' : 'text-[#8E8E93]'
+            finished ? 'text-[#30D158]' : 'text-[#8E8E93]'
           }`}
         >
-          {done === total ? (
+          {finished ? (
             <>
               Training geschafft!
               <TrophyIcon className="h-4 w-4 shrink-0" />
@@ -288,7 +276,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
       >
         <div
           className={`h-full rounded-full transition-all duration-300 ${
-            done === total ? 'bg-[#30D158]' : 'neon-bar bg-neon'
+            finished ? 'bg-[#30D158]' : 'neon-bar bg-neon'
           }`}
           style={{ width: `${total === 0 ? 0 : (done / total) * 100}%` }}
         />
@@ -302,7 +290,6 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         <div>
           {progress}
           <ul className="mt-3 space-y-2.5">{day.entries.map((entry) => card(entry, 'summary'))}</ul>
-          <AddExerciseForm planDayId={planDayId} nextPosition={nextPos} onAdded={handleEntryAdded} />
         </div>
         <div className="sticky top-4 space-y-4">
           {openEntry ? (
@@ -329,7 +316,6 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
           <WorkoutSummary summary={summary} finished={finished} />
         </div>
       )}
-      <AddExerciseForm planDayId={planDayId} nextPosition={nextPos} onAdded={handleEntryAdded} />
     </>
   )
 }

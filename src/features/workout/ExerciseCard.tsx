@@ -16,22 +16,17 @@ import {
 } from '../../domain/sets'
 import {
   deleteExerciseSets,
-  deletePlanEntry,
   deleteSet,
-  deleteSetAndShift,
   type Exercise,
   type LoggedSet,
   type PlanEntry,
   saveSet,
   updateExercise,
   updateNextWeights,
-  updatePlanSets,
 } from './api'
-import { CheckIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from '../../lib/icons'
-import { ConfirmDeleteButton } from './ConfirmDeleteButton'
-import { readDraft, removeDraft, writeDraft } from './drafts'
+import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
+import { readDraft, removeDraft } from './drafts'
 import { SetRow } from './SetRow'
-import { SwipeToDelete } from './SwipeToDelete'
 
 const fieldClass =
   'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-neon focus:bg-[#3A3A3C] disabled:opacity-50'
@@ -57,19 +52,17 @@ type Props = {
   /** Ändert sich der Wert, scrollt die Karte an den oberen Rand. */
   scrollRequest: number | null
   savedSets: Record<string, SetValues>
+  /** Sätze aus dem Plan. Heute schon mehr gespeicherte Sätze bleiben sichtbar. */
   setCount: number
-  onSetCountChange: (count: number) => void
   lastSets: LoggedSet[]
   getWorkoutId: () => Promise<string>
   onToggle: () => void
   onSetChange: (exerciseId: string, setNumber: number, values: SetValues | null) => void
   onExerciseChange: (exerciseId: string, changes: Partial<Exercise>) => void
   onActiveChange: (exerciseId: string) => void
-  onRemoveEntry?: () => void
-  /** Neue Satzanzahl im Plan, z. B. nach „Satz hinzufügen“. */
-  onEntryChange: (changes: Pick<PlanEntry, 'sets_min' | 'sets_max'>) => void
-  /** Ein Satz wurde gelöscht, die gespeicherten Sätze dahinter rücken eine Nummer auf. */
-  onSetDeleted: (exerciseId: string, setNumber: number) => void
+  /** Heute übersprungen. Der Plan bleibt dabei unverändert. */
+  skipped: boolean
+  onSkipChange: (skip: boolean) => void
 }
 
 export function ExerciseCard(props: Props) {
@@ -84,19 +77,16 @@ export function ExerciseCard(props: Props) {
     scrollRequest,
     savedSets,
     setCount,
-    onSetCountChange,
     lastSets,
     getWorkoutId,
     onToggle,
     onSetChange,
     onExerciseChange,
     onActiveChange,
-    onRemoveEntry,
-    onEntryChange,
-    onSetDeleted,
+    skipped,
+    onSkipChange,
   } = props
   const [busy, setBusy] = useState(false)
-  const [changingCount, setChangingCount] = useState(false)
   const [savingSets, setSavingSets] = useState(0)
   const [error, setError] = useState<string | null>(null)
   // null: Das Feld zeigt den gespeicherten Wert, sonst die laufende Eingabe.
@@ -129,7 +119,7 @@ export function ExerciseCard(props: Props) {
   const isRounds = entry.sets_min !== entry.sets_max
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min, entry.duration_max)
-  const sets = String(setCount)
+  const sets = formatRange(entry.sets_min, entry.sets_max)
   const target = reps
     ? `${sets}${isRounds ? ' Runden' : ''} × ${reps}`
     : duration
@@ -139,7 +129,7 @@ export function ExerciseCard(props: Props) {
   const hint = progressionHint({
     tracking: exercise.tracking_type,
     currentWeight: exercise.current_weight_kg,
-    setsMin: setCount,
+    setsMin: entry.sets_min,
     repsMin: entry.reps_min,
     repsMax: entry.reps_max,
     lastSets: last,
@@ -151,7 +141,7 @@ export function ExerciseCard(props: Props) {
     const set = savedSets[setKey(activeId, setNumber)]
     return set ? [set] : []
   })
-  const done = logged.length >= setCount
+  const done = logged.length >= entry.sets_min
   const direction = assisted ? -1 : 1
   const answered = logged.length > 0 && logged.every((set) => set.next_weight_kg != null)
   // Empfehlung: Dieselbe Regel wie beim Hinweis, nur mit den heutigen Sätzen.
@@ -160,7 +150,7 @@ export function ExerciseCard(props: Props) {
     progressionHint({
       tracking: exercise.tracking_type,
       currentWeight: null,
-      setsMin: setCount,
+      setsMin: entry.sets_min,
       repsMin: entry.reps_min,
       repsMax: entry.reps_max,
       lastSets: logged.map((set) => ({ ...set, next_weight_kg: null })),
@@ -175,6 +165,8 @@ export function ExerciseCard(props: Props) {
   const yesLabel = sameWeight ? `Ja, ${assisted ? 'Hilfe auf' : 'auf'} ${yesPlanned}` : `Ja, ${stepLabel}`
   const noLabel = assisted ? 'Nein, Hilfe lassen' : 'Nein, Gewicht lassen'
 
+  // Eine geschaffte Übung gilt nicht mehr als übersprungen.
+  const isSkipped = skipped && !done
   const isDetail = layout === 'detail'
   // Die Sätze sind im Detail immer sichtbar, in der Laptop-Liste nie.
   const bodyVisible = isDetail || (layout === 'stacked' && open)
@@ -237,7 +229,7 @@ export function ExerciseCard(props: Props) {
 
   /** Setzt die Übung für heute zurück: gespeicherte Sätze, Antwort auf „Geschafft?“ und Entwürfe. */
   async function handleResetExercise() {
-    if (changingCount || savingSets > 0 || busy) return
+    if (savingSets > 0 || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -251,72 +243,6 @@ export function ExerciseCard(props: Props) {
       setConfirmingReset(false)
     } catch {
       setError('Die Übung konnte nicht zurückgesetzt werden. Versuch es noch einmal.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleRemoveEntry() {
-    if (!onRemoveEntry) return
-    setBusy(true)
-    setError(null)
-    try {
-      await deletePlanEntry(entry.id)
-      onRemoveEntry()
-    } catch {
-      setError('Übung konnte nicht aus dem Tag entfernt werden.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  /** Fügt einen neuen Satz hinzu und speichert die neue Satzanzahl im Trainingsplan. */
-  async function handleAddSet() {
-    if (entry.sets_max >= 20) return
-    setBusy(true)
-    setError(null)
-    const nextMax = entry.sets_max + 1
-    // Wenn vorher sets_min === sets_max war, ziehen wir sets_min mit hoch; bei Bereichen (z. B. 3–4 Runden) wächst nur das Maximum.
-    const nextMin = entry.sets_min === entry.sets_max ? nextMax : entry.sets_min
-    try {
-      await updatePlanSets(entry.id, nextMin, nextMax)
-      onEntryChange({ sets_min: nextMin, sets_max: nextMax })
-    } catch {
-      setError('Der Satz konnte nicht hinzugefügt werden. Versuch es noch einmal.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  /** Löscht einen Satz, rückt folgende Sätze und Entwürfe eins vor und reduziert die Satzanzahl im Plan. */
-  async function handleDeleteSet(setNumber: number) {
-    if (setCount <= 1 || busy || changingCount || savingSets > 0) return
-    setBusy(true)
-    setError(null)
-    const nextMax = setCount - 1
-    const nextMin = Math.max(1, Math.min(entry.sets_min, nextMax))
-    try {
-      const savedNumbers = rows.filter((num) => savedSets[setKey(activeId, num)] !== undefined)
-      if (savedNumbers.some((num) => num >= setNumber)) {
-        const workoutId = await getWorkoutId()
-        await deleteSetAndShift(workoutId, activeId, setNumber, savedNumbers)
-      }
-      await updatePlanSets(entry.id, nextMin, nextMax)
-
-      // Entwürfe für dahinterliegende Sätze eine Nummer nach vorne verschieben.
-      for (let num = setNumber; num < setCount; num++) {
-        const nextDraft = readDraft(userId, today, activeId, num + 1)
-        if (nextDraft) writeDraft(userId, today, activeId, num, nextDraft)
-        else removeDraft(userId, today, activeId, num)
-      }
-      removeDraft(userId, today, activeId, setCount)
-
-      onSetDeleted(activeId, setNumber)
-      onEntryChange({ sets_min: nextMin, sets_max: nextMax })
-      onSetCountChange(nextMax)
-      setRowGeneration((current) => current + 1)
-    } catch {
-      setError('Der Satz konnte nicht gelöscht werden. Versuch es noch einmal.')
     } finally {
       setBusy(false)
     }
@@ -356,30 +282,6 @@ export function ExerciseCard(props: Props) {
     }
   }
 
-  async function removeLastSet() {
-    if (setCount <= 1 || changingCount || busy || savingSets > 0) return
-    setChangingCount(true)
-    setError(null)
-    try {
-      // Beide Alternativen teilen dieselbe Satzanzahl; vorhandene Sätze werden nie versteckt.
-      const ids = entry.alternative ? [entry.exercise.id, entry.alternative.id] : [entry.exercise.id]
-      const savedIds = ids.filter((id) => savedSets[setKey(id, setCount)])
-      if (savedIds.length > 0) {
-        const workoutId = await getWorkoutId()
-        for (const id of savedIds) {
-          await deleteSet(workoutId, id, setCount)
-          onSetChange(id, setCount, null)
-        }
-      }
-      for (const id of ids) removeDraft(userId, today, id, setCount)
-      onSetCountChange(setCount - 1)
-    } catch {
-      setError('Der Satz konnte nicht gelöscht werden. Bitte erneut versuchen.')
-    } finally {
-      setChangingCount(false)
-    }
-  }
-
   const statusIcon = (
     <span
       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${
@@ -390,14 +292,15 @@ export function ExerciseCard(props: Props) {
       aria-hidden="true"
     >
       {done && <CheckIcon className="h-3.5 w-3.5 stroke-[3]" />}
+      {isSkipped && <span className="text-xs font-semibold leading-none text-[#8E8E93]">–</span>}
     </span>
   )
 
   const subtitle = (
     <span
-      className={`block truncate text-sm tabular-nums ${hint && !done ? 'font-medium text-neon' : 'text-[#8E8E93]'}`}
+      className={`block truncate text-sm tabular-nums ${hint && !done && !isSkipped ? 'font-medium text-neon' : 'text-[#8E8E93]'}`}
     >
-      {logged.length > 0 ? formatPerformance(logged, unit) : hint && !bodyVisible ? hintText : target}
+      {isSkipped ? 'Heute übersprungen' : logged.length > 0 ? formatPerformance(logged, unit) : hint && !bodyVisible ? hintText : target}
     </span>
   )
 
@@ -415,17 +318,7 @@ export function ExerciseCard(props: Props) {
     </button>
   )
 
-  const desktopDeleteButton = onRemoveEntry && layout !== 'stacked' && (
-    <div className="mr-2 shrink-0">
-      <ConfirmDeleteButton
-        label={`${exercise.name} aus diesem Tag entfernen`}
-        disabled={busy}
-        onConfirm={() => void handleRemoveEntry()}
-      />
-    </div>
-  )
-
-  const rawHeader = isDetail ? (
+  const header = isDetail ? (
     <div className="flex items-center">
       <div className="flex min-h-16 min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 pr-2">
         {statusIcon}
@@ -435,7 +328,6 @@ export function ExerciseCard(props: Props) {
         </div>
       </div>
       {settingsButton}
-      {desktopDeleteButton}
     </div>
   ) : (
     <div className="flex items-center bg-[#1C1C1E]">
@@ -453,7 +345,7 @@ export function ExerciseCard(props: Props) {
         <span className="min-w-0 flex-1">
           <span
             className={`block font-semibold tracking-tight ${bodyVisible ? '' : 'truncate'} ${
-              done && !open ? 'text-[#8E8E93]' : 'text-white'
+              (done || isSkipped) && !open ? 'text-[#8E8E93]' : 'text-white'
             }`}
           >
             {exercise.name}
@@ -467,22 +359,8 @@ export function ExerciseCard(props: Props) {
         />
       </button>
       {settingsButton}
-      {desktopDeleteButton}
     </div>
   )
-
-  const header =
-    layout === 'stacked' ? (
-      <SwipeToDelete
-        label={`${exercise.name} aus diesem Tag entfernen`}
-        enabled={onRemoveEntry !== undefined && !busy}
-        onDelete={() => void handleRemoveEntry()}
-      >
-        {rawHeader}
-      </SwipeToDelete>
-    ) : (
-      rawHeader
-    )
 
   const answer = showAnswer && (
     <div className="px-4 pb-3.5">
@@ -589,18 +467,34 @@ export function ExerciseCard(props: Props) {
           {exercise.tracking_type === 'duration' && !entry.alternative && (
             <p className="text-sm text-[#8E8E93]">Diese Übung wird über die Dauer erfasst.</p>
           )}
-          {onRemoveEntry && (
+          {!done && !isSkipped && (
             <div className="border-t border-white/[0.06] pt-2">
               <button
-                className="min-h-11 text-sm font-medium text-[#FF453A] disabled:opacity-50"
+                className="min-h-11 w-full text-left text-sm font-medium text-neon"
                 type="button"
-                disabled={busy}
-                onClick={() => void handleRemoveEntry()}
+                onClick={() => {
+                  setShowSettings(false)
+                  onSkipChange(true)
+                }}
               >
-                Übung aus diesem Tag entfernen
+                Heute überspringen
               </button>
+              <p className="text-xs text-[#8E8E93]">Nur für dieses Training. Dein Plan bleibt unverändert.</p>
             </div>
           )}
+        </div>
+      )}
+
+      {isSkipped && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-[#2C2C2E]/70 px-3 py-2">
+          <p className="min-w-0 text-sm text-[#EBEBF5]/80">Heute übersprungen</p>
+          <button
+            className="min-h-11 shrink-0 px-2 text-sm font-medium text-neon"
+            type="button"
+            onClick={() => onSkipChange(false)}
+          >
+            Doch trainieren
+          </button>
         </div>
       )}
 
@@ -630,7 +524,7 @@ export function ExerciseCard(props: Props) {
         <span className={isDetail && entry.sets_max > 1 ? 'w-[5.75rem] shrink-0' : 'w-11 shrink-0'} />
       </div>
 
-      <fieldset disabled={changingCount || busy} aria-label="Sätze">
+      <fieldset disabled={busy} aria-label="Sätze">
       <ul>
         {rows.map((setNumber) => {
           const lastSet = last.find((set) => set.set_number === setNumber)
@@ -660,39 +554,13 @@ export function ExerciseCard(props: Props) {
               plannedWeight={lastSet && lastSet.is_assisted === assisted && weighted ? plannedWeight(lastSet) : null}
               resetRequest={resetRequest}
               weightStep={exercise.weight_step_kg}
-              deleteMode={isDetail ? 'button' : 'swipe'}
               onSave={handleSaveSet}
               onEdit={() => setHasEdits(true)}
-              onDelete={setCount > 1 ? () => void handleDeleteSet(setNumber) : undefined}
             />
           )
         })}
       </ul>
       </fieldset>
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-700 pt-3">
-        <span className="mr-auto text-sm text-neutral-400" aria-live="polite">{setCount} {isRounds ? 'Runden' : 'Sätze'}</span>
-        <button className="min-h-11 rounded-lg bg-neutral-900 px-3 py-2 text-sm text-red-300 disabled:opacity-40"
-          type="button" disabled={setCount <= 1 || busy || changingCount || savingSets > 0} onClick={() => void removeLastSet()}>
-          {changingCount ? 'Wird gelöscht …' : `${isRounds ? 'Runde' : 'Satz'} ${setCount} löschen`}
-        </button>
-        <button className="min-h-11 rounded-lg bg-neutral-900 px-3 py-2 text-sm text-yellow-300 disabled:opacity-40"
-          type="button" disabled={setCount >= 100 || busy || changingCount || savingSets > 0} onClick={() => onSetCountChange(setCount + 1)}>
-          + {isRounds ? 'Runde' : 'Satz'} hinzufügen
-        </button>
-      </div>
-
-      {entry.sets_max < 20 && (
-        <button
-          className="mt-2.5 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/[0.12] bg-[#2C2C2E]/40 px-3 text-sm font-medium text-[#EBEBF5]/85 transition-colors hover:border-white/25 hover:bg-[#2C2C2E] active:scale-[0.99] disabled:opacity-50"
-          type="button"
-          disabled={busy}
-          onClick={() => void handleAddSet()}
-        >
-          <PlusIcon className="h-4 w-4 text-neon" />
-          {isRounds ? 'Runde hinzufügen' : 'Satz hinzufügen'}
-        </button>
-      )}
-
       {(logged.length > 0 || hasEdits) &&
         (confirmingReset ? (
           <div className="mt-3 rounded-lg bg-neutral-900/60 p-3">
