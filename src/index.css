@@ -190,3 +190,9 @@ button.bg-neon:not(:disabled):active { transform: scale(0.98); }
 @media (prefers-color-scheme: light) {
   .text-neon { color: var(--color-accent-ink); }
 }
+
+/* Hero-Karte fürs heutige Training: Cyan-Glow von oben rechts. */
+.hero-card {
+  background-image: radial-gradient(ellipse 70% 90% at 100% 0%, rgb(24 224 255 / 0.22), transparent 65%);
+  box-shadow: 0 18px 50px -24px rgb(24 224 255 / 0.55);
+}

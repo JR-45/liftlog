@@ -128,3 +128,12 @@ export function CameraIcon({ className }: IconProps) {
     </SvgIcon>
   )
 }
+
+/** Gefüllte Flamme für die Streak, damit sie auch klein kräftig wirkt. */
+export function FlameIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M13.5 1.5c.3 2.9-.9 4.6-2.4 6.3-.6-1-1.5-1.8-2.6-2.3.2 2.2-.8 3.6-1.9 5.1C5.4 12.3 4.5 13.9 4.5 16c0 3.9 3.4 6.5 7.5 6.5s7.5-2.6 7.5-6.6c0-3.4-1.8-5.6-3.4-7.6-1.3-1.7-2.5-3.3-2.6-6.8Zm-1.4 18.7c-1.9 0-3.3-1.2-3.3-2.9 0-1.4.8-2.3 1.7-3.3.4.8 1 1.3 1.8 1.6-.1-1.6.5-2.8 1.4-3.9.6 1.5 2 2.9 2 4.9 0 2.1-1.6 3.6-3.6 3.6Z" />
+    </svg>
+  )
+}

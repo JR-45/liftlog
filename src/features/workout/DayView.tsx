@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { dayProgress } from '../../domain/dayProgress'
 import { countLoggedSets, setKey, type SetValues } from '../../domain/sets'
 import { summarizeWorkout } from '../../domain/summary'
+import { estimateMinutes } from '../../domain/motivation'
 import { TrophyIcon } from '../../lib/icons'
 import { trainingSetCount } from '../../domain/planEditing'
 import { readSkippedEntries, writeSkippedEntries } from './drafts'
@@ -11,7 +12,17 @@ import { ExerciseCard } from './ExerciseCard'
 import { WorkoutSummary } from './WorkoutSummary'
 
 type SavedSets = Record<string, SetValues>
-type Props = { planDayId: string; userId: string; today: string; onSetLogged: () => void }
+type Props = {
+  planDayId: string
+  userId: string
+  today: string
+  /** Name des Trainingstags, z. B. „Oberkörper“. */
+  dayName: string
+  /** Ob der gezeigte Tag heute ist. Sonst steht der Wochentag in der Karte. */
+  dayLabel: string
+  restSeconds: number
+  onSetLogged: () => void
+}
 
 function entryIds(entry: PlanEntry): string[] {
   return entry.alternative ? [entry.exercise.id, entry.alternative.id] : [entry.exercise.id]
@@ -50,7 +61,7 @@ function initialActiveId(entry: PlanEntry, saved: SavedSets): string {
   return usedAlternative && !usedMain ? alternative.id : exercise.id
 }
 
-export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
+export function DayView({ planDayId, userId, today, dayName, dayLabel, restSeconds, onSetLogged }: Props) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [day, setDay] = useState<DayData | null>(null)
   const [savedSets, setSavedSets] = useState<SavedSets>({})
@@ -143,6 +154,7 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     setSavedSets(next)
 
     if (!values || !day) return
+
     const index = day.entries.findIndex((entry) => entryIds(entry).includes(exerciseId))
     const entry = day.entries[index]
     if (!entry) return
@@ -241,6 +253,41 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     )
   }
 
+  const started = Object.keys(savedSets).length > 0
+  const nextId = finished ? null : nextOpenEntry(day.entries, savedSets, -1, skipped)
+  const nextEntry = day.entries.find((entry) => entry.id === nextId)
+  const nextName = nextEntry ? (exercises[activeIds[nextEntry.id]] ?? nextEntry.exercise).name : null
+  const plannedSets = day.entries
+    .filter((entry) => !skipped.has(entry.id))
+    .reduce((sum, entry) => sum + setCountFor(entry, savedSets), 0)
+
+  function handleStart() {
+    if (!nextId) return
+    setOpenId(nextId)
+    if (!isDesktop) scrollTo(nextId)
+  }
+
+  const hero = (
+    <section className="hero-card relative mt-4 overflow-hidden rounded-3xl border border-neon/30 bg-surface p-5 lg:max-w-[62.5rem] lg:p-7">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-neon">{dayLabel}</p>
+      <h2 className="mt-1 text-4xl text-foreground [overflow-wrap:break-word] lg:text-5xl">{dayName}</h2>
+      <p className="mt-1.5 text-sm font-medium text-muted">
+        {total} Übungen · {plannedSets} Sätze · ca. {estimateMinutes(plannedSets, restSeconds)} Min.
+      </p>
+      {finished ? (
+        <p className="mt-4 inline-flex items-center gap-2 font-display text-2xl font-extrabold uppercase text-success">
+          <TrophyIcon className="h-6 w-6" /> Training geschafft
+        </p>
+      ) : (
+        nextName && (
+          <button type="button" onClick={handleStart} className="bg-neon mt-4 min-h-14 w-full rounded-2xl px-4 text-black lg:w-auto lg:px-8">
+            {started ? `Weiter: ${nextName}` : '▶ Training starten'}
+          </button>
+        )
+      )}
+    </section>
+  )
+
   const progress = (
     <div className="apple-glass sticky top-0 z-10 -mx-4 mt-2 border-b border-line/[0.06] px-4 py-2.5 md:-mx-6 md:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:bg-surface lg:px-4">
       <div className="flex items-center justify-between">
@@ -286,7 +333,9 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
 
   if (isDesktop) {
     return (
-      <div className="mt-3 grid grid-cols-[minmax(0,21rem)_minmax(0,40rem)] items-start gap-6">
+      <>
+      {hero}
+      <div className="mt-4 grid grid-cols-[minmax(0,21rem)_minmax(0,40rem)] items-start gap-6">
         <div>
           {progress}
           <ul className="mt-3 space-y-2.5">{day.entries.map((entry) => card(entry, 'summary'))}</ul>
@@ -304,11 +353,13 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
           <WorkoutSummary summary={summary} finished={finished} />
         </div>
       </div>
+      </>
     )
   }
 
   return (
     <>
+      {hero}
       {progress}
       <ul className="mt-3 space-y-2.5">{day.entries.map((entry) => card(entry, 'stacked'))}</ul>
       {summary.totalSets > 0 && (
