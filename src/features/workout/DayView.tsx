@@ -182,6 +182,33 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
     if (openId === entryId) setOpenId(null)
   }
 
+  function handleEntryChange(entryId: string, changes: Pick<PlanEntry, 'sets_min' | 'sets_max'>) {
+    setDay((current) =>
+      current
+        ? {
+            ...current,
+            entries: current.entries.map((entry) => (entry.id === entryId ? { ...entry, ...changes } : entry)),
+          }
+        : current,
+    )
+  }
+
+  function handleSetDeleted(exerciseId: string, deletedSetNumber: number) {
+    const previous = latestSaved.current
+    const next: SavedSets = {}
+    for (const [key, values] of Object.entries(previous)) {
+      const [id, numStr] = key.split(':')
+      const num = Number(numStr)
+      if (id !== exerciseId || num < deletedSetNumber) {
+        next[key] = values
+      } else if (num > deletedSetNumber) {
+        next[setKey(id, num - 1)] = values
+      }
+    }
+    latestSaved.current = next
+    setSavedSets(next)
+  }
+
   const nextPos = day.entries.reduce((max, e) => Math.max(max, e.position), 0) + 1
 
   function card(entry: PlanEntry, layout: 'stacked' | 'summary' | 'detail') {
@@ -204,6 +231,8 @@ export function DayView({ planDayId, userId, today, onSetLogged }: Props) {
         onExerciseChange={handleExerciseChange}
         onActiveChange={(exerciseId) => setActiveIds((current) => ({ ...current, [entry.id]: exerciseId }))}
         onRemoveEntry={total > 1 ? () => handleEntryRemoved(entry.id) : undefined}
+        onEntryChange={(changes) => handleEntryChange(entry.id, changes)}
+        onSetDeleted={handleSetDeleted}
       />
     )
   }
