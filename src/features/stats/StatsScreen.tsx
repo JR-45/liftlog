@@ -43,12 +43,12 @@ function DayCell({
   const label = `${DAY_FORMAT.format(new Date(`${cell.date}T12:00:00`))}: ${mark?.label ?? STATUS_LABEL[cell.status]}`
   const style: Record<DayStatus, string> = {
     trained: selected
-      ? 'bg-[#FFD60A] font-bold text-black ring-2 ring-white shadow-sm'
+      ? 'bg-neon font-bold text-black ring-2 ring-white shadow-sm'
       : 'bg-[#30D158] font-semibold text-black shadow-sm shadow-[#30D158]/20',
     missed: 'bg-[#FF453A]/15 text-[#FF453A]',
     marked: 'bg-[#3A3A3C] font-medium text-white',
     rest: 'text-[#8E8E93]',
-    today: 'ring-2 ring-[#FFD60A] font-semibold text-white',
+    today: 'ring-2 ring-neon font-semibold text-white',
     future: 'text-[#8E8E93]/40',
     before_start: 'text-[#8E8E93]/25',
   }
@@ -234,7 +234,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
             <div className="py-10 text-center">
               <p role="alert" className="text-sm text-[#FF453A]">Der Kalender konnte nicht geladen werden.</p>
               <button
-                className="mt-2 min-h-11 py-2 text-sm font-medium text-[#FFD60A]"
+                className="mt-2 min-h-11 py-2 text-sm font-medium text-neon"
                 type="button"
                 onClick={() => {
                   setFailedIndex(null)
@@ -282,7 +282,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                         key={mark.kind}
                         className={`min-h-11 rounded-xl px-1 text-sm font-medium transition-transform active:scale-95 disabled:opacity-50 ${
                           selectedCell.mark === mark.kind
-                            ? 'bg-[#FFD60A] font-semibold text-black'
+                            ? 'bg-neon font-semibold text-black'
                             : 'bg-[#3A3A3C] text-white'
                         }`}
                         type="button"
@@ -296,7 +296,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                   </div>
                   {selectedCell.mark && (
                     <button
-                      className="mt-2 min-h-11 w-full text-sm font-medium text-[#FFD60A] disabled:opacity-50"
+                      className="mt-2 min-h-11 w-full text-sm font-medium text-neon disabled:opacity-50"
                       type="button"
                       disabled={markBusy}
                       onClick={() => void applyMark(selectedCell.date, null)}
@@ -350,7 +350,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                 <div className="mt-3 rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[#FFD60A]">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-neon">
                         {DAY_FORMAT.format(new Date(`${dayHistory.date}T12:00:00`))}
                       </p>
                       {dayHistory.planDay && (

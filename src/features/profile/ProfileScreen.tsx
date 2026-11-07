@@ -29,7 +29,7 @@ const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-
 const MEMBER_SINCE_FORMAT = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' })
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 text-base text-white placeholder-[#8E8E93]/60 outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
+  'h-11 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 text-base text-white placeholder-[#8E8E93]/60 outline-none transition-colors focus:border-neon focus:bg-[#3A3A3C] disabled:opacity-50'
 
 type Props = {
   user: User
@@ -37,6 +37,7 @@ type Props = {
   defaultWeeklyTarget: number
   restTimer: RestTimer
   onAvatarChange: (avatarUrl: string | null) => void
+  onNameChange: (displayName: string) => void
   onSignOut: () => void
 }
 
@@ -87,6 +88,7 @@ function ProfileView({
   today,
   restTimer,
   onAvatarChange,
+  onNameChange,
   onSignOut,
   initialProfile,
   initialAvatar,
@@ -184,6 +186,7 @@ function ProfileView({
     try {
       await saveProfile(next)
       setProfile(next)
+      onNameChange(next.displayName)
       setEditingProfile(false)
       showSuccess('Profil gespeichert')
     } catch {
@@ -206,12 +209,12 @@ function ProfileView({
                 <img
                   src={avatar}
                   alt={`Profilbild von ${profile.displayName}`}
-                  className="h-22 w-22 rounded-full object-cover ring-2 ring-[#FFD60A]/80"
+                  className="h-22 w-22 rounded-full object-cover ring-2 ring-neon/80"
                 />
               ) : (
                 <div
                   aria-hidden="true"
-                  className="flex h-22 w-22 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD60A] to-[#FF9F0A] text-2xl font-bold tracking-tight text-black shadow-md"
+                  className="flex h-22 w-22 items-center justify-center rounded-full bg-gradient-to-br from-neon to-[#FF9F0A] text-2xl font-bold tracking-tight text-black shadow-md"
                 >
                   {initials}
                 </div>
@@ -228,7 +231,7 @@ function ProfileView({
                 type="button"
                 aria-label="Profilbild ändern"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#1C1C1E] bg-[#2C2C2E] text-[#FFD60A] shadow-md transition-transform hover:bg-[#3A3A3C] active:scale-95"
+                className="absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#1C1C1E] bg-[#2C2C2E] text-neon shadow-md transition-transform hover:bg-[#3A3A3C] active:scale-95"
               >
                 <CameraIcon className="h-5 w-5" />
               </button>
@@ -237,7 +240,7 @@ function ProfileView({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-xl font-bold tracking-tight text-white">{profile.displayName}</h2>
-                <span className="rounded-full bg-[#FFD60A]/15 px-2.5 py-0.5 text-xs font-semibold text-[#FFD60A] ring-1 ring-[#FFD60A]/30">
+                <span className="rounded-full bg-neon/15 px-2.5 py-0.5 text-xs font-semibold text-neon ring-1 ring-neon/30">
                   {GOAL_LABELS[profile.goal]}
                 </span>
               </div>
@@ -355,7 +358,7 @@ function ProfileView({
               <button
                 type="submit"
                 disabled={busy}
-                className="min-h-11 rounded-xl bg-[#FFD60A] px-5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+                className="min-h-11 rounded-xl bg-neon px-5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
               >
                 Speichern
               </button>
@@ -379,7 +382,7 @@ function ProfileView({
           <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#2C2C2E]">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                stats.weekProgress >= 1 ? 'bg-[#30D158]' : 'bg-[#FFD60A]'
+                stats.weekProgress >= 1 ? 'bg-[#30D158]' : 'bg-neon'
               }`}
               style={{ width: `${Math.round(stats.weekProgress * 100)}%` }}
             />
@@ -400,7 +403,7 @@ function ProfileView({
 
         <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">Gesamtvolumen</p>
-          <p className="mt-1.5 text-2xl font-bold tabular-nums text-[#FFD60A]">{formatVolume(stats.totalVolumeKg)}</p>
+          <p className="mt-1.5 text-2xl font-bold tabular-nums text-neon">{formatVolume(stats.totalVolumeKg)}</p>
           <p className="mt-0.5 text-xs text-[#8E8E93]">Bewegtes Gewicht</p>
         </div>
       </div>
@@ -413,7 +416,7 @@ function ProfileView({
         <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFD60A]/15 text-[#FFD60A]">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neon/15 text-neon">
                 <TrophyIcon className="h-4 w-4" />
               </span>
               <div>
@@ -445,7 +448,7 @@ function ProfileView({
                             {formatWeight(pr.maxWeightKg)} × {pr.bestSetReps}
                           </p>
                           {pr.estimated1RmKg !== null && (
-                            <p className="text-xs font-medium text-[#FFD60A]">
+                            <p className="text-xs font-medium text-neon">
                               1RM ~ {formatWeight(pr.estimated1RmKg)}
                             </p>
                           )}
@@ -461,7 +464,7 @@ function ProfileView({
                 <button
                   type="button"
                   onClick={() => setShowAllPrs((current) => !current)}
-                  className="mt-2 min-h-11 w-full rounded-xl bg-[#2C2C2E] text-sm font-medium text-[#FFD60A]"
+                  className="mt-2 min-h-11 w-full rounded-xl bg-[#2C2C2E] text-sm font-medium text-neon"
                 >
                   {showAllPrs ? 'Weniger anzeigen' : `Alle ${stats.personalRecords.length} Rekorde anzeigen`}
                 </button>
@@ -488,7 +491,7 @@ function ProfileView({
                 onClick={() => restTimer.chooseDuration(seconds)}
                 className={`h-11 min-w-14 rounded-[10px] px-3 text-sm tabular-nums transition-all ${
                   restTimer.duration === seconds
-                    ? 'bg-[#FFD60A] font-semibold text-black shadow-sm'
+                    ? 'bg-neon font-semibold text-black shadow-sm'
                     : 'text-[#8E8E93] hover:text-white'
                 }`}
               >

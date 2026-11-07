@@ -34,7 +34,7 @@ import { SetRow } from './SetRow'
 import { SwipeToDelete } from './SwipeToDelete'
 
 const fieldClass =
-  'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
+  'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-neon focus:bg-[#3A3A3C] disabled:opacity-50'
 const OPEN_ANIMATION_MS = 300
 
 /**
@@ -395,7 +395,7 @@ export function ExerciseCard(props: Props) {
 
   const subtitle = (
     <span
-      className={`block truncate text-sm tabular-nums ${hint && !done ? 'font-medium text-[#FFD60A]' : 'text-[#8E8E93]'}`}
+      className={`block truncate text-sm tabular-nums ${hint && !done ? 'font-medium text-neon' : 'text-[#8E8E93]'}`}
     >
       {logged.length > 0 ? formatPerformance(logged, unit) : hint && !bodyVisible ? hintText : target}
     </span>
@@ -492,7 +492,7 @@ export function ExerciseCard(props: Props) {
             Nächstes Mal: <span className="font-semibold tabular-nums text-white">{formatPlanned(logged)}</span>
           </p>
           <button
-            className="min-h-11 shrink-0 px-2 text-sm font-medium text-[#FFD60A] disabled:opacity-50"
+            className="min-h-11 shrink-0 px-2 text-sm font-medium text-neon disabled:opacity-50"
             type="button"
             disabled={busy}
             onClick={() => void applyAnswer(() => null)}
@@ -504,7 +504,7 @@ export function ExerciseCard(props: Props) {
         <div className="rounded-xl bg-[#2C2C2E]/60 p-3">
           <p className="text-sm font-semibold text-white">
             Geschafft?
-            {recommended && <span className="ml-2 font-medium text-[#FFD60A]">Erhöhen empfohlen</span>}
+            {recommended && <span className="ml-2 font-medium text-neon">Erhöhen empfohlen</span>}
           </p>
           <div className="mt-2.5 grid grid-cols-2 gap-2">
             <button
@@ -516,7 +516,7 @@ export function ExerciseCard(props: Props) {
               {noLabel}
             </button>
             <button
-              className="min-h-11 rounded-xl bg-[#FFD60A] px-2 py-2 text-sm font-semibold tabular-nums text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+              className="min-h-11 rounded-xl bg-neon px-2 py-2 text-sm font-semibold tabular-nums text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
               type="button"
               disabled={busy}
               onClick={() =>
@@ -571,7 +571,7 @@ export function ExerciseCard(props: Props) {
           )}
           {entry.alternative && (
             <button
-              className="min-h-11 text-sm font-medium text-[#FFD60A]"
+              className="min-h-11 text-sm font-medium text-neon"
               type="button"
               onClick={() => {
                 const alternative = entry.alternative as Exercise
@@ -610,7 +610,7 @@ export function ExerciseCard(props: Props) {
       </p>
 
       {hint && !done && (
-        <p className="mt-2.5 rounded-xl bg-[#FFD60A]/12 px-3 py-2 text-sm font-medium text-[#FFD60A] ring-1 ring-[#FFD60A]/25">
+        <p className="mt-2.5 rounded-xl bg-neon/12 px-3 py-2 text-sm font-medium text-neon ring-1 ring-neon/25">
           {hintText}
         </p>
       )}
@@ -688,7 +688,7 @@ export function ExerciseCard(props: Props) {
           disabled={busy}
           onClick={() => void handleAddSet()}
         >
-          <PlusIcon className="h-4 w-4 text-[#FFD60A]" />
+          <PlusIcon className="h-4 w-4 text-neon" />
           {isRounds ? 'Runde hinzufügen' : 'Satz hinzufügen'}
         </button>
       )}
@@ -741,7 +741,7 @@ export function ExerciseCard(props: Props) {
   // In der Laptop-Liste markiert ein gelber Rand die Übung, die rechts offen ist.
   const openStyle =
     layout === 'summary'
-      ? 'border-[#FFD60A]/60 bg-[#242426]'
+      ? 'border-neon/60 bg-[#242426]'
       : 'border-white/[0.12] bg-[#1C1C1E] shadow-md'
   return (
     <li

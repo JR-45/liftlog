@@ -132,6 +132,13 @@ export async function deleteMeasurement(date: string): Promise<void> {
   if (error) throw error
 }
 
+/** Name und Bild für Kopfzeile und Begrüßung. Ohne gespeicherten Namen ist displayName null. */
+export async function loadProfileHeader(): Promise<{ displayName: string | null; avatar: string | null }> {
+  const { data, error } = await supabase.from('profiles').select('display_name, avatar').maybeSingle()
+  if (error) throw error
+  return { displayName: data?.display_name ?? null, avatar: data?.avatar ?? null }
+}
+
 /** Lädt das Profilbild als Data-URL, null ohne Bild. */
 export async function loadAvatar(): Promise<string | null> {
   const { data, error } = await supabase.from('profiles').select('avatar').maybeSingle()

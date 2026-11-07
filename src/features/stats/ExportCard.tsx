@@ -80,7 +80,7 @@ export function ExportCard({ today }: { today: string }) {
             {prepared.setCount === 1 ? '1 Satz' : `${prepared.setCount} Sätze`} bereit
           </p>
           <button
-            className="mt-2.5 min-h-11 w-full rounded-xl bg-[#FFD60A] px-3 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99]"
+            className="mt-2.5 min-h-11 w-full rounded-xl bg-neon px-3 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99]"
             type="button"
             onClick={() => void handleSave()}
           >

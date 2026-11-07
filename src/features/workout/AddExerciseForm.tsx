@@ -3,7 +3,7 @@ import type { TrackingType } from '../../domain/sets'
 import { addExerciseToPlanDay, type PlanEntry } from './api'
 
 const fieldClass =
-  'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
+  'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-neon focus:bg-[#3A3A3C] disabled:opacity-50'
 
 type Props = {
   planDayId: string
@@ -27,7 +27,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
       <div className="mt-4">
         <button
           type="button"
-          className="min-h-11 w-full rounded-2xl border border-dashed border-white/[0.14] bg-[#1C1C1E]/60 px-4 py-3 text-sm font-semibold text-[#FFD60A] transition-colors hover:bg-[#1C1C1E] active:scale-[0.99]"
+          className="min-h-11 w-full rounded-2xl border border-dashed border-white/[0.14] bg-[#1C1C1E]/60 px-4 py-3 text-sm font-semibold text-neon transition-colors hover:bg-[#1C1C1E] active:scale-[0.99]"
           onClick={() => setOpen(true)}
         >
           + Übung zum Trainingstag hinzufügen
@@ -180,7 +180,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
       <button
         type="submit"
         disabled={busy}
-        className="min-h-11 w-full rounded-xl bg-[#FFD60A] px-4 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99] disabled:opacity-50"
+        className="min-h-11 w-full rounded-xl bg-neon px-4 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99] disabled:opacity-50"
       >
         {busy ? 'Wird gespeichert …' : 'Hinzufügen'}
       </button>
