@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { loadPlanDays, type PlanDay } from './api'
 import { DayView } from './DayView'
 import { clearDrafts } from './drafts'
+import { RestTimerBar } from './RestTimerBar'
+import { useRestTimer } from './useRestTimer'
 
 const WEEKDAY_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -20,6 +22,8 @@ export function HomeScreen({ session }: { session: Session }) {
   const [attempt, setAttempt] = useState(0)
   const [today, setToday] = useState(() => localDateString())
   const [pickedWeekday, setPickedWeekday] = useState<number | null>(null)
+  // Liegt hier und nicht beim Tag, damit die Pause beim Wechsel des Tages weiterläuft.
+  const restTimer = useRestTimer()
 
   useEffect(() => {
     let cancelled = false
@@ -56,6 +60,7 @@ export function HomeScreen({ session }: { session: Session }) {
 
   function handleSignOut() {
     clearDrafts()
+    restTimer.stop()
     void supabase.auth.signOut()
   }
 
@@ -63,7 +68,7 @@ export function HomeScreen({ session }: { session: Session }) {
   const selectedDay = planDays?.find((day) => day.weekday === selectedWeekday)
 
   return (
-    <main className="mx-auto min-h-dvh max-w-md px-4 pb-10 pt-6">
+    <main className="mx-auto min-h-dvh max-w-md px-4 pb-28 pt-6">
       <header className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-100">LiftLog</h1>
@@ -98,7 +103,7 @@ export function HomeScreen({ session }: { session: Session }) {
                 key={day.id}
                 className={`relative h-11 flex-1 rounded-lg text-sm transition-colors ${
                   day.weekday === selectedWeekday
-                    ? 'bg-emerald-400 font-semibold text-neutral-950'
+                    ? 'bg-yellow-400 font-semibold text-neutral-950'
                     : 'bg-neutral-800 text-neutral-300'
                 }`}
                 type="button"
@@ -107,7 +112,7 @@ export function HomeScreen({ session }: { session: Session }) {
               >
                 {WEEKDAY_SHORT[day.weekday]}
                 {day.weekday === weekdayOf(today) && day.weekday !== selectedWeekday && (
-                  <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-emerald-400" />
+                  <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-yellow-400" />
                 )}
               </button>
             ))}
@@ -116,7 +121,13 @@ export function HomeScreen({ session }: { session: Session }) {
           {selectedDay ? (
             <>
               <h2 className="mt-5 text-lg font-medium text-neutral-100">{selectedDay.name}</h2>
-              <DayView key={`${selectedDay.id}:${today}`} planDayId={selectedDay.id} userId={userId} today={today} />
+              <DayView
+                key={`${selectedDay.id}:${today}`}
+                planDayId={selectedDay.id}
+                userId={userId}
+                today={today}
+                onSetLogged={restTimer.start}
+              />
             </>
           ) : (
             <div className="mt-16 text-center">
@@ -124,6 +135,7 @@ export function HomeScreen({ session }: { session: Session }) {
               <p className="mt-1 text-sm text-neutral-400">Oben kannst du trotzdem einen Trainingstag wählen.</p>
             </div>
           )}
+          {(selectedDay || restTimer.endsAt !== null) && <RestTimerBar timer={restTimer} />}
         </>
       )}
     </main>

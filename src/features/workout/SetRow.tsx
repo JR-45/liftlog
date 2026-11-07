@@ -10,7 +10,7 @@ import {
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
-  'h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-900 px-2 text-center text-base tabular-nums text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-emerald-400'
+  'h-11 w-full min-w-0 rounded-lg border border-neutral-700 bg-neutral-900 px-2 text-center text-base tabular-nums text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-yellow-400'
 
 type Props = {
   label: string
@@ -144,7 +144,7 @@ export function SetRow(props: Props) {
 
         <button
           className={`h-11 w-11 shrink-0 rounded-lg border text-lg transition-colors disabled:opacity-50 ${
-            isSaved ? 'border-emerald-400 bg-emerald-400 text-neutral-950' : 'border-neutral-700 text-neutral-400'
+            isSaved ? 'border-yellow-400 bg-yellow-400 text-neutral-950' : 'border-neutral-700 text-neutral-400'
           }`}
           type="button"
           aria-label={isSaved ? `${label} gespeichert, erneut speichern` : `${label} speichern`}
