@@ -11,7 +11,7 @@ export function RestTimerBar({ timer }: { timer: RestTimer }) {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-20 border-t transition-colors ${
+      className={`border-t transition-colors ${
         overtime ? 'border-yellow-300 bg-yellow-400 text-neutral-950' : 'border-neutral-800 bg-neutral-950 text-neutral-100'
       }`}
     >

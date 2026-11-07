@@ -46,6 +46,19 @@ export async function loadPlanDays(): Promise<PlanDay[]> {
   return data
 }
 
+/** Tage im Zeitraum, an denen mindestens ein Satz gespeichert wurde. */
+export async function loadTrainedDates(from: string, to: string): Promise<Set<string>> {
+  // sets!inner lässt Workouts weg, deren Sätze alle wieder gelöscht wurden.
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('performed_on, sets!inner(id)')
+    .gte('performed_on', from)
+    .lte('performed_on', to)
+    .limit(1, { foreignTable: 'sets' })
+  if (error) throw error
+  return new Set(data.map((workout) => workout.performed_on))
+}
+
 export async function loadDay(planDayId: string, today: string): Promise<DayData> {
   const [entries, workout, last] = await Promise.all([
     supabase
