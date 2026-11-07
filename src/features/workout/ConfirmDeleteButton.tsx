@@ -25,8 +25,8 @@ export function ConfirmDeleteButton({ label, disabled, onConfirm, className = ''
       disabled={disabled}
       className={`flex h-11 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-40 ${
         armed
-          ? 'bg-[#FF453A] px-3 text-sm font-semibold text-white opacity-100!'
-          : 'w-11 text-[#8E8E93] hover:bg-[#2C2C2E] hover:text-[#FF453A] focus-visible:text-[#FF453A]'
+          ? 'bg-danger-fill px-3 text-sm font-semibold text-white opacity-100!'
+          : 'w-11 text-muted hover:bg-control hover:text-danger focus-visible:text-danger'
       } ${className}`}
       onClick={() => {
         if (armed) {

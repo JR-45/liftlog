@@ -68,7 +68,7 @@ export function PlanEditor({ hasPlan, onSaved, onCancel }: {
             <div className="plan-days-area min-w-0 xl:col-span-2">
             <h3 className="mt-6 text-lg font-medium">Trainingstage & Übungen</h3>
             <TemplateWeekdays days={days} onChange={setDays} />
-            <button className="mt-5 w-full rounded-lg bg-yellow-400 px-4 py-3 font-semibold text-neutral-950 disabled:opacity-50"
+            <button className="mt-5 w-full rounded-lg bg-yellow-400 px-4 py-3 font-semibold text-black disabled:opacity-50"
               type="submit" disabled={days.length === 0 || loading}>{busy ? 'Wird gespeichert …' : 'Trainingsplan speichern'}</button>
             {hasPlan && <button className={`${BUTTON} mt-3 w-full`} type="button" onClick={onCancel}>Abbrechen</button>}
             {hasPlan && !confirmDelete && <button className="mt-6 w-full py-2 text-sm text-red-300" type="button"

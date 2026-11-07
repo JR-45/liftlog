@@ -53,7 +53,7 @@ export function WeekPlanner({ selectedDate, today, days, planDays, workouts, edi
       })}
     </div>
     {editable && <div className="mt-4 flex flex-wrap gap-2">
-      <button className="min-h-11 rounded-lg bg-yellow-400 px-4 py-2 font-semibold text-neutral-950 disabled:opacity-40" type="button" disabled={busy} onClick={onSave}>{busy ? 'Wird gespeichert …' : 'Woche speichern'}</button>
+      <button className="min-h-11 rounded-lg bg-yellow-400 px-4 py-2 font-semibold text-black disabled:opacity-40" type="button" disabled={busy} onClick={onSave}>{busy ? 'Wird gespeichert …' : 'Woche speichern'}</button>
       <button className={BUTTON} type="button" disabled={busy || !dirty} onClick={onDiscard}>Änderungen verwerfen</button>
       <button className={BUTTON} type="button" disabled={busy} onClick={onTemplate}>Wochenvorlage übernehmen</button>
     </div>}

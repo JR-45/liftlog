@@ -3,7 +3,7 @@ import type { TrackingType } from '../../domain/sets'
 import { addExerciseToPlanDay, type PlanEntry } from './api'
 
 const fieldClass =
-  'h-11 rounded-xl border border-transparent bg-[#2C2C2E] px-3 text-base text-white outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
+  'h-11 rounded-xl border border-transparent bg-control px-3 text-base text-foreground outline-none transition-colors focus:border-accent focus:bg-control-hover disabled:opacity-50'
 
 type Props = {
   planDayId: string
@@ -27,7 +27,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
       <div className="mt-4">
         <button
           type="button"
-          className="min-h-11 w-full rounded-2xl border border-dashed border-white/[0.14] bg-[#1C1C1E]/60 px-4 py-3 text-sm font-semibold text-[#FFD60A] transition-colors hover:bg-[#1C1C1E] active:scale-[0.99]"
+          className="min-h-11 w-full rounded-2xl border border-dashed border-line/[0.14] bg-surface/60 px-4 py-3 text-sm font-semibold text-accent-ink transition-colors hover:bg-surface active:scale-[0.99]"
           onClick={() => setOpen(true)}
         >
           + Übung zum Trainingstag hinzufügen
@@ -90,13 +90,13 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
   return (
     <form
       onSubmit={(event) => void handleSubmit(event)}
-      className="mt-4 space-y-3 rounded-2xl border border-white/[0.1] bg-[#1C1C1E] p-4"
+      className="mt-4 space-y-3 rounded-2xl border border-line/[0.1] bg-surface p-4"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-white">Neue Übung hinzufügen</h3>
+        <h3 className="text-base font-semibold text-foreground">Neue Übung hinzufügen</h3>
         <button
           type="button"
-          className="min-h-11 px-2 text-sm text-[#8E8E93]"
+          className="min-h-11 px-2 text-sm text-muted"
           onClick={() => {
             setOpen(false)
             setError(null)
@@ -106,7 +106,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
         </button>
       </div>
 
-      <label className="block text-sm font-medium text-[#EBEBF5]/85">
+      <label className="block text-sm font-medium text-foreground/85">
         Name der Übung
         <input
           className={`${fieldClass} mt-1 w-full`}
@@ -117,7 +117,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
         />
       </label>
 
-      <label className="flex items-center justify-between gap-3 text-sm font-medium text-[#EBEBF5]/85">
+      <label className="flex items-center justify-between gap-3 text-sm font-medium text-foreground/85">
         Erfassung
         <select
           className={fieldClass}
@@ -132,7 +132,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
       </label>
 
       <div className="grid grid-cols-3 gap-2">
-        <label className="block text-xs font-medium text-[#8E8E93]">
+        <label className="block text-xs font-medium text-muted">
           Sätze
           <input
             className={`${fieldClass} mt-1 w-full text-center tabular-nums`}
@@ -142,7 +142,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
           />
         </label>
         {trackingType === 'duration' ? (
-          <label className="col-span-2 block text-xs font-medium text-[#8E8E93]">
+          <label className="col-span-2 block text-xs font-medium text-muted">
             Dauer (Sek.)
             <input
               className={`${fieldClass} mt-1 w-full text-center tabular-nums`}
@@ -153,7 +153,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
           </label>
         ) : (
           <>
-            <label className="block text-xs font-medium text-[#8E8E93]">
+            <label className="block text-xs font-medium text-muted">
               Min. Wdh.
               <input
                 className={`${fieldClass} mt-1 w-full text-center tabular-nums`}
@@ -162,7 +162,7 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
                 onChange={(event) => setRepsMin(event.target.value)}
               />
             </label>
-            <label className="block text-xs font-medium text-[#8E8E93]">
+            <label className="block text-xs font-medium text-muted">
               Max. Wdh.
               <input
                 className={`${fieldClass} mt-1 w-full text-center tabular-nums`}
@@ -175,12 +175,12 @@ export function AddExerciseForm({ planDayId, nextPosition, onAdded }: Props) {
         )}
       </div>
 
-      {error && <p role="alert" className="text-sm text-[#FF453A]">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
       <button
         type="submit"
         disabled={busy}
-        className="min-h-11 w-full rounded-xl bg-[#FFD60A] px-4 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99] disabled:opacity-50"
+        className="min-h-11 w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99] disabled:opacity-50"
       >
         {busy ? 'Wird gespeichert …' : 'Hinzufügen'}
       </button>

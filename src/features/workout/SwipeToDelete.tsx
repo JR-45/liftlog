@@ -78,7 +78,7 @@ export function SwipeToDelete({ label, enabled, onDelete, children, className = 
       {offset < 0 && (
         <button
           type="button"
-          className="absolute inset-y-0 right-0 flex items-center justify-end bg-[#FF453A] text-white"
+          className="absolute inset-y-0 right-0 flex items-center justify-end bg-danger-fill text-white"
           style={{ width: -offset }}
           aria-label={label}
           tabIndex={open ? 0 : -1}

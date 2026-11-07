@@ -11,8 +11,8 @@ import {
 } from './api'
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-transparent bg-[#2C2C2E] px-3.5 text-base text-white placeholder-[#8E8E93]/60 outline-none transition-colors focus:border-[#FFD60A] focus:bg-[#3A3A3C] disabled:opacity-50'
-const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#8E8E93]'
+  'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-accent focus:bg-control-hover disabled:opacity-50'
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-muted'
 const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
 
 type Field = keyof MeasurementValues
@@ -40,9 +40,9 @@ const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
 }
 
 const RATING_STYLE: Record<Rating, string> = {
-  good: 'text-[#30D158]',
-  elevated: 'text-[#FFD60A]',
-  high: 'text-[#FF453A]',
+  good: 'text-success',
+  elevated: 'text-accent-ink',
+  high: 'text-danger',
 }
 const RATING_LABEL: Record<Rating, string> = { good: 'günstig', elevated: 'erhöht', high: 'hoch' }
 
@@ -85,10 +85,10 @@ function summary(entry: BodyMeasurement): string {
 
 function Tile(props: { label: string; value: string; note?: string; noteClass?: string }) {
   return (
-    <div className="rounded-xl bg-[#141416] p-2.5 ring-1 ring-white/[0.05]">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">{props.label}</p>
-      <p className="mt-0.5 text-base font-bold tabular-nums text-white">{props.value}</p>
-      {props.note && <p className={`text-xs ${props.noteClass ?? 'text-[#8E8E93]'}`}>{props.note}</p>}
+    <div className="rounded-xl bg-surface-inset p-2.5 ring-1 ring-line/[0.05]">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{props.label}</p>
+      <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{props.value}</p>
+      {props.note && <p className={`text-xs ${props.noteClass ?? 'text-muted'}`}>{props.note}</p>}
     </div>
   )
 }
@@ -234,10 +234,10 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
 
   const diff = analysis.diffToTargetKg
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
+    <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
       <div>
-        <h3 className="text-base font-bold tracking-tight text-white">Körperdaten</h3>
-        <p className="text-xs text-[#8E8E93]">Gewicht, Umfänge und daraus berechnete Werte</p>
+        <h3 className="text-base font-bold tracking-tight text-foreground">Körperdaten</h3>
+        <p className="text-xs text-muted">Gewicht, Umfänge und daraus berechnete Werte</p>
       </div>
 
       {/* Auswertung */}
@@ -252,7 +252,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 ? 'Ziel erreicht'
                 : `${diff > 0 ? '+' : ''}${formatNumber(diff)} kg zum Ziel`
           }
-          noteClass={diff === 0 ? 'text-[#30D158]' : 'text-[#FFD60A]'}
+          noteClass={diff === 0 ? 'text-success' : 'text-accent-ink'}
         />
         <Tile label="BMI" value={analysis.bmi === null ? '—' : formatNumber(analysis.bmi)} note={analysis.bmiCategory ?? undefined} />
         <Tile
@@ -290,13 +290,13 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         {analysis.proteinG !== null && <Tile label="Eiweiß" value={`${analysis.proteinG} g`} note="pro Tag empfohlen" />}
       </div>
       {missing.length > 0 && (
-        <p className="mt-2 text-xs text-[#8E8E93]">Für mehr Werte fehlt noch: {missing.join(', ')}.</p>
+        <p className="mt-2 text-xs text-muted">Für mehr Werte fehlt noch: {missing.join(', ')}.</p>
       )}
-      <p className="mt-1 text-[11px] text-[#8E8E93]/70">Alle Werte sind Schätzungen und ersetzen keine ärztliche Beratung.</p>
+      <p className="mt-1 text-[11px] text-muted/70">Alle Werte sind Schätzungen und ersetzen keine ärztliche Beratung.</p>
 
       {/* Heutige Messung */}
-      <form onSubmit={(event) => void handleSaveMeasurement(event)} className="mt-4 space-y-3 border-t border-white/[0.06] pt-4">
-        <p className="text-sm font-semibold text-white">Messung heute</p>
+      <form onSubmit={(event) => void handleSaveMeasurement(event)} className="mt-4 space-y-3 border-t border-line/[0.06] pt-4">
+        <p className="text-sm font-semibold text-foreground">Messung heute</p>
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)] gap-2.5">
           <div>
             <span className={labelClass}>Gewicht (kg)</span>
@@ -305,7 +305,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 type="button"
                 aria-label="Gewicht um 0,5 kg verringern"
                 onClick={() => stepWeight(-1)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#2C2C2E] text-lg font-medium text-white active:scale-95"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-control text-lg font-medium text-foreground active:scale-95"
               >
                 −
               </button>
@@ -321,7 +321,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 type="button"
                 aria-label="Gewicht um 0,5 kg erhöhen"
                 onClick={() => stepWeight(1)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#2C2C2E] text-white active:scale-95"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-control text-foreground active:scale-95"
               >
                 <PlusIcon className="h-4 w-4" />
               </button>
@@ -341,7 +341,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
 
         <button
           type="button"
-          className="min-h-11 text-sm text-[#8E8E93] underline"
+          className="min-h-11 text-sm text-muted underline"
           aria-expanded={showCircumferences}
           onClick={() => setShowCircumferences((current) => !current)}
         >
@@ -367,22 +367,22 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         <button
           type="submit"
           disabled={busy}
-          className="min-h-11 w-full rounded-xl bg-[#FFD60A] px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
+          className="min-h-11 w-full rounded-xl bg-accent px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
         >
           Messung speichern
         </button>
       </form>
 
       {/* Angaben für die Berechnungen */}
-      <div className="mt-4 border-t border-white/[0.06] pt-3">
+      <div className="mt-4 border-t border-line/[0.06] pt-3">
         <button
           type="button"
-          className="flex min-h-11 w-full items-center justify-between text-left text-sm font-semibold text-white"
+          className="flex min-h-11 w-full items-center justify-between text-left text-sm font-semibold text-foreground"
           aria-expanded={showDetails}
           onClick={() => setShowDetails((current) => !current)}
         >
           Angaben für die Berechnungen
-          <span className="text-xs font-normal text-[#8E8E93]">{showDetails ? 'schließen' : 'bearbeiten'}</span>
+          <span className="text-xs font-normal text-muted">{showDetails ? 'schließen' : 'bearbeiten'}</span>
         </button>
         {showDetails && (
           <form onSubmit={(event) => void handleSaveDetails(event)} className="mt-2 space-y-3">
@@ -441,13 +441,13 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 ))}
               </select>
             </label>
-            <p className="text-xs text-[#8E8E93]">
+            <p className="text-xs text-muted">
               Geschlecht und Geburtsjahr nutzt die App nur für Grundumsatz und Körperfett-Schätzung.
             </p>
             <button
               type="submit"
               disabled={busy}
-              className="min-h-11 w-full rounded-xl bg-[#2C2C2E] px-4 text-sm font-semibold text-white active:scale-[0.99] disabled:opacity-50"
+              className="min-h-11 w-full rounded-xl bg-control px-4 text-sm font-semibold text-foreground active:scale-[0.99] disabled:opacity-50"
             >
               Angaben speichern
             </button>
@@ -455,15 +455,15 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         )}
       </div>
 
-      {error && <p role="alert" className="mt-3 text-sm text-[#FF453A]">{error}</p>}
-      {feedback && <p role="status" className="mt-3 text-sm text-[#30D158]">{feedback}</p>}
+      {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+      {feedback && <p role="status" className="mt-3 text-sm text-success">{feedback}</p>}
 
       {/* Verlauf */}
       {profile.measurements.length > 0 && (
-        <div className="mt-4 border-t border-white/[0.06] pt-3">
+        <div className="mt-4 border-t border-line/[0.06] pt-3">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93]">Verlauf</p>
-            <p className="text-xs tabular-nums text-[#8E8E93]">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Verlauf</p>
+            <p className="text-xs tabular-nums text-muted">
               {[
                 firstWeight !== null && latest.weightKg !== null && firstWeight !== latest.weightKg
                   ? `Seit Beginn ${latest.weightKg > firstWeight ? '+' : ''}${formatNumber(latest.weightKg - firstWeight)} kg`
@@ -476,22 +476,22 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 .join(' · ')}
             </p>
           </div>
-          <ul className="mt-2 divide-y divide-white/[0.06]">
+          <ul className="mt-2 divide-y divide-line/[0.06]">
             {[...profile.measurements]
               .reverse()
               .slice(0, 10)
               .map((entry) => (
                 <li key={entry.date} className="flex items-center justify-between gap-3 py-1.5 text-sm">
-                  <span className="shrink-0 tabular-nums text-[#8E8E93]">
+                  <span className="shrink-0 tabular-nums text-muted">
                     {SHORT_DATE.format(new Date(`${entry.date}T12:00:00`))}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-right tabular-nums text-white">{summary(entry)}</span>
+                  <span className="min-w-0 flex-1 truncate text-right tabular-nums text-foreground">{summary(entry)}</span>
                   <button
                     type="button"
                     aria-label={`Messung vom ${entry.date} löschen`}
                     disabled={busy}
                     onClick={() => void handleDelete(entry.date)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#8E8E93] hover:text-[#FF453A]"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:text-danger"
                   >
                     <TrashIcon className="h-3.5 w-3.5" />
                   </button>

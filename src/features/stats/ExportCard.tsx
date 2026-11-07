@@ -68,19 +68,19 @@ export function ExportCard({ today }: { today: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#1C1C1E] p-4">
-      <h3 className="text-base font-bold tracking-tight text-white">Backup & CSV-Export</h3>
-      <p className="mt-1 text-xs leading-relaxed text-[#8E8E93]">
+    <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
+      <h3 className="text-base font-bold tracking-tight text-foreground">Backup & CSV-Export</h3>
+      <p className="mt-1 text-xs leading-relaxed text-muted">
         Alle deine Sätze als CSV-Datei, z. B. für iCloud Drive oder Excel. Einspielen lässt sich die Datei in der App
         bisher nicht.
       </p>
       {prepared ? (
         <>
-          <p className="mt-3 text-sm font-medium text-white" role="status">
+          <p className="mt-3 text-sm font-medium text-foreground" role="status">
             {prepared.setCount === 1 ? '1 Satz' : `${prepared.setCount} Sätze`} bereit
           </p>
           <button
-            className="mt-2.5 min-h-11 w-full rounded-xl bg-[#FFD60A] px-3 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99]"
+            className="mt-2.5 min-h-11 w-full rounded-xl bg-accent px-3 py-2.5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-[0.99]"
             type="button"
             onClick={() => void handleSave()}
           >
@@ -89,7 +89,7 @@ export function ExportCard({ today }: { today: string }) {
         </>
       ) : (
         <button
-          className="mt-3.5 min-h-11 w-full rounded-xl bg-[#2C2C2E] px-3 py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.99] active:bg-[#3A3A3C] disabled:opacity-50"
+          className="mt-3.5 min-h-11 w-full rounded-xl bg-control px-3 py-2.5 text-sm font-semibold text-foreground transition-all active:scale-[0.99] active:bg-control-hover disabled:opacity-50"
           type="button"
           disabled={busy}
           onClick={() => void handlePrepare()}
@@ -97,8 +97,8 @@ export function ExportCard({ today }: { today: string }) {
           {busy ? 'Daten werden geladen …' : 'Daten exportieren'}
         </button>
       )}
-      {message && <p className="mt-2.5 text-sm text-[#8E8E93]" role="status">{message}</p>}
-      {error && <p className="mt-2.5 text-sm text-[#FF453A]" role="alert">{error}</p>}
+      {message && <p className="mt-2.5 text-sm text-muted" role="status">{message}</p>}
+      {error && <p className="mt-2.5 text-sm text-danger" role="alert">{error}</p>}
     </div>
   )
 }

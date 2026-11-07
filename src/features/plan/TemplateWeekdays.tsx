@@ -92,7 +92,7 @@ export function TemplateWeekdays({ days, onChange }: { days: PlanDayDraft[]; onC
         {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
         </div>
         <footer className="template-day-actions grid shrink-0 grid-cols-2 gap-2 border-t border-neutral-700 bg-neutral-900 p-4 md:px-6">
-          <button className="min-h-11 rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-neutral-950" type="button" aria-label={`Für ${WEEKDAYS[draft.weekday]} übernehmen`} onClick={apply}>Tag übernehmen</button>
+          <button className="min-h-11 rounded-lg bg-yellow-400 px-3 py-2 text-sm font-semibold text-black" type="button" aria-label={`Für ${WEEKDAYS[draft.weekday]} übernehmen`} onClick={apply}>Tag übernehmen</button>
           <button className={BUTTON} type="button" onClick={() => setDraft(null)}>Abbrechen</button>
         </footer>
       </div>}
