@@ -135,6 +135,14 @@ export async function loadSharedOverview(personId: string): Promise<SharedOvervi
   return data?.overview as unknown as SharedOverview | null ?? null
 }
 
+/** Anzahl offener Folgeanfragen an mich, für das rote Abzeichen. */
+export async function countRequests(userId: string): Promise<number> {
+  const { count, error } = await supabase.from('follows').select('user_id', { count: 'exact', head: true })
+    .eq('followed_user_id', userId).eq('status', 'pending')
+  if (error) throw error
+  return count ?? 0
+}
+
 export async function loadRequests(userId: string): Promise<Person[]> {
   const { data, error } = await supabase.from('follows').select('user_id').eq('followed_user_id', userId).eq('status', 'pending').order('created_at').limit(50)
   if (error) throw error

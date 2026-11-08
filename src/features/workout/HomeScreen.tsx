@@ -14,6 +14,8 @@ import { loadPlanDays, loadScheduledDays, loadTrainedDates, type PlanDay } from 
 import { planForDate, shiftDate, type ScheduledDay } from '../../domain/week'
 import { weekStreak } from '../../domain/motivation'
 import { FlameIcon } from '../../lib/icons'
+import { CountBadge } from '../../components/CountBadge'
+import { countRequests } from '../social/api'
 import { WeekPlanning } from './WeekPlanning'
 import { TrainingDays } from './TrainingDays'
 import { clearDrafts } from './drafts'
@@ -105,6 +107,21 @@ export function HomeScreen({ session }: { session: Session }) {
       cancelled = true
     }
   }, [userId])
+  // Offene Folgeanfragen: bei jedem Tab-Wechsel und beim Zurückkehren in die App neu zählen.
+  const [requestCount, setRequestCount] = useState(0)
+  const [requestsVersion, setRequestsVersion] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    countRequests(userId).then((count) => { if (!cancelled) setRequestCount(count) })
+      .catch(() => { /* Ohne Zahl bleibt nur das Abzeichen weg. */ })
+    return () => { cancelled = true }
+  }, [userId, tab, requestsVersion])
+  useEffect(() => {
+    const update = () => { if (document.visibilityState === 'visible') setRequestsVersion((value) => value + 1) }
+    document.addEventListener('visibilitychange', update)
+    return () => document.removeEventListener('visibilitychange', update)
+  }, [])
+
   // Liegt hier und nicht beim Tag, damit die Pause beim Wechsel von Tag oder Tab weiterläuft.
   const restTimer = useRestTimer()
   const [trainedDates, setTrainedDates] = useState<ReadonlySet<string>>(new Set())
@@ -186,6 +203,11 @@ export function HomeScreen({ session }: { session: Session }) {
   const planArea = tab === 'plan' || (tab === 'training' && planDays?.length === 0)
 
   const streak = weekStreak(trainedDates, today)
+  const profileIcon = <span className="relative">
+    {avatarUrl ? <img src={avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover ring-1 ring-line/20" /> : <UserIcon />}
+    <CountBadge count={requestCount} />
+    {requestCount > 0 && <span className="sr-only">{requestCount} offene Anfragen,</span>}
+  </span>
   const streakChip = streak > 0 && (
     <span
       className="inline-flex shrink-0 items-center gap-1 rounded-full bg-neon/15 px-2.5 py-1 font-display text-base font-extrabold uppercase tracking-wide text-neon"
@@ -232,11 +254,7 @@ export function HomeScreen({ session }: { session: Session }) {
               <StatsIcon />
             </TabButton>
             <TabButton label="Profil" variant="side" active={tab === 'profile'} onClick={() => setTab('profile')}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover ring-1 ring-line/20" />
-              ) : (
-                <UserIcon />
-              )}
+              {profileIcon}
             </TabButton>
           </nav>
         )}
@@ -373,6 +391,8 @@ export function HomeScreen({ session }: { session: Session }) {
                 defaultWeeklyTarget={planDays.length}
                 onAvatarChange={setAvatarUrl}
                 onNameChange={setDisplayName}
+                requestCount={requestCount}
+                onRequestsChanged={() => setRequestsVersion((value) => value + 1)}
               />
             )}
 
@@ -396,11 +416,7 @@ export function HomeScreen({ session }: { session: Session }) {
                     <StatsIcon />
                   </TabButton>
                   <TabButton label="Profil" variant="bottom" active={tab === 'profile'} onClick={() => setTab('profile')}>
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover ring-1 ring-line/20" />
-                    ) : (
-                      <UserIcon />
-                    )}
+                    {profileIcon}
                   </TabButton>
                 </div>
               </nav>

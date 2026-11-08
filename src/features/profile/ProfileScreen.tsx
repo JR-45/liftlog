@@ -11,6 +11,7 @@ import { ConnectionsSummary } from '../social/ConnectionsSummary'
 import { SocialNavigator, type SocialRoute } from '../social/SocialNavigator'
 import { disableSocialProfile, enableSocialProfile, loadAccount, saveProfileIdentity, type Person, type SocialTab } from '../social/api'
 import { SocialSettings } from '../social/AccountSettings'
+import { CountBadge } from '../../components/CountBadge'
 import { DeleteAccountCard } from './DeleteAccountCard'
 import { BodyCard } from './BodyCard'
 import { enableProfileTargets } from '../nutrition/api'
@@ -43,6 +44,9 @@ type Props = {
   defaultWeeklyTarget: number
   onAvatarChange: (avatarUrl: string | null) => void
   onNameChange: (displayName: string) => void
+  /** Offene Folgeanfragen, als rote Zahl am Zahnrad. */
+  requestCount?: number
+  onRequestsChanged?: () => void
 }
 
 /** Lädt Profil und Profilbild aus der Datenbank und zeigt danach die Ansicht. */
@@ -92,6 +96,8 @@ function ProfileView({
   today,
   onAvatarChange,
   onNameChange,
+  requestCount = 0,
+  onRequestsChanged,
   initialProfile,
   initialAvatar,
   initialAccount,
@@ -294,15 +300,15 @@ function ProfileView({
       onEnable={async () => { await saveProfile(profile); await enableSocialProfile(); setAccount(await loadAccount(user.id, user.id)) }}
       onHide={async () => { await disableSocialProfile(user.id); setAccount(null) }}
       onSaved={isPrivate => setAccount(current => current && ({ ...current, is_private: isPrivate }))}
-      onOpenPerson={id => { setEditingProfile(false); setSocialRoute({ kind: 'profile', id }) }} />
+      onOpenPerson={id => { setEditingProfile(false); setSocialRoute({ kind: 'profile', id }) }} onRequestsChanged={onRequestsChanged} />
   </section>
 
   return (
     <section className="mt-5 space-y-5">
       {/* 1. Athleten-Header mit Profilbild-Upload */}
       <div className="relative rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
-        <button id="profile-settings" type="button" className={`${NAV_BUTTON} absolute right-4 top-4`} aria-label="Profileinstellungen öffnen"
-          onClick={openSettings}><SettingsIcon /></button>
+        <button id="profile-settings" type="button" className={`${NAV_BUTTON} absolute right-4 top-4`} aria-label={requestCount > 0 ? `Profileinstellungen öffnen, ${requestCount} offene Anfragen` : 'Profileinstellungen öffnen'}
+          onClick={openSettings}><SettingsIcon /><CountBadge count={requestCount} /></button>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
