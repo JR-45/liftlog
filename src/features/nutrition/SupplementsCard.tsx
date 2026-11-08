@@ -8,17 +8,15 @@ import { addSupplement, loadSupplements, removeSupplement, setSupplementTaken, u
 const INPUT = 'h-11 rounded-xl border border-line/15 bg-control px-3 text-base text-foreground outline-none focus:border-neon'
 const WEEK = [1, 2, 3, 4, 5, 6, 0]
 const SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
+/** daily: jeden Tag. custom: nur an den angetippten Tagen. */
+type Values = { amount: string; unit: DoseUnit; daily: boolean; days: number[] }
 
-type Values = { amount: string; unit: DoseUnit; days: number[] }
-
-/** Menge, Einheit und Tage. Alle Tage an heißt täglich. Beim Hinzufügen zusätzlich der Name. */
+/** Menge, Einheit und wie oft. Beim Hinzufügen zusätzlich der Name. */
 function SupplementForm({ initial, withName, name, onName, busy, submitLabel, onSubmit, amountRef }: {
   initial: Values; withName: boolean; name?: string; onName?: (value: string) => void; busy: boolean; submitLabel: string
   onSubmit: (values: Values) => void; amountRef?: React.RefObject<HTMLInputElement | null>
 }) {
   const [values, setValues] = useState(initial)
-  const daily = values.days.length === 7
   return <form className="space-y-2" onSubmit={(event: FormEvent) => { event.preventDefault(); onSubmit(values) }}>
     {withName && <input className={`${INPUT} w-full`} placeholder="Name, z. B. Eisen" maxLength={60} value={name} aria-label="Name des Supplements"
       onChange={(event) => onName?.(event.target.value)} />}
@@ -30,18 +28,20 @@ function SupplementForm({ initial, withName, name, onName, busy, submitLabel, on
         {DOSE_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
       </select>
     </div>
-    <div>
-      <div className="grid grid-cols-7 gap-1" role="group" aria-label="An welchen Tagen">
-        {WEEK.map((day) => {
-          const on = values.days.includes(day)
-          return <button key={day} type="button" aria-pressed={on} className={`h-11 min-w-0 rounded-lg text-sm font-semibold ${on ? 'bg-neon/15 text-accent-ink ring-1 ring-neon/60' : 'bg-control text-muted'}`}
-            onClick={() => setValues({ ...values, days: on ? values.days.filter((entry) => entry !== day) : [...values.days, day] })}>{SHORT[day]}</button>
-        })}
-      </div>
-      <p className="mt-1 text-xs text-muted">{daily ? 'Täglich' : values.days.length ? `${values.days.length}× pro Woche` : 'Mindestens einen Tag wählen'}</p>
+    <div className="grid grid-cols-2 gap-1 rounded-xl bg-control p-1" role="group" aria-label="Wie oft">
+      {([true, false] as const).map((daily) => <button key={String(daily)} type="button" aria-pressed={values.daily === daily}
+        className={`min-h-10 rounded-lg text-sm font-semibold ${values.daily === daily ? 'bg-surface text-foreground' : 'text-muted'}`}
+        onClick={() => setValues({ ...values, daily })}>{daily ? 'Täglich' : 'Benutzerdefiniert'}</button>)}
     </div>
+    {!values.daily && <div className="grid grid-cols-7 gap-1" role="group" aria-label="An welchen Tagen">
+      {WEEK.map((day) => {
+        const on = values.days.includes(day)
+        return <button key={day} type="button" aria-pressed={on} className={`h-11 min-w-0 rounded-lg text-sm font-semibold ${on ? 'bg-neon/15 text-accent-ink ring-1 ring-neon/60' : 'bg-control text-muted'}`}
+          onClick={() => setValues({ ...values, days: on ? values.days.filter((entry) => entry !== day) : [...values.days, day] })}>{SHORT[day]}</button>
+      })}
+    </div>}
     <button className="min-h-11 w-full rounded-xl bg-neon px-4 text-sm font-semibold text-black disabled:opacity-50" type="submit"
-      disabled={busy || values.days.length === 0 || (withName && !name?.trim())}>{submitLabel}</button>
+      disabled={busy || (!values.daily && values.days.length === 0) || (withName && !name?.trim())}>{submitLabel}</button>
   </form>
 }
 
@@ -96,7 +96,7 @@ export function SupplementsCard({ date }: { date: string }) {
     setBusy(true)
     setError('')
     try {
-      const created = await addSupplement(cleanName, formatDose(values.amount, values.unit), normalizeWeekdays(values.days))
+      const created = await addSupplement(cleanName, formatDose(values.amount, values.unit), values.daily ? null : normalizeWeekdays(values.days))
       setList((current) => [...(current ?? []), created])
       // Nach dem ersten Eintrag bleibt das Hinzufügen offen, damit man direkt weitere eintragen kann.
       if (list?.length === 0) setEditing(true)
@@ -107,7 +107,7 @@ export function SupplementsCard({ date }: { date: string }) {
   }
 
   async function change(item: Supplement, values: Values) {
-    const changes = { dose: formatDose(values.amount, values.unit), weekdays: normalizeWeekdays(values.days) }
+    const changes = { dose: formatDose(values.amount, values.unit), weekdays: values.daily ? null : normalizeWeekdays(values.days) }
     setBusy(true)
     setError('')
     try {
@@ -166,7 +166,7 @@ export function SupplementsCard({ date }: { date: string }) {
           </div>
           {editing && changing === item.id && <div className="mt-2">
             <SupplementForm withName={false} busy={busy} submitLabel="Speichern" onSubmit={(values) => void change(item, values)}
-              initial={{ amount: parsed.amount, unit: parsed.unit ?? 'g', days: item.weekdays ?? ALL_DAYS }} />
+              initial={{ amount: parsed.amount, unit: parsed.unit ?? 'g', daily: item.weekdays === null, days: item.weekdays ?? [] }} />
           </div>}
         </li>
       })}
@@ -181,7 +181,7 @@ export function SupplementsCard({ date }: { date: string }) {
       <div className="mt-3">
         {/* Ein Vorschlag setzt die passende Einheit, dafür startet das Formular neu. */}
         <SupplementForm key={`${formKey}-${unit}`} withName name={name} onName={setName} busy={busy} submitLabel="Hinzufügen" amountRef={amountInput}
-          initial={{ amount: '', unit, days: ALL_DAYS }} onSubmit={(values) => void add(values)} />
+          initial={{ amount: '', unit, daily: true, days: [] }} onSubmit={(values) => void add(values)} />
       </div>
     </div>}
 
