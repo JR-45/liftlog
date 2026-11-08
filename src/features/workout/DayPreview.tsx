@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatRange } from '../../domain/sets'
+import { circuitTarget } from '../../domain/circuit'
 import { isCardioExercise } from '../../domain/cardio'
 import { loadDay, type PlanEntry } from './api'
 
@@ -9,9 +10,10 @@ function target(entry: PlanEntry): string {
     return minutes ? `${minutes} Min.` : 'Minuten frei'
   }
   const sets = formatRange(entry.sets_min, entry.sets_max)
+  if (entry.steps?.length) return circuitTarget(sets, entry.steps.length)
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min, entry.duration_max)
-  if (reps) return `${sets}${entry.sets_min !== entry.sets_max || (entry.steps?.length ?? 0) > 0 ? ' Runden' : ''} × ${reps}`
+  if (reps) return `${sets}${entry.sets_min !== entry.sets_max ? ' Runden' : ''} × ${reps}`
   return duration ? `${sets} × ${duration} Sek.` : 'Dauer frei'
 }
 

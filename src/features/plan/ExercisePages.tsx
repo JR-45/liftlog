@@ -4,6 +4,7 @@ import { EXERCISE_CATALOG, findExercises } from '../../domain/exerciseCatalog'
 import { exerciseDefaults, isCardioExercise } from '../../domain/cardio'
 import type { TrackingType } from '../../domain/sets'
 import type { PlanExerciseDraft } from '../../domain/trainingPlan'
+import type { CircuitStep } from '../../domain/circuit'
 import { newExercise } from './api'
 import { createExerciseSlots, updateExerciseSlot, type PlanExerciseSlot } from '../../domain/planExerciseSlots'
 import { CloseIcon } from '../../lib/icons'
@@ -13,6 +14,7 @@ const BUTTON = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium tex
 const LABEL = 'block text-sm text-muted'
 const CUSTOM = '__eigene_uebung__'
 const MAX_STEPS = 20
+const STEP_INPUT = 'h-11 rounded-xl bg-control px-3 text-base text-foreground outline-none focus:ring-2 focus:ring-neon'
 
 function numberOrNull(value: string): number | null {
   return value === '' ? null : Number(value)
@@ -23,7 +25,7 @@ function trackingChanges(tracking_type: TrackingType): Partial<PlanExerciseDraft
     tracking_type, alternative_exercise_id: null,
     reps_min: tracking_type === 'duration' ? null : 8, reps_max: tracking_type === 'duration' ? null : 12,
     duration_min: tracking_type === 'duration' ? 30 : null, duration_max: tracking_type === 'duration' ? 60 : null,
-    ...(tracking_type === 'duration' ? { steps: [] } : {}),
+    ...(tracking_type === 'duration' ? { steps: undefined } : {}),
   }
 }
 
@@ -43,8 +45,9 @@ export function ExercisePages({ exercises, onChange, reveal }: {
   const inCatalog = available.some((item) => item.name === exercise.name)
   const isDuration = exercise.tracking_type === 'duration'
   const cardio = isDuration && isCardioExercise(exercise.name)
+  // Ein Zirkel bleibt ein Zirkel, auch während noch keine Bewegung eingetragen ist.
+  const isCircuit = exercise.steps !== undefined
   const steps = exercise.steps ?? []
-  const isCircuit = steps.length > 0
 
   if (reveal !== lastReveal) {
     setLastReveal(reveal)
@@ -78,8 +81,18 @@ export function ExercisePages({ exercises, onChange, reveal }: {
     })
   }
 
-  function updateStep(position: number, value: string) {
-    update({ steps: steps.map((step, i) => i === position ? value : step) })
+  function updateStep(position: number, changes: Partial<CircuitStep>) {
+    update({ steps: steps.map((step, i) => i === position ? { ...step, ...changes } : step) })
+  }
+
+  function addStep() {
+    // Neue Bewegungen übernehmen die Wiederholungen der vorigen, das ist bei Complexen meist gleich.
+    update({ steps: [...steps, { name: '', reps: steps.at(-1)?.reps ?? 5 }] })
+  }
+
+  function setCircuit(circuit: boolean) {
+    if (circuit === isCircuit) return
+    update({ steps: circuit ? [{ name: '', reps: exercise.reps_max ?? 5 }] : undefined })
   }
 
   function updateSets(value: number) {
@@ -112,6 +125,13 @@ export function ExercisePages({ exercises, onChange, reveal }: {
           if (dx < 0 && index < exercises.length - 1) turn(index + 1)
           if (dx > 0 && index > 0) turn(index - 1)
         }}>
+        {!isDuration && <div className="grid grid-cols-2 gap-1 rounded-xl bg-control p-1" role="tablist" aria-label="Art der Übung">
+          {([false, true] as const).map((circuit) => <button key={String(circuit)} type="button" role="tab" aria-selected={isCircuit === circuit}
+            className={`min-h-10 rounded-lg text-sm font-semibold transition-colors ${isCircuit === circuit ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'}`}
+            onClick={() => setCircuit(circuit)}>
+            {circuit ? 'Zirkel' : 'Übung'}
+          </button>)}
+        </div>}
         <label className={LABEL}>Muskelgruppe
           <select aria-label="Muskelgruppe" className={INPUT} value={exercise.muscleGroup} onChange={event => update({ muscleGroup: event.target.value })}>
             <option value="">Alle Muskelgruppen</option>
@@ -147,7 +167,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
               <TimeWheelInput className={`${INPUT} text-center tabular-nums`} valueSeconds={exercise.duration_max}
                 onSecondsChange={seconds => update({ duration_max: seconds })} />
             </label>
-          </> : <>
+          </> : isCircuit ? null : <>
             <label className={`${LABEL} min-w-0 flex-1`}>Wdh. von
               <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="999" step="1" value={exercise.reps_min ?? ''}
                 onChange={(event) => update({ reps_min: numberOrNull(event.target.value) })} />
@@ -160,18 +180,25 @@ export function ExercisePages({ exercises, onChange, reveal }: {
           </>}
         </div>
 
-        {isCircuit && <fieldset className="space-y-2">
+        {isCircuit && <fieldset>
           <legend className={LABEL}>Bewegungen pro Runde</legend>
-          {steps.map((step, i) => <div key={i} className="flex items-center gap-2">
-            <span className="w-4 shrink-0 text-right text-sm tabular-nums text-muted" aria-hidden="true">{i + 1}</span>
-            <input className={INPUT.replace('mt-1 ', '')} aria-label={`Bewegung ${i + 1}`} maxLength={60} value={step} placeholder="z. B. Swing"
-              onChange={(event) => updateStep(i, event.target.value)} />
-            <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted hover:text-danger" type="button"
-              aria-label={`Bewegung ${i + 1} entfernen`} onClick={() => update({ steps: steps.filter((_, j) => j !== i) })}>
-              <CloseIcon className="h-4 w-4" />
-            </button>
-          </div>)}
-          {steps.length < MAX_STEPS && <button className={`${BUTTON} w-full`} type="button" onClick={() => update({ steps: [...steps, ''] })}>
+          {steps.length > 0 && <div className="mt-1 flex gap-2 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
+            <span className="w-16 shrink-0">Wdh.</span><span className="flex-1 text-left">Bewegung</span><span className="w-11 shrink-0" />
+          </div>}
+          <ol className="space-y-2">
+            {steps.map((step, i) => <li key={i} className="flex items-center gap-2">
+              <input className={`${STEP_INPUT} w-16 shrink-0 text-center tabular-nums`} aria-label={`Wiederholungen Bewegung ${i + 1}`}
+                type="number" inputMode="numeric" min="1" max="999" step="1" value={step.reps ?? ''}
+                onChange={(event) => updateStep(i, { reps: numberOrNull(event.target.value) })} />
+              <input className={`${STEP_INPUT} min-w-0 flex-1`} aria-label={`Bewegung ${i + 1}`} maxLength={60} value={step.name}
+                placeholder="z. B. Swing" onChange={(event) => updateStep(i, { name: event.target.value })} />
+              <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted hover:text-danger" type="button"
+                aria-label={`Bewegung ${i + 1} entfernen`} onClick={() => update({ steps: steps.filter((_, j) => j !== i) })}>
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            </li>)}
+          </ol>
+          {steps.length < MAX_STEPS && <button className={`${BUTTON} mt-2 w-full`} type="button" onClick={addStep}>
             Bewegung hinzufügen
           </button>}
         </fieldset>}
@@ -190,12 +217,9 @@ export function ExercisePages({ exercises, onChange, reveal }: {
               <option value="weight_reps">Gewicht + Wiederholungen</option>
               <option value="assisted_reps">Gewichtshilfe + Wiederholungen</option>
               <option value="reps">Nur Wiederholungen</option>
-              <option value="duration">Dauer</option>
+              {!isCircuit && <option value="duration">Dauer</option>}
             </select>
           </label>}
-          {!isDuration && !isCircuit && <button className={`${BUTTON} w-full`} type="button" onClick={() => update({ steps: [''] })}>
-            Als Zirkel mit Bewegungen
-          </button>}
           {!cardio && <label className={LABEL}>{isCircuit ? 'Mindestens Runden (für Bereiche wie 4–5)' : 'Mindestens Sätze (für Bereiche wie 4–5 Runden)'}
             <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
               onChange={(event) => update({ sets_min: Number(event.target.value) })} />
