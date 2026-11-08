@@ -208,14 +208,14 @@ export function HomeScreen({ session }: { session: Session }) {
             <TabButton label="Training" variant="side" active={tab === 'training' && !planArea} onClick={() => setTab('training')}>
               <TrainingIcon />
             </TabButton>
-            <TabButton label="Statistik" variant="side" active={tab === 'stats'} onClick={() => setTab('stats')}>
-              <StatsIcon />
+            <TabButton label="Trainingsplan" variant="side" active={planArea} onClick={() => setTab('plan')}>
+              <PlanIcon />
             </TabButton>
             <TabButton label="Ernährung" variant="side" active={tab === 'nutrition'} onClick={() => setTab('nutrition')}>
               <FoodIcon />
             </TabButton>
-            <TabButton label="Trainingsplan" variant="side" active={planArea} onClick={() => setTab('plan')}>
-              <PlanIcon />
+            <TabButton label="Statistik" variant="side" active={tab === 'stats'} onClick={() => setTab('stats')}>
+              <StatsIcon />
             </TabButton>
             <TabButton label="Profil" variant="side" active={tab === 'profile'} onClick={() => setTab('profile')}>
               {avatarUrl ? (
@@ -372,14 +372,14 @@ export function HomeScreen({ session }: { session: Session }) {
                   <TabButton label="Training" variant="bottom" active={tab === 'training' && !planArea} onClick={() => setTab('training')}>
                     <TrainingIcon />
                   </TabButton>
-                  <TabButton label="Statistik" variant="bottom" active={tab === 'stats'} onClick={() => setTab('stats')}>
-                    <StatsIcon />
+                  <TabButton label="Trainingsplan" variant="bottom" active={planArea} onClick={() => setTab('plan')}>
+                    <PlanIcon />
                   </TabButton>
                   <TabButton label="Ernährung" variant="bottom" active={tab === 'nutrition'} onClick={() => setTab('nutrition')}>
                     <FoodIcon />
                   </TabButton>
-                  <TabButton label="Trainingsplan" variant="bottom" active={planArea} onClick={() => setTab('plan')}>
-                    <PlanIcon />
+                  <TabButton label="Statistik" variant="bottom" active={tab === 'stats'} onClick={() => setTab('stats')}>
+                    <StatsIcon />
                   </TabButton>
                   <TabButton label="Profil" variant="bottom" active={tab === 'profile'} onClick={() => setTab('profile')}>
                     {avatarUrl ? (
