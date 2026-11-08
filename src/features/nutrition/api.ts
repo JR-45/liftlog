@@ -89,12 +89,13 @@ export async function loadNutritionProfile(user: User) {
 }
 
 
-export type Supplement = { id: string; name: string; dose: string | null }
+/** weekdays: an welchen Tagen (0 = Sonntag), null heißt täglich. */
+export type Supplement = { id: string; name: string; dose: string | null; weekdays: number[] | null }
 
 /** Liste der Supplemente und welche davon am Tag schon abgehakt sind. */
 export async function loadSupplements(date: string): Promise<{ list: Supplement[]; taken: Set<string> }> {
   const [list, intakes] = await Promise.all([
-    supabase.from('supplements').select('id, name, dose').order('created_at'),
+    supabase.from('supplements').select('id, name, dose, weekdays').order('created_at'),
     supabase.from('supplement_intakes').select('supplement_id').eq('taken_on', date),
   ])
   if (list.error) throw list.error
@@ -102,14 +103,14 @@ export async function loadSupplements(date: string): Promise<{ list: Supplement[
   return { list: list.data, taken: new Set(intakes.data.map((row) => row.supplement_id)) }
 }
 
-/** Menge ändern. Leer heißt keine Menge. */
-export async function updateSupplementDose(id: string, dose: string | null): Promise<void> {
-  const { error } = await supabase.from('supplements').update({ dose }).eq('id', id)
+/** Menge und Tage ändern. */
+export async function updateSupplement(id: string, changes: { dose: string | null; weekdays: number[] | null }): Promise<void> {
+  const { error } = await supabase.from('supplements').update(changes).eq('id', id)
   if (error) throw error
 }
 
-export async function addSupplement(name: string, dose: string | null): Promise<Supplement> {
-  const { data, error } = await supabase.from('supplements').insert({ name, dose }).select('id, name, dose').single()
+export async function addSupplement(name: string, dose: string | null, weekdays: number[] | null): Promise<Supplement> {
+  const { data, error } = await supabase.from('supplements').insert({ name, dose, weekdays }).select('id, name, dose, weekdays').single()
   if (error) throw error
   return data
 }
