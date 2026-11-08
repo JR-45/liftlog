@@ -22,6 +22,8 @@ const groups: { group: string; tracking_type: TrackingType; names: string[]; gps
   { group: 'Trizeps', tracking_type: 'weight_reps', names: [
     'Trizeps Extensions (nach unten)', 'Trizepsdrücken über Kopf', 'French Press', 'Skull Crushers',
     'Trizeps-Kickbacks', 'Enges Bankdrücken', 'Trizepsmaschine',
+    'Trizepsdrücken am Kabelzug mit Seil', 'Trizepsdrücken am Kabelzug mit Stange',
+    'Einarmiges Trizepsdrücken am Kabelzug', 'Trizepsstrecken über Kopf am Kabelzug',
   ] },
   { group: 'Beine & Gesäß', tracking_type: 'weight_reps', names: [
     'Kniebeugen', 'Frontkniebeugen', 'Goblet Squats', 'Hackenschmidt-Kniebeugen', 'Kniebeugen an der Multipresse',

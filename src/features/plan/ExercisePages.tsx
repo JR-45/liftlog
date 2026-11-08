@@ -1,10 +1,11 @@
 import { TimeWheelInput } from '../../components/TimeWheelInput'
 import { useEffect, useRef, useState } from 'react'
-import { findExercises } from '../../domain/exerciseCatalog'
+import { EXERCISE_CATALOG, findExercises } from '../../domain/exerciseCatalog'
 import { exerciseDefaults, isCardioExercise } from '../../domain/cardio'
 import type { TrackingType } from '../../domain/sets'
 import type { PlanExerciseDraft } from '../../domain/trainingPlan'
 import { newExercise } from './api'
+import { createExerciseSlots, updateExerciseSlot, type PlanExerciseSlot } from '../../domain/planExerciseSlots'
 
 const INPUT = 'mt-1 h-11 w-full min-w-0 rounded-xl bg-control px-3 text-base text-foreground outline-none focus:ring-2 focus:ring-neon'
 const BUTTON = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-40'
@@ -23,10 +24,9 @@ function trackingChanges(tracking_type: TrackingType): Partial<PlanExerciseDraft
   }
 }
 
-export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
-  exercises: PlanExerciseDraft[]; onChange: (exercises: PlanExerciseDraft[]) => void
+export function ExercisePages({ exercises, onChange, reveal }: {
+  exercises: PlanExerciseSlot[]; onChange: (exercises: PlanExerciseSlot[]) => void
   reveal?: { index: number }
-  exerciseGroup?: string
 }) {
   const [page, setPage] = useState(0)
   const [lastReveal, setLastReveal] = useState(reveal)
@@ -35,7 +35,7 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const index = Math.min(page, exercises.length - 1)
   const exercise = exercises[index]
-  const available = findExercises('', exerciseGroup)
+  const available = findExercises('', exercise.muscleGroup)
   const groups = [...new Set(available.map(item => item.group))]
   const inCatalog = available.some((item) => item.name === exercise.name)
   const isDuration = exercise.tracking_type === 'duration'
@@ -57,8 +57,8 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
     heading.current?.focus()
   }
 
-  function update(changes: Partial<PlanExerciseDraft>) {
-    onChange(exercises.map((item, i) => i === index ? { ...item, ...changes } : item))
+  function update(changes: Partial<PlanExerciseDraft> & { muscleGroup?: string }) {
+    onChange(updateExerciseSlot(exercises, exercise.slotId, changes))
   }
 
   function selectExercise(value: string) {
@@ -68,7 +68,7 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
       return
     }
     const selected = available.find((item) => item.name === value)
-    if (selected) update({ name: selected.name, ...exerciseDefaults(selected.name, selected.tracking_type),
+    if (selected) update({ name: selected.name, muscleGroup: selected.group, ...exerciseDefaults(selected.name, selected.tracking_type),
       ...(!cardio && !isCardioExercise(selected.name) ? { sets_min: exercise.sets_min, sets_max: exercise.sets_max } : {}),
     })
   }
@@ -87,7 +87,7 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
         <button className={BUTTON} type="button" aria-label="Nächste Übung" disabled={index === exercises.length - 1} onClick={() => turn(index + 1)}>Weiter ›</button>
       </div>
 
-      <div className="exercise-page mt-3 space-y-3 rounded-2xl bg-surface-inset p-3.5 ring-1 ring-line/[0.06]" key={index}
+      <div className="exercise-page mt-3 space-y-3 rounded-2xl bg-surface-inset p-3.5 ring-1 ring-line/[0.06]" key={exercise.slotId}
         onTouchStart={(event) => {
           const target = event.target as HTMLElement
           if (target.closest('input, select, button, label')) { touchStart.current = null; return }
@@ -103,19 +103,22 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
           if (dx < 0 && index < exercises.length - 1) turn(index + 1)
           if (dx > 0 && index > 0) turn(index - 1)
         }}>
+        <label className={LABEL}>Muskelgruppe
+          <select aria-label="Muskelgruppe" className={INPUT} value={exercise.muscleGroup} onChange={event => update({ muscleGroup: event.target.value })}>
+            <option value="">Alle Muskelgruppen</option>
+            {[...new Set(EXERCISE_CATALOG.map(item => item.group))].map(group => <option key={group}>{group}</option>)}
+          </select>
+        </label>
         <label className={LABEL}>Übung
-          <select aria-label="Übung" className={INPUT} value={exerciseGroup && !inCatalog ? '' : inCatalog || exercise.name ? exercise.name : ''} onChange={(event) => selectExercise(event.target.value)}>
+          <select aria-label="Übung" className={INPUT} value={exercise.name} onChange={(event) => selectExercise(event.target.value)}>
             <option value="">Bitte auswählen …</option>
-            {!exerciseGroup && exercise.name && !inCatalog && <option value={exercise.name}>{exercise.name}</option>}
+            {exercise.name && !inCatalog && <option value={exercise.name}>{exercise.name}</option>}
             {groups.map((group) => <optgroup key={group} label={group}>
               {available.filter((item) => item.group === group).map((item) => <option key={item.name}>{item.name}</option>)}
             </optgroup>)}
-            {!exerciseGroup && <option value={CUSTOM}>Eigene Übung …</option>}
+            <option value={CUSTOM}>Eigene Übung …</option>
           </select>
         </label>
-        {exerciseGroup && exercise.name && !inCatalog && <p className="text-sm text-danger" role="status">
-          „{exercise.name}“ gehört nicht zu „{exerciseGroup}“. Wähle eine passende Übung aus.
-        </p>}
 
         <div className="flex items-end gap-2">
           {!cardio && <label className={`${LABEL} w-20 shrink-0`}>Sätze
@@ -153,10 +156,10 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
         </button>
 
         {showMore && <div className="space-y-3 border-t border-line/[0.06] pt-3">
-          {!exerciseGroup && <label className={LABEL}>Eigener Name
+          <label className={LABEL}>Eigener Name
             <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Bankdrücken"
               onChange={(event) => update({ name: event.target.value })} />
-          </label>}
+          </label>
           {!cardio && <label className={LABEL}>Erfassung
             <select className={INPUT} value={exercise.tracking_type} onChange={(event) => update(trackingChanges(event.target.value as TrackingType))}>
               <option value="weight_reps">Gewicht + Wiederholungen</option>
@@ -174,11 +177,11 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
 
       <div className={`mt-3 grid gap-2 ${exercises.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {exercises.length > 1 && <button className="min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-danger" type="button" onClick={() => {
-          onChange(exercises.filter((_, i) => i !== index))
+          onChange(exercises.filter(item => item.slotId !== exercise.slotId))
           turn(Math.max(0, index - 1))
         }}>Übung löschen</button>}
         <button className={BUTTON} type="button" onClick={() => {
-          onChange([...exercises, newExercise()])
+          onChange([...exercises, ...createExerciseSlots([newExercise()], () => crypto.randomUUID())])
           turn(exercises.length)
         }}>{exercises.length === 1 ? '+ Übung hinzufügen' : 'Übung hinzufügen'}</button>
       </div>
