@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildWeek, shiftDate, weekStart } from './week'
+import { buildWeek, planForDate, shiftDate, weekStart } from './week'
 import { buildMonth } from './calendar'
 
 describe('Kalenderwochen', () => {
@@ -59,5 +59,34 @@ describe('Kalenderwochen', () => {
     })
     expect(result.weeks.flat().find((day) => day?.date === '2026-11-03')?.status).toBe('marked')
     expect(result.marked).toBe(1)
+  })
+})
+
+describe('planForDate', () => {
+  // 2026-11-09 ist ein Montag, 2026-11-12 ein Donnerstag.
+  const template = [{ id: 'push', weekday: 1 }, { id: 'pull', weekday: 2 }]
+
+  it('nimmt ohne Wochenplanung die Vorlage', () => {
+    expect(planForDate('2026-11-09', template, [])).toEqual({ planDayId: 'push', kind: 'plan' })
+    expect(planForDate('2026-11-12', template, [])).toEqual({ planDayId: null, kind: 'rest' })
+  })
+
+  it('lässt die Wochenplanung gewinnen', () => {
+    const overrides = [
+      { day_date: '2026-11-09', plan_day_id: null, is_rest_day: true },
+      { day_date: '2026-11-12', plan_day_id: 'push', is_rest_day: false },
+    ]
+    expect(planForDate('2026-11-09', template, overrides)).toEqual({ planDayId: null, kind: 'rest' })
+    expect(planForDate('2026-11-12', template, overrides)).toEqual({ planDayId: 'push', kind: 'plan' })
+  })
+
+  it('kennt ungeplante Tage', () => {
+    const overrides = [{ day_date: '2026-11-10', plan_day_id: null, is_rest_day: false }]
+    expect(planForDate('2026-11-10', template, overrides)).toEqual({ planDayId: null, kind: 'unplanned' })
+  })
+
+  it('betrifft nur das geplante Datum, nicht denselben Wochentag eine Woche später', () => {
+    const overrides = [{ day_date: '2026-11-09', plan_day_id: null, is_rest_day: true }]
+    expect(planForDate('2026-11-16', template, overrides)).toEqual({ planDayId: 'push', kind: 'plan' })
   })
 })
