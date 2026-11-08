@@ -116,7 +116,8 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
         setActiveIds(Object.fromEntries(data.entries.map((entry) => [entry.id, initialActiveId(entry, saved)])))
         const skippedToday = readSkippedEntries(userId, today)
         setSkipped(skippedToday)
-        setOpenId(nextOpenEntry(data.entries, saved, -1, skippedToday))
+        // Am Handy ist anfangs alles zugeklappt, erst ein Tipp oder „Training starten“ öffnet eine Übung.
+        setOpenId(window.matchMedia(DESKTOP_QUERY).matches ? nextOpenEntry(data.entries, saved, -1, skippedToday) : null)
         setDay(data)
       })
       .catch(() => {
