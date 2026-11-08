@@ -1,20 +1,49 @@
+import type { ExportRow } from '../../domain/export'
+import type { Meal } from '../../domain/nutrition'
 import { socialSearchPattern } from '../../domain/social'
+import { normalizeUsername } from '../../domain/username'
 import { supabase } from '../../lib/supabase'
+import type { BodyMeasurement, UserProfile } from '../profile/api'
 
 export type SocialTab = 'followers' | 'following'
+export type Relationship = 'none' | 'pending' | 'accepted'
 export type SocialSummary = { enabled: boolean; followers: number; following: number }
-export type Person = { user_id: string; display_name: string; avatar: string | null; following: boolean }
+export type Person = {
+  user_id: string; display_name: string; username: string; avatar: string | null; is_private: boolean
+  followers_count: number; relationship: Relationship; following: boolean
+}
 export type PeoplePage = { people: Person[]; hasMore: boolean }
+export type SharedOverview = { profile: Omit<UserProfile, 'measurements'>; measurements: BodyMeasurement[]; sets: ExportRow[]; meals: Meal[] }
 export const PEOPLE_PAGE_SIZE = 20
+const DIRECTORY_COLUMNS = 'user_id, display_name, username, avatar, is_private, followers_count'
+type DirectoryPerson = Omit<Person, 'relationship' | 'following'>
+
+async function withRelationships(people: DirectoryPerson[], viewerId: string): Promise<Person[]> {
+  if (!people.length) return []
+  const { data, error } = await supabase.from('follows').select('followed_user_id, status')
+    .eq('user_id', viewerId).in('followed_user_id', people.map(person => person.user_id))
+  if (error) throw error
+  const relationships = new Map(data.map(row => [row.followed_user_id, row.status as Relationship]))
+  return people.map(person => {
+    const relationship = relationships.get(person.user_id) ?? 'none'
+    return { ...person, relationship, following: relationship === 'accepted' }
+  })
+}
+
+export async function loadAccount(personId: string, viewerId: string): Promise<Person> {
+  const { data, error } = await supabase.from('social_directory').select(DIRECTORY_COLUMNS).eq('user_id', personId).single()
+  if (error) throw error
+  return (await withRelationships([data as DirectoryPerson], viewerId))[0]!
+}
 
 export async function loadSocialSummary(userId: string): Promise<SocialSummary> {
-  const [profile, followers, following] = await Promise.all([
-    supabase.from('social_profiles').select('user_id').eq('user_id', userId).maybeSingle(),
-    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('followed_user_id', userId),
-    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+  const [profile, following] = await Promise.all([
+    supabase.from('social_directory').select('followers_count').eq('user_id', userId).single(),
+    supabase.from('visible_follows').select('*', { head: true, count: 'exact' }).eq('user_id', userId),
   ])
-  for (const result of [profile, followers, following]) if (result.error) throw result.error
-  return { enabled: profile.data !== null, followers: followers.count ?? 0, following: following.count ?? 0 }
+  if (profile.error) throw profile.error
+  if (following.error) throw following.error
+  return { enabled: true, followers: profile.data.followers_count ?? 0, following: following.count ?? 0 }
 }
 
 export async function enableSocialProfile(): Promise<void> {
@@ -23,48 +52,87 @@ export async function enableSocialProfile(): Promise<void> {
 }
 
 export async function disableSocialProfile(userId: string): Promise<void> {
-  const { error } = await supabase.from('social_profiles').delete().eq('user_id', userId)
+  await savePrivacy(userId, true)
+}
+
+export async function savePrivacy(userId: string, isPrivate: boolean): Promise<void> {
+  const { error } = await supabase.from('social_profiles').update({ is_private: isPrivate }).eq('user_id', userId)
   if (error) throw error
 }
 
-export async function setFollowing(personId: string, following: boolean): Promise<void> {
-  // user_id stammt ausschließlich aus auth.uid(); auch die Löschung ist durch RLS auf eigene Beziehungen beschränkt.
+export async function saveUsername(userId: string, input: string): Promise<string> {
+  const username = normalizeUsername(input)
+  if (!username) throw new Error('3–40 Zeichen: a–z, Zahlen, Punkt und Unterstrich.')
+  const { error } = await supabase.from('social_profiles').update({ username }).eq('user_id', userId)
+  if (error?.code === '23505') throw new Error('Dieser Benutzername ist bereits vergeben.')
+  if (error) throw new Error('Benutzername konnte nicht gespeichert werden.')
+  return username
+}
+
+export async function saveProfileIdentity(profile: UserProfile, input: string): Promise<string> {
+  const username = normalizeUsername(input)
+  if (!username) throw new Error('3–40 Zeichen: a–z, Zahlen, Punkt und Unterstrich.')
+  const { error } = await supabase.rpc('save_profile_identity', {
+    p_username: username, p_name: profile.displayName, p_bio: profile.bio, p_goal: profile.goal, p_weekly_target: profile.weeklyTarget,
+  })
+  if (error?.code === '23505') throw new Error('Dieser Benutzername ist bereits vergeben.')
+  if (error) throw new Error('Profil konnte nicht gespeichert werden.')
+  return username
+}
+
+export async function setFollowing(personId: string, following: boolean, viewerId?: string): Promise<void> {
+  const actor = viewerId ?? (await supabase.auth.getUser()).data.user?.id
+  if (!actor || actor === personId) throw new Error('Ungültige Folgeaktion.')
+  // Die Datenbank bestimmt anhand der Kontoprivatsphäre, ob eine Anfrage nötig ist.
   const result = following
     ? await supabase.from('follows').upsert({ followed_user_id: personId }, { onConflict: 'user_id,followed_user_id', ignoreDuplicates: true })
-    : await supabase.from('follows').delete().eq('followed_user_id', personId)
+    : await supabase.from('follows').delete().eq('user_id', actor).eq('followed_user_id', personId)
   if (result.error) throw result.error
 }
 
-export async function loadPeople(userId: string, tab: SocialTab, query: string, page: number): Promise<PeoplePage> {
+export async function loadPeople(viewerId: string, tab: SocialTab, query: string, page: number, ownerId = viewerId): Promise<PeoplePage> {
   const from = page * PEOPLE_PAGE_SIZE
-  let people: Omit<Person, 'following'>[]
+  let people: DirectoryPerson[]
   if (query) {
     const pattern = socialSearchPattern(query)
     if (!pattern) throw new Error('Bitte 2 bis 50 Zeichen eingeben.')
-    const { data, error } = await supabase.from('social_profiles')
-      .select('user_id, display_name, avatar').neq('user_id', userId)
-      .ilike('display_name', pattern).order('display_name').order('user_id').range(from, from + PEOPLE_PAGE_SIZE)
+    const { data, error } = await supabase.rpc('search_social_accounts', { p_query: query, p_offset: from })
     if (error) throw error
-    people = data
+    people = data as DirectoryPerson[]
   } else {
     const incoming = tab === 'followers'
-    const { data, error } = await supabase.from('follows')
-      .select(incoming
-        ? 'person:social_profiles!follows_user_id_fkey(user_id, display_name, avatar)'
-        : 'person:social_profiles!follows_followed_user_id_fkey(user_id, display_name, avatar)')
-      .eq(incoming ? 'followed_user_id' : 'user_id', userId)
+    const { data, error } = await supabase.from('visible_follows').select('user_id, followed_user_id')
+      .eq(incoming ? 'followed_user_id' : 'user_id', ownerId)
       .order(incoming ? 'user_id' : 'followed_user_id').range(from, from + PEOPLE_PAGE_SIZE)
     if (error) throw error
-    // PostgREST unterscheidet die beiden Beziehungen zur selben Tabelle über die FK-Namen.
-    people = (data as unknown as { person: Omit<Person, 'following'> | null }[])
-      .flatMap(row => row.person ? [row.person] : [])
+    const ids = data.map(row => incoming ? row.user_id : row.followed_user_id).filter((id): id is string => id !== null)
+    if (!ids.length) return { people: [], hasMore: false }
+    const accounts = await supabase.from('social_directory').select(DIRECTORY_COLUMNS).in('user_id', ids)
+    if (accounts.error) throw accounts.error
+    const positions = new Map(ids.map((id, index) => [id, index]))
+    people = (accounts.data as DirectoryPerson[]).sort((a, b) => positions.get(a.user_id)! - positions.get(b.user_id)!)
   }
   const hasMore = people.length > PEOPLE_PAGE_SIZE
-  people = people.slice(0, PEOPLE_PAGE_SIZE)
-  if (!people.length) return { people: [], hasMore }
-  const { data, error } = await supabase.from('follows').select('followed_user_id')
-    .eq('user_id', userId).in('followed_user_id', people.map(person => person.user_id))
+  return { people: await withRelationships(people.slice(0, PEOPLE_PAGE_SIZE), viewerId), hasMore }
+}
+
+export async function loadSharedOverview(personId: string): Promise<SharedOverview | null> {
+  const { data, error } = await supabase.from('shared_profile_overviews').select('overview').eq('user_id', personId).maybeSingle()
   if (error) throw error
-  const following = new Set(data.map(row => row.followed_user_id))
-  return { people: people.map(person => ({ ...person, following: following.has(person.user_id) })), hasMore }
+  return data?.overview as unknown as SharedOverview | null ?? null
+}
+
+export async function loadRequests(userId: string): Promise<Person[]> {
+  const { data, error } = await supabase.from('follows').select('user_id').eq('followed_user_id', userId).eq('status', 'pending').order('created_at').limit(50)
+  if (error) throw error
+  if (!data.length) return []
+  const people = await supabase.from('social_directory').select(DIRECTORY_COLUMNS).in('user_id', data.map(row => row.user_id))
+  if (people.error) throw people.error
+  return withRelationships(people.data as DirectoryPerson[], userId)
+}
+
+export async function decideRequest(userId: string, requesterId: string, accept: boolean): Promise<void> {
+  const query = accept ? supabase.from('follows').update({ status: 'accepted' }) : supabase.from('follows').delete()
+  const { error } = await query.eq('followed_user_id', userId).eq('user_id', requesterId).eq('status', 'pending')
+  if (error) throw error
 }

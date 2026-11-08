@@ -1,4 +1,16 @@
-# Umsetzung: Gemini-Foodscanner
+# Umsetzung: Kontoprivatsphäre
+
+Spezifikation: [docs/account-privacy.md](../docs/account-privacy.md). Bestätigte Grenze: Fremde sehen Name, Benutzername, Bild und Follower-Anzahl; nach Annahme ist die gesamte Profilübersicht lesbar. Kontoverwaltung und Schreibrechte bleiben beim Eigentümer.
+
+1. Benutzernamenvalidierung und private/öffentliche Folgeanfragen mit Tests absichern.
+2. Neue additive Migration: Verzeichnis aller Konten, eindeutige Benutzernamen, Anfragezustände, geschützte Leseansichten. Quelltabellen behalten Owner-RLS. Bestehende Beziehungen werden wegen erweiterter Datenfreigabe erneut angefragt.
+3. API und generierte Typen anpassen. Fremde Profile und Navigation aus Suche/Listen anbinden.
+4. Zahnrad, Einstellungsplatzhalter, Kontoprivatsphäre und Anfrageverwaltung ergänzen. Eigene Benutzernamen editierbar machen.
+5. Mehrnutzerablauf lokal testen: Zugriff vor/nach Annahme, Ablehnung, Rücknahme, öffentlich folgen, Entfolgen, Eindeutigkeit. Lint, Unit-Tests, Build, pgTAP und responsive UI prüfen.
+
+Keine Online-Migration, keine Commits oder Pushes ohne neuen Auftrag. Rückbau: Oberfläche kann entfernt werden; zusätzliche Spalten/Ansichten bleiben zunächst erhalten. Keine private Quelltabelle wird für Fremdzugriff geöffnet.
+
+<!-- Der vorherige, abgeschlossene Plan bleibt in der Git-Historie erhalten. -->
 
 Spezifikation: [docs/food-scanner.md](../docs/food-scanner.md). Umsetzung und Pull Request gegen den zuvor aktualisierten `main` sind vom Nutzer beauftragt. Keine Online-Datenbankänderungen.
 
