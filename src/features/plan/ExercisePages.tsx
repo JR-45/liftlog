@@ -92,12 +92,15 @@ export function ExercisePages({ exercises, onChange, reveal }: {
 
   function setCircuit(circuit: boolean) {
     if (circuit === isCircuit) return
-    update({ steps: circuit ? [{ name: '', reps: exercise.reps_max ?? 5, weightKg: null }] : undefined })
+    update(circuit
+      ? { steps: [{ name: '', reps: exercise.reps_max ?? 5, weightKg: null }], sets_min: exercise.sets_max }
+      : { steps: undefined })
   }
 
   function updateSets(value: number) {
     // Eine feste Vorgabe bleibt fest. Bei einem Bereich wie 4–5 Runden ändert sich das Maximum.
-    if (exercise.sets_min === exercise.sets_max) update({ sets_min: value, sets_max: value })
+    // Beim Zirkel gibt es nur das Feld „Runden“, also immer eine feste Zahl.
+    if (isCircuit || exercise.sets_min === exercise.sets_max) update({ sets_min: value, sets_max: value })
     else update({ sets_min: Math.min(exercise.sets_min, value), sets_max: value })
   }
 
@@ -212,11 +215,11 @@ export function ExercisePages({ exercises, onChange, reveal }: {
           </button>}
         </fieldset>}
 
-        <button className="min-h-11 text-sm font-medium text-muted" type="button" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>
+        {!isCircuit && <button className="min-h-11 text-sm font-medium text-muted" type="button" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>
           {showMore ? 'Weniger Optionen' : 'Mehr Optionen'}
-        </button>
+        </button>}
 
-        {showMore && <div className="space-y-3 border-t border-line/[0.06] pt-3">
+        {showMore && !isCircuit && <div className="space-y-3 border-t border-line/[0.06] pt-3">
           {!isCircuit && <label className={LABEL}>Eigener Name
             <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Bankdrücken"
               onChange={(event) => update({ name: event.target.value })} />
@@ -229,7 +232,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
               {!isCircuit && <option value="duration">Dauer</option>}
             </select>
           </label>}
-          {!cardio && <label className={LABEL}>{isCircuit ? 'Mindestens Runden (für Bereiche wie 4–5)' : 'Mindestens Sätze (für Bereiche wie 4–5 Runden)'}
+          {!cardio && <label className={LABEL}>Mindestens Sätze (für Bereiche wie 4–5 Runden)
             <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
               onChange={(event) => update({ sets_min: Number(event.target.value) })} />
           </label>}
