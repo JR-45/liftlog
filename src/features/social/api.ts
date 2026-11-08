@@ -29,19 +29,22 @@ async function withRelationships(people: DirectoryPerson[], viewerId: string): P
   })
 }
 
-export async function loadAccount(personId: string, viewerId: string): Promise<Person> {
-  const { data, error } = await supabase.from('social_directory').select(DIRECTORY_COLUMNS).eq('user_id', personId).single()
+/** null, wenn die Person ihr Profil nicht sichtbar gemacht hat. */
+export async function loadAccount(personId: string, viewerId: string): Promise<Person | null> {
+  const { data, error } = await supabase.from('social_directory').select(DIRECTORY_COLUMNS).eq('user_id', personId).maybeSingle()
   if (error) throw error
+  if (!data) return null
   return (await withRelationships([data as DirectoryPerson], viewerId))[0]!
 }
 
 export async function loadSocialSummary(userId: string): Promise<SocialSummary> {
   const [profile, following] = await Promise.all([
-    supabase.from('social_directory').select('followers_count').eq('user_id', userId).single(),
+    supabase.from('social_directory').select('followers_count').eq('user_id', userId).maybeSingle(),
     supabase.from('visible_follows').select('*', { head: true, count: 'exact' }).eq('user_id', userId),
   ])
   if (profile.error) throw profile.error
   if (following.error) throw following.error
+  if (!profile.data) return { enabled: false, followers: 0, following: 0 }
   return { enabled: true, followers: profile.data.followers_count ?? 0, following: following.count ?? 0 }
 }
 
@@ -50,8 +53,10 @@ export async function enableSocialProfile(): Promise<void> {
   if (error) throw error
 }
 
+/** Profil verbergen: nicht mehr auffindbar, alle Folgebeziehungen werden entfernt. Eigene Daten bleiben. */
 export async function disableSocialProfile(userId: string): Promise<void> {
-  await savePrivacy(userId, true)
+  const { error } = await supabase.from('social_profiles').delete().eq('user_id', userId)
+  if (error) throw error
 }
 
 export async function savePrivacy(userId: string, isPrivate: boolean): Promise<void> {

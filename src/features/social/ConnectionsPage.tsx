@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { socialSearchPattern } from '../../domain/social'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../lib/icons'
-import { CARD, INPUT, LINK, NAV_BUTTON, SECTION_TITLE } from '../../lib/ui'
+import { CARD, INPUT, LINK, NAV_BUTTON, PRIMARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
 import { FollowButton } from './FollowButton'
 import { loadPeople, loadSocialSummary, type PeoplePage, type SocialSummary, type SocialTab } from './api'
 
-type Props = { userId: string; ownerId?: string; displayName: string; initialTab: SocialTab; initialQuery?: string; initialPage?: number; onBack: () => void; onOpenPerson: (id: string) => void; onViewChange?: (tab: SocialTab, query: string, page: number) => void }
+type Props = { userId: string; ownerId?: string; displayName: string; initialTab: SocialTab; initialQuery?: string; initialPage?: number; onBack: () => void; onOpenPerson: (id: string) => void; onEnable?: () => Promise<void>; onViewChange?: (tab: SocialTab, query: string, page: number) => void }
 
-export function ConnectionsPage({ userId, ownerId = userId, displayName, initialTab, initialQuery = '', initialPage = 0, onBack, onOpenPerson, onViewChange }: Props) {
+export function ConnectionsPage({ userId, ownerId = userId, displayName, initialTab, initialQuery = '', initialPage = 0, onBack, onOpenPerson, onEnable, onViewChange }: Props) {
   const [tab, setTab] = useState(initialTab)
   const [summary, setSummary] = useState<SocialSummary | null>(null)
   const [result, setResult] = useState<PeoplePage>({ people: [], hasMore: false })
@@ -17,6 +17,7 @@ export function ConnectionsPage({ userId, ownerId = userId, displayName, initial
   const [attempt, setAttempt] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [enabling, setEnabling] = useState(false)
   const back = useRef<HTMLButtonElement>(null)
   useEffect(() => { back.current?.focus(); window.scrollTo(0, 0) }, [])
   useEffect(() => {
@@ -53,8 +54,16 @@ export function ConnectionsPage({ userId, ownerId = userId, displayName, initial
         <span className="tabular-nums">{summary ? summary[value] : '…'}</span> {value === 'followers' ? 'Follower' : 'Gefolgt'}
       </button>)}
     </div>
-    <form role="search" onSubmit={event => event.preventDefault()}><input type="search" className={INPUT} maxLength={50} value={draft} placeholder="Name oder Benutzername" aria-label="Personen suchen"
-      enterKeyHint="search" onChange={event => setDraft(event.target.value)} /></form>
+    {onEnable && summary && !summary.enabled ? <div className={CARD}>
+      <h3 className={SECTION_TITLE}>Personen finden und folgen</h3>
+      <p className="mt-2 text-sm text-muted">Andere finden dich dann über Name und Benutzername. Follower sehen nur dein Profil und deine Trainings.</p>
+      <button type="button" disabled={enabling} className={`${PRIMARY_BUTTON} mt-3 w-full`} onClick={() => {
+        setEnabling(true)
+        setError('')
+        void onEnable().then(refresh).catch(() => setError('Profil konnte nicht sichtbar gemacht werden.')).finally(() => setEnabling(false))
+      }}>Profil sichtbar machen</button>
+    </div> : <form role="search" onSubmit={event => event.preventDefault()}><input type="search" className={INPUT} maxLength={50} value={draft} placeholder="Name oder Benutzername" aria-label="Personen suchen"
+      enterKeyHint="search" onChange={event => setDraft(event.target.value)} /></form>}
     {error && <div role="alert"><p className="text-sm text-danger">{error}</p><button className={LINK} type="button" onClick={refresh}>Erneut laden</button></div>}
     <div id="connections-list" role="tabpanel" aria-labelledby={`connections-${tab}`} aria-busy={loading} className={CARD}>
       {query && <h3 className={`mb-2 ${SECTION_TITLE}`}>Suchergebnisse</h3>}

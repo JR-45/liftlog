@@ -13,9 +13,12 @@ export function ForeignProfile({ personId, viewerId, today, onConnections }: {
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let cancelled = false
-    loadAccount(personId, viewerId).then(async person => ({ person, overview: person.relationship === 'accepted' ? await loadSharedOverview(personId) : null }))
+    loadAccount(personId, viewerId).then(async person => {
+      if (!person) throw new Error('verborgen')
+      return { person, overview: person.relationship === 'accepted' ? await loadSharedOverview(personId) : null }
+    })
       .then(value => { if (!cancelled) setData(value) })
-      .catch(() => { if (!cancelled) setError('Profil konnte nicht geladen werden.') })
+      .catch((cause) => { if (!cancelled) setError(cause instanceof Error && cause.message === 'verborgen' ? 'Dieses Profil ist nicht mehr sichtbar.' : 'Profil konnte nicht geladen werden.') })
     return () => { cancelled = true }
   }, [personId, viewerId, attempt])
   function refresh() { setData(null); setError(''); setAttempt(value => value + 1) }

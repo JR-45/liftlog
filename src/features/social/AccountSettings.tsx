@@ -2,11 +2,40 @@ import { useEffect, useRef, useState } from 'react'
 import { CARD, LINK, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
 import { decideRequest, loadRequests, savePrivacy, type Person } from './api'
 
-export function SettingsMenu({ onPrivacy, onRequests }: { onPrivacy: () => void; onRequests: () => void }) {
+/** Ohne sichtbares Profil nur der Knopf zum Sichtbarmachen. Sonst Privatsphäre, Anfragen und Verbergen. */
+export function SettingsMenu({ account, onEnable, onHide, onPrivacy, onRequests }: {
+  account: Person | null; onEnable: () => Promise<void>; onHide: () => Promise<void>; onPrivacy: () => void; onRequests: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [confirmHide, setConfirmHide] = useState(false)
+  useEffect(() => {
+    if (!confirmHide) return
+    const timeout = window.setTimeout(() => setConfirmHide(false), 3000)
+    return () => window.clearTimeout(timeout)
+  }, [confirmHide])
+  function run(action: () => Promise<void>, message: string) {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    void action().catch(() => setError(message)).finally(() => setBusy(false))
+  }
+  if (!account) return <div className={CARD}>
+    <h2 className={SECTION_TITLE}>Personen finden und folgen</h2>
+    <p className="mt-2 text-sm text-muted">Andere finden dich dann über Name und Benutzername. Follower sehen nur dein Profil und deine Trainings.</p>
+    {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
+    <button type="button" disabled={busy} className={`${PRIMARY_BUTTON} mt-3 w-full`}
+      onClick={() => run(onEnable, 'Profil konnte nicht sichtbar gemacht werden.')}>Profil sichtbar machen</button>
+  </div>
   return <div className={`${CARD} space-y-2`}>
     <button type="button" className={`${SECONDARY_BUTTON} w-full text-left`} onClick={onPrivacy}>Privatsphäre-Konto</button>
     <button type="button" className={`${SECONDARY_BUTTON} w-full text-left`} onClick={onRequests}>Folgeanfragen</button>
-    {['Benachrichtigungen', 'Darstellung', 'Hilfe'].map(label => <button key={label} type="button" disabled className={`${SECONDARY_BUTTON} flex w-full justify-between gap-3 text-left`}><span>{label}</span><span className="text-xs text-muted">Demnächst</span></button>)}
+    {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+    <button type="button" disabled={busy} className={`${SECONDARY_BUTTON} w-full text-left ${confirmHide ? 'bg-danger/15 text-danger' : 'text-danger'}`}
+      onClick={() => { if (!confirmHide) { setConfirmHide(true); return } setConfirmHide(false); run(onHide, 'Profil konnte nicht verborgen werden.') }}>
+      {confirmHide ? 'Sicher? Nochmal tippen' : 'Profil verbergen'}
+    </button>
+    {confirmHide && <p className="text-xs text-muted">Du bist dann nicht mehr auffindbar, und alle Follower werden entfernt.</p>}
   </div>
 }
 
