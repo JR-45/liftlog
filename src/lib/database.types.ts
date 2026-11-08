@@ -181,14 +181,14 @@ isOneToOne: false
                   ]
                 },"plan_exercises": {
                   Row: {
-                    "alternative_exercise_id": string | null,"created_at": string,"duration_max": number | null,"duration_min": number | null,"exercise_id": string,"id": string,"plan_day_id": string,"position": number,"reps_max": number | null,"reps_min": number | null,"sets_max": number,"sets_min": number,"user_id": string
+                    "alternative_exercise_id": string | null,"created_at": string,"duration_max": number | null,"duration_min": number | null,"exercise_id": string,"id": string,"plan_day_id": string,"position": number,"reps_max": number | null,"reps_min": number | null,"sets_max": number,"sets_min": number,"steps": (string)[] | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "alternative_exercise_id"?: string | null,"created_at"?: string,"duration_max"?: number | null,"duration_min"?: number | null,"exercise_id": string,"id"?: string,"plan_day_id": string,"position": number,"reps_max"?: number | null,"reps_min"?: number | null,"sets_max": number,"sets_min": number,"user_id"?: string
+                    "alternative_exercise_id"?: string | null,"created_at"?: string,"duration_max"?: number | null,"duration_min"?: number | null,"exercise_id": string,"id"?: string,"plan_day_id": string,"position": number,"reps_max"?: number | null,"reps_min"?: number | null,"sets_max": number,"sets_min": number,"steps"?: (string)[] | null,"user_id"?: string
                   }
                   Update: {
-                    "alternative_exercise_id"?: string | null,"created_at"?: string,"duration_max"?: number | null,"duration_min"?: number | null,"exercise_id"?: string,"id"?: string,"plan_day_id"?: string,"position"?: number,"reps_max"?: number | null,"reps_min"?: number | null,"sets_max"?: number,"sets_min"?: number,"user_id"?: string
+                    "alternative_exercise_id"?: string | null,"created_at"?: string,"duration_max"?: number | null,"duration_min"?: number | null,"exercise_id"?: string,"id"?: string,"plan_day_id"?: string,"position"?: number,"reps_max"?: number | null,"reps_min"?: number | null,"sets_max"?: number,"sets_min"?: number,"steps"?: (string)[] | null,"user_id"?: string
                   }
                   Relationships: [
                     {

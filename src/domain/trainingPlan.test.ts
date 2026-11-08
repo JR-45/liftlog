@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXERCISE_CATALOG, findExercises } from './exerciseCatalog'
-import { PLAN_SPLITS, TRAINING_METHODS, recommendPlan } from './trainingPlan'
+import { PLAN_SPLITS, TRAINING_METHODS, recommendPlan, withCleanSteps } from './trainingPlan'
 
 describe('Übungskatalog', () => {
   it('enthält eindeutige Übungen und findet deutsche Schreibvarianten', () => {
@@ -43,5 +43,20 @@ describe('Methodenempfehlungen', () => {
     const first = recommendPlan('classic', 'full_body')
     first[0].exercises[0].name = 'Geändert'
     expect(recommendPlan('classic', 'full_body')[0].exercises[0].name).toBe('Beinpresse')
+  })
+})
+
+describe('Zirkel-Bewegungen', () => {
+  const base = { name: 'Kettlebell Complex', tracking_type: 'weight_reps' as const, alternative_exercise_id: null,
+    sets_min: 4, sets_max: 5, reps_min: 5, reps_max: 5, duration_min: null, duration_max: null }
+
+  it('entfernt leere Felder und Leerzeichen, Reihenfolge bleibt', () => {
+    const [day] = withCleanSteps([{ weekday: 5, name: 'Freitag', exercises: [{ ...base, steps: [' Swing ', '', 'Clean', '  '] }] }])
+    expect(day.exercises[0].steps).toEqual(['Swing', 'Clean'])
+  })
+
+  it('macht ohne Bewegungen wieder eine normale Übung', () => {
+    const [day] = withCleanSteps([{ weekday: 5, name: 'Freitag', exercises: [{ ...base, steps: ['', ' '] }, base] }])
+    expect(day.exercises.map((exercise) => 'steps' in exercise)).toEqual([false, false])
   })
 })

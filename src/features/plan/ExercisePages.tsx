@@ -6,11 +6,13 @@ import type { TrackingType } from '../../domain/sets'
 import type { PlanExerciseDraft } from '../../domain/trainingPlan'
 import { newExercise } from './api'
 import { createExerciseSlots, updateExerciseSlot, type PlanExerciseSlot } from '../../domain/planExerciseSlots'
+import { CloseIcon } from '../../lib/icons'
 
 const INPUT = 'mt-1 h-11 w-full min-w-0 rounded-xl bg-control px-3 text-base text-foreground outline-none focus:ring-2 focus:ring-neon'
 const BUTTON = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-40'
 const LABEL = 'block text-sm text-muted'
 const CUSTOM = '__eigene_uebung__'
+const MAX_STEPS = 20
 
 function numberOrNull(value: string): number | null {
   return value === '' ? null : Number(value)
@@ -21,6 +23,7 @@ function trackingChanges(tracking_type: TrackingType): Partial<PlanExerciseDraft
     tracking_type, alternative_exercise_id: null,
     reps_min: tracking_type === 'duration' ? null : 8, reps_max: tracking_type === 'duration' ? null : 12,
     duration_min: tracking_type === 'duration' ? 30 : null, duration_max: tracking_type === 'duration' ? 60 : null,
+    ...(tracking_type === 'duration' ? { steps: [] } : {}),
   }
 }
 
@@ -40,6 +43,8 @@ export function ExercisePages({ exercises, onChange, reveal }: {
   const inCatalog = available.some((item) => item.name === exercise.name)
   const isDuration = exercise.tracking_type === 'duration'
   const cardio = isDuration && isCardioExercise(exercise.name)
+  const steps = exercise.steps ?? []
+  const isCircuit = steps.length > 0
 
   if (reveal !== lastReveal) {
     setLastReveal(reveal)
@@ -71,6 +76,10 @@ export function ExercisePages({ exercises, onChange, reveal }: {
     if (selected) update({ name: selected.name, muscleGroup: selected.group, ...exerciseDefaults(selected.name, selected.tracking_type),
       ...(!cardio && !isCardioExercise(selected.name) ? { sets_min: exercise.sets_min, sets_max: exercise.sets_max } : {}),
     })
+  }
+
+  function updateStep(position: number, value: string) {
+    update({ steps: steps.map((step, i) => i === position ? value : step) })
   }
 
   function updateSets(value: number) {
@@ -121,7 +130,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
         </label>
 
         <div className="flex items-end gap-2">
-          {!cardio && <label className={`${LABEL} w-20 shrink-0`}>Sätze
+          {!cardio && <label className={`${LABEL} w-20 shrink-0`}>{isCircuit ? 'Runden' : 'Sätze'}
             <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_max || ''}
               onChange={(event) => updateSets(Number(event.target.value))} />
           </label>}
@@ -151,6 +160,22 @@ export function ExercisePages({ exercises, onChange, reveal }: {
           </>}
         </div>
 
+        {isCircuit && <fieldset className="space-y-2">
+          <legend className={LABEL}>Bewegungen pro Runde</legend>
+          {steps.map((step, i) => <div key={i} className="flex items-center gap-2">
+            <span className="w-4 shrink-0 text-right text-sm tabular-nums text-muted" aria-hidden="true">{i + 1}</span>
+            <input className={INPUT.replace('mt-1 ', '')} aria-label={`Bewegung ${i + 1}`} maxLength={60} value={step} placeholder="z. B. Swing"
+              onChange={(event) => updateStep(i, event.target.value)} />
+            <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted hover:text-danger" type="button"
+              aria-label={`Bewegung ${i + 1} entfernen`} onClick={() => update({ steps: steps.filter((_, j) => j !== i) })}>
+              <CloseIcon className="h-4 w-4" />
+            </button>
+          </div>)}
+          {steps.length < MAX_STEPS && <button className={`${BUTTON} w-full`} type="button" onClick={() => update({ steps: [...steps, ''] })}>
+            Bewegung hinzufügen
+          </button>}
+        </fieldset>}
+
         <button className="min-h-11 text-sm font-medium text-muted" type="button" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>
           {showMore ? 'Weniger Optionen' : 'Mehr Optionen'}
         </button>
@@ -168,7 +193,10 @@ export function ExercisePages({ exercises, onChange, reveal }: {
               <option value="duration">Dauer</option>
             </select>
           </label>}
-          {!cardio && <label className={LABEL}>Mindestens Sätze (für Bereiche wie 4–5 Runden)
+          {!isDuration && !isCircuit && <button className={`${BUTTON} w-full`} type="button" onClick={() => update({ steps: [''] })}>
+            Als Zirkel mit Bewegungen
+          </button>}
+          {!cardio && <label className={LABEL}>{isCircuit ? 'Mindestens Runden (für Bereiche wie 4–5)' : 'Mindestens Sätze (für Bereiche wie 4–5 Runden)'}
             <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
               onChange={(event) => update({ sets_min: Number(event.target.value) })} />
           </label>}
