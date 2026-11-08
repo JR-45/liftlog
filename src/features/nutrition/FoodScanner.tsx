@@ -4,7 +4,8 @@ import type { Meal, NutritionTargets } from '../../domain/nutrition'
 import { CameraIcon, TrashIcon } from '../../lib/icons'
 import { analyzeFood, setPhotoConsent } from './api'
 import { prepareFoodPhoto } from './image'
-import { MealReview } from './MealReview'
+import { BarcodeScanner } from './BarcodeScanner'
+import { MealReview, type ReviewFood, type ReviewSource } from './MealReview'
 import { PRIMARY_BUTTON as primaryClass, SECONDARY_BUTTON as secondaryClass } from '../../lib/ui'
 
 export function FoodScanner({ consent, date, targets, onConsent, onSaved }: {
@@ -15,7 +16,9 @@ export function FoodScanner({ consent, date, targets, onConsent, onSaved }: {
   const [agreed, setAgreed] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const camera = useRef<HTMLInputElement>(null)
+  // Barcode-Scanner offen oder ein Eintrag aus Barcode bzw. von Hand, der gerade geprüft wird.
+  const [scanning, setScanning] = useState(false)
+  const [entry, setEntry] = useState<{ source: ReviewSource; foods: ReviewFood[]; title: string } | null>(null)
   const upload = useRef<HTMLInputElement>(null)
   const controller = useRef<AbortController | null>(null)
   const lock = useRef(false)
@@ -74,12 +77,17 @@ export function FoodScanner({ consent, date, targets, onConsent, onSaved }: {
 
   return <section className="rounded-2xl border border-line/[0.08] bg-surface p-4" aria-labelledby="food-scanner-heading">
     <h2 id="food-scanner-heading" className="text-xl">Essen eintragen</h2>
-    {!scan?.foods.length && <>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <button type="button" disabled={busy !== null} className={`${primaryClass} inline-flex items-center justify-center gap-2`} onClick={() => camera.current?.click()}><CameraIcon className="h-5 w-5" /> Foto</button>
-        <button type="button" disabled={busy !== null} className={secondaryClass} onClick={() => upload.current?.click()}>Aus Galerie</button>
+    {!scan?.foods.length && !entry && !scanning && <>
+      {/* Drei Wege: Foto (Kamera oder Galerie fragt das Handy selbst), Barcode, von Hand. */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <button type="button" disabled={busy !== null} className={`${primaryClass} inline-flex items-center justify-center gap-1.5 px-2`} onClick={() => upload.current?.click()}><CameraIcon className="h-5 w-5" /> Foto</button>
+        <button type="button" disabled={busy !== null} className={`${secondaryClass} px-2`} onClick={() => { setError(''); setPhoto(null); setScanning(true) }}>Barcode</button>
+        <button type="button" disabled={busy !== null} className={`${secondaryClass} px-2`} onClick={() => {
+          setError('')
+          setPhoto(null)
+          setEntry({ source: 'manual', title: 'Meine Mahlzeit', foods: [{ name: '', grams: null, per100g: { kcal: null, protein: null, carbs: null, fat: null, fiber: null }, question: null, uncertain: false }] })
+        }}>Manuell</button>
       </div>
-      <input ref={camera} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-label="Essen fotografieren" onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = '' }} />
       <input ref={upload} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Essensfoto auswählen" onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = '' }} />
       {photo && <>
         <img src={`data:image/jpeg;base64,${photo}`} className="mt-4 max-h-64 w-full rounded-xl bg-surface-inset object-contain" alt="Vorschau deiner Mahlzeit vor der Übertragung" />
@@ -89,16 +97,24 @@ export function FoodScanner({ consent, date, targets, onConsent, onSaved }: {
           setScan(null)
           setError('')
         }}><TrashIcon className="h-5 w-5" />Foto entfernen</button>
+        <div className="mt-3 text-xs text-muted">
+          <p>Das Foto geht zur Analyse an Google Gemini und wird nicht gespeichert. Die Werte sind Schätzungen.</p>
+          {!consent && <label className="mt-2 flex min-h-11 items-start gap-3 text-sm text-foreground"><input className="mt-0.5 h-5 w-5 shrink-0 accent-neon" type="checkbox" checked={agreed} disabled={busy !== null} onChange={(event) => setAgreed(event.target.checked)} />Ich stimme der Übertragung meiner Essensfotos an Google zur Analyse zu. Ich kann diese Einwilligung hier widerrufen.</label>}
+        </div>
+        <button type="button" className={`${primaryClass} mt-4 w-full sm:w-auto`} disabled={busy !== null || (!consent && !agreed)} onClick={() => { void analyze() }}>Mit Gemini analysieren</button>
       </>}
-      <div className="mt-3 text-xs text-muted">
-        <p>Das Foto geht zur Analyse an Google Gemini und wird nicht gespeichert. Die Werte sind Schätzungen.</p>
-        {!consent ? <label className="mt-2 flex min-h-11 items-start gap-3 text-sm text-foreground"><input className="mt-0.5 h-5 w-5 shrink-0 accent-neon" type="checkbox" checked={agreed} disabled={busy !== null} onChange={(event) => setAgreed(event.target.checked)} />Ich stimme der Übertragung meiner Essensfotos an Google zur Analyse zu. Ich kann diese Einwilligung hier widerrufen.</label>
-          : <button className="min-h-11 text-left text-xs text-accent-ink disabled:opacity-50" type="button" disabled={busy !== null} onClick={() => { void revoke() }}>Einwilligung widerrufen</button>}
-      </div>
-      {photo && <button type="button" className={`${primaryClass} mt-4 w-full sm:w-auto`} disabled={busy !== null || (!consent && !agreed)} onClick={() => { void analyze() }}>Mit Gemini analysieren</button>}
+      {consent && <button className="mt-1 min-h-11 text-left text-xs text-muted disabled:opacity-50" type="button" disabled={busy !== null} onClick={() => { void revoke() }}>Foto-Einwilligung widerrufen</button>}
     </>}
+    {scanning && <BarcodeScanner onCancel={() => setScanning(false)} onFound={(product) => {
+      setScanning(false)
+      setEntry({ source: 'barcode', title: product.name, foods: [{ name: product.name, grams: product.grams, per100g: product.per100g, question: null, uncertain: false }] })
+    }} />}
     {busy && <p role="status" className="mt-4 text-sm text-muted">{busy}</p>}
     {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
-    {scan && scan.foods.length > 0 && <MealReview scan={scan} date={date} targets={targets} onCancel={() => { setScan(null); setPhoto(null) }} onSaved={(meal) => { setScan(null); setPhoto(null); onSaved(meal) }} />}
+    {entry && <MealReview key={entry.source + entry.title} foods={entry.foods} source={entry.source} defaultTitle={entry.title} date={date} targets={targets}
+      onCancel={() => setEntry(null)} onSaved={(meal) => { setEntry(null); onSaved(meal) }} />}
+    {!entry && scan && scan.foods.length > 0 && <MealReview foods={scan.foods.map((food) => ({ ...food, uncertain: food.portion_uncertain }))} note={scan.note} source="photo"
+      defaultTitle="Meine Mahlzeit" date={date} targets={targets}
+      onCancel={() => { setScan(null); setPhoto(null) }} onSaved={(meal) => { setScan(null); setPhoto(null); onSaved(meal) }} />}
   </section>
 }

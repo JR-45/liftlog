@@ -30,7 +30,7 @@ Alle Tabellen erhalten RLS. `anon` erhält keine Rechte. Fachliche RPCs sind `se
 - Standardlimit: 20 Versuche pro Nutzer und UTC-Tag, mindestens zehn Sekunden Abstand. Fehlgeschlagene Anbieteraufrufe zählen mit. Keine automatischen kostenpflichtigen Wiederholungen.
 - Kalenderdaten kommen vom Gerät. Das Tagebuch kann auch vergangene Tage anzeigen. Verbrauch, Rest und Überschreitung werden getrennt ausgewiesen; Prozentwerte werden nicht bei 100 % abgeschnitten.
 - Kalorien- und Proteinvorschläge verwenden ausschließlich die bestehende `analyzeBody`-Logik. Fehlende Profilwerte werden benannt und können im Profil ergänzt werden. Alle fünf Ziele können ohne Profilberechnung manuell gesetzt werden. Keine stillen Standardziele für Fett, Kohlenhydrate oder Ballaststoffe.
-- Keine Aussage über genaue Mikronährstoffabdeckung, keine automatische Diagnose, kein Barcode-Scanner und keine externe Lebensmitteldatenbank in dieser Version.
+- Keine Aussage über genaue Mikronährstoffabdeckung, keine automatische Diagnose, keine Mikronährstoffe aus dem Foto.
 
 ## Zugangsdaten und Betrieb
 
@@ -73,3 +73,12 @@ Grundlagen: [Gemini-Bildanalyse](https://ai.google.dev/gemini-api/docs/image-und
 - Die Onboarding-Tests entsprechen auf ausdrücklichen Nutzerwunsch dem aktuellen `main`. Die ältere lokale 120-Minuten-Änderung bleibt separat gesichert und ist kein Bestandteil des Foodscanner-PRs.
 - Playwright prüft Ziele, Einwilligung/Widerruf, Bildverarbeitung, Rückfragen, Korrektur, Speicherung, erneutes Laden sowie 320/390/768/1024/1440 px ohne horizontalen Überlauf oder JavaScript-Fehler. Dark- und Light-Ansichten wurden visuell geprüft.
 - Die echte lokale Edge Function prüft Anmeldung und Einwilligung und meldet den fehlenden Gemini-Key korrekt. Der erfolgreiche Analyseablauf verwendet im Browser eine ausdrücklich simulierte KI-Antwort; ein echter Gemini-Smoke-Test steht bis zur Einrichtung des Keys aus.
+
+## Weitere Wege zum Eintragen
+
+Neben dem Foto gibt es **Barcode** und **Manuell**:
+
+- **Barcode:** Die Kamera erkennt EAN-8, EAN-13, UPC-A und UPC-E mit `barcode-detector` (zxing-wasm). Die WASM-Datei wird mit der App ausgeliefert, nicht von einem CDN geladen. Die Nummer lässt sich auch eintippen. Nährwerte und Portion kommen von [Open Food Facts](https://world.openfoodfacts.org) (offene Datenbank, ohne Schlüssel, übertragen wird nur die Nummer). Fehlende Werte füllt man im Formular selbst aus. Logik: `src/domain/barcode.ts`.
+- **Manuell:** leeres Formular mit Name, Menge und Nährwerten pro 100 g.
+
+Einträge aus Barcode und Manuell sind keine Schätzungen (`estimated = false`) und brauchen keine Bestätigung.

@@ -144,7 +144,7 @@ online noch nicht gibt.
 
 ## Gemini-Foodscanner
 
-Der Tab „Ernährung“ bietet Fotoanalyse, korrigierbare Lebensmittel und Portionen, ein privates Ernährungstagebuch sowie Tagesziele für Kalorien, Protein, Kohlenhydrate, Fett und Ballaststoffe. Alle Fotoangaben sind Schätzungen. Gemini-Zugangsdaten liegen ausschließlich in einer Supabase Edge Function.
+Der Tab „Ernährung“ bietet Eintragen per Foto, Barcode (Open Food Facts) oder von Hand, Fotoanalyse, korrigierbare Lebensmittel und Portionen, ein privates Ernährungstagebuch sowie Tagesziele für Kalorien, Protein, Kohlenhydrate, Fett und Ballaststoffe. Alle Fotoangaben sind Schätzungen. Gemini-Zugangsdaten liegen ausschließlich in einer Supabase Edge Function.
 
 Oben stehen die Tagesziele mit dem, was noch offen ist. Sie werden aus dem Profil berechnet (Kalorien und Protein aus der Körperanalyse, Fett 25 % der Kalorien, Kohlenhydrate der Rest, Ballaststoffe 14 g je 1000 kcal) und ändern sich mit, bis man eigene Ziele speichert. Darunter lassen sich Supplemente und Vitamine pro Tag abhaken (Tabellen `supplements` und `supplement_intakes`). Erreichte Ziele und vollständig abgehakte Supplemente bekommen den DONE-Stempel.
 
