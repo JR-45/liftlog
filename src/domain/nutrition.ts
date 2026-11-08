@@ -70,6 +70,7 @@ export function formatNutrition(value: number, key: Nutrient): string {
 
 export function profileNutritionSuggestion(profile: {
   heightCm: number | null; sex: Sex | null; birthYear: number | null; activityLevel: ActivityLevel | null; goal: Goal
+  targetWeightKg?: number | null
   measurements: { date: string; weightKg: number | null }[]
 }, today: string): { kcal: number | null; protein: number | null; missing: string[] } {
   const weightKg = profile.measurements.filter((item) => item.date <= today && item.weightKg !== null).sort((a, b) => a.date.localeCompare(b.date)).at(-1)?.weightKg ?? null
@@ -79,7 +80,7 @@ export function profileNutritionSuggestion(profile: {
   ].filter(([value]) => value === null).map(([, label]) => String(label))
   const analysis = analyzeBody({
     weightKg, heightCm: profile.heightCm, sex: profile.sex, age: ageFromBirthYear(profile.birthYear, today),
-    activity: profile.activityLevel, goal: profile.goal, targetWeightKg: null, bodyFatPct: null, neckCm: null, waistCm: null, hipsCm: null,
+    activity: profile.activityLevel, goal: profile.goal, targetWeightKg: profile.targetWeightKg ?? null, bodyFatPct: null, neckCm: null, waistCm: null, hipsCm: null,
   })
   return { kcal: analysis.targetKcal, protein: analysis.proteinG, missing }
 }

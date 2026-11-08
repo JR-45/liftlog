@@ -98,9 +98,21 @@ export function mifflinBmr(sex: Sex, weightKg: number, heightCm: number, age: nu
   return Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + (sex === 'male' ? 5 : -161))
 }
 
+/**
+ * Ziel, nach dem Kalorien und Eiweiß gerechnet werden. Ein Zielgewicht mindestens 1 kg unter dem
+ * Gewicht heißt abnehmen, eins mindestens 1 kg darüber zunehmen, egal welches Trainingsziel gewählt ist.
+ */
+export function effectiveGoal(goal: Goal, weightKg: number | null, targetWeightKg: number | null): Goal {
+  if (weightKg === null || !validWeight(targetWeightKg)) return goal
+  if (weightKg - targetWeightKg >= 1) return 'cut'
+  if (targetWeightKg - weightKg >= 1 && (goal === 'cut' || goal === 'fitness')) return 'hypertrophy'
+  return goal
+}
+
 export function analyzeBody(input: BodyInput): BodyAnalysis {
-  const { weightKg, heightCm, sex, age, activity, goal, targetWeightKg, neckCm, waistCm, hipsCm } = input
+  const { weightKg, heightCm, sex, age, activity, targetWeightKg, neckCm, waistCm, hipsCm } = input
   const weight = validWeight(weightKg) ? weightKg : null
+  const goal = effectiveGoal(input.goal, weight, targetWeightKg)
   const height = validHeight(heightCm) ? heightCm : null
   const meters = height === null ? null : height / 100
 

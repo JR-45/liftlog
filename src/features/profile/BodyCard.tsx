@@ -1,6 +1,7 @@
 import { type FormEvent, useMemo, useState } from 'react'
 import { type ActivityLevel, ageFromBirthYear, analyzeBody, type Rating, type Sex } from '../../domain/body'
 import { PlusIcon, TrashIcon } from '../../lib/icons'
+import { enableProfileTargets } from '../nutrition/api'
 import {
   deleteMeasurement,
   type BodyMeasurement,
@@ -199,6 +200,8 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
     setError(null)
     try {
       await saveProfile(next)
+      // Neues Zielgewicht: Ernährung rechnet die Tagesziele wieder aus dem Profil.
+      if (next.targetWeightKg !== profile.targetWeightKg) await enableProfileTargets()
       onProfileChange(next)
       setShowDetails(false)
       flash('Angaben gespeichert')
@@ -246,7 +249,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
               ? undefined
               : diff === 0
                 ? 'Ziel erreicht'
-                : `${diff > 0 ? '+' : ''}${formatNumber(diff)} kg zum Ziel`
+                : `${formatNumber(Math.abs(diff))} kg ${diff > 0 ? 'abnehmen' : 'zunehmen'}`
           }
           noteClass={diff === 0 ? 'text-success' : 'text-accent-ink'}
         />

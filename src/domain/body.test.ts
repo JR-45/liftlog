@@ -51,8 +51,9 @@ describe('analyzeBody', () => {
     expect(result.ffmi).not.toBeNull()
     expect(result.bmrKcal).toBe(1780)
     expect(result.tdeeKcal).toBe(Math.round(1780 * 1.55))
-    expect(result.targetKcal).toBe(Math.round(1780 * 1.55) + 300)
-    expect(result.proteinG).toBe(144)
+    // Zielgewicht 78 kg liegt unter 80 kg: Defizit trotz Ziel Muskelaufbau.
+    expect(result.targetKcal).toBe(Math.round(1780 * 1.55) - 500)
+    expect(result.proteinG).toBe(176)
     expect(result.diffToTargetKg).toBe(2)
   })
 
@@ -84,6 +85,22 @@ describe('analyzeBody', () => {
     const result = analyzeBody({ ...base, goal: 'cut' })
     expect(result.targetKcal).toBe(Math.round(1780 * 1.55) - 500)
     expect(result.proteinG).toBe(176)
+  })
+
+  it('nutzt ohne Zielgewicht das Trainingsziel', () => {
+    const result = analyzeBody({ ...base, targetWeightKg: null })
+    expect(result.targetKcal).toBe(Math.round(1780 * 1.55) + 300)
+    expect(result.proteinG).toBe(144)
+  })
+
+  it('rechnet mit Überschuss, wenn das Zielgewicht über dem Gewicht liegt', () => {
+    const result = analyzeBody({ ...base, goal: 'cut', targetWeightKg: 85 })
+    expect(result.targetKcal).toBe(Math.round(1780 * 1.55) + 300)
+    expect(result.proteinG).toBe(144)
+  })
+
+  it('folgt dem Trainingsziel, wenn das Zielgewicht fast erreicht ist', () => {
+    expect(analyzeBody({ ...base, targetWeightKg: 79.5 }).targetKcal).toBe(Math.round(1780 * 1.55) + 300)
   })
 
   it('ignoriert unrealistische Größe', () => {
