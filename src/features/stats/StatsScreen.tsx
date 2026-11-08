@@ -8,6 +8,7 @@ import { loadScheduledDays, loadTrainedDates, type PlanDay } from '../workout/ap
 import { deleteDayMark, loadDayMarks, loadExportRows, saveDayMark } from './api'
 import { ExerciseProgressCard } from './ExerciseProgressCard'
 import { AttendanceChart } from './AttendanceChart'
+import { NAV_BUTTON } from '../../lib/ui'
 
 const WEEKDAY_HEADERS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const MONTH_FORMAT = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' })
@@ -45,7 +46,7 @@ function DayCell({
   const style: Record<DayStatus, string> = {
     trained: selected
       ? 'bg-neon font-bold text-black ring-2 ring-line shadow-sm'
-      : 'bg-success-fill font-semibold text-black shadow-sm shadow-[#30D158]/20',
+      : 'bg-success-fill font-semibold text-black shadow-sm shadow-success/20',
     missed: 'bg-danger/15 text-danger',
     marked: 'bg-control-hover font-medium text-foreground',
     rest: 'text-muted',
@@ -211,7 +212,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
         <div className="rounded-2xl border border-line/[0.08] bg-surface p-3.5">
           <div className="flex items-center justify-between">
             <button
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-control text-foreground transition-transform active:scale-95 disabled:opacity-25"
+              className={NAV_BUTTON}
               type="button"
               aria-label="Vorheriger Monat"
               disabled={shownIndex <= firstIndex}
@@ -221,7 +222,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
             </button>
             <span className="font-semibold tracking-tight text-foreground">{MONTH_FORMAT.format(new Date(year, month, 1))}</span>
             <button
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-control text-foreground transition-transform active:scale-95 disabled:opacity-25"
+              className={NAV_BUTTON}
               type="button"
               aria-label="Nächster Monat"
               disabled={shownIndex >= currentIndex}

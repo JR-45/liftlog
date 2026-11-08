@@ -5,7 +5,8 @@ import type { Json } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import { loadProfile } from '../profile/api'
 
-export type NutritionSettings = { targets: NutritionTargets; consent: boolean }
+/** fromProfile: Ziele werden live aus dem Profil berechnet, gespeicherte eigene Ziele gelten dann nicht. */
+export type NutritionSettings = { targets: NutritionTargets; consent: boolean; fromProfile: boolean }
 
 export async function loadNutrition(date: string): Promise<{ settings: NutritionSettings; meals: Meal[] }> {
   const [settings, meals] = await Promise.all([
@@ -21,7 +22,7 @@ export async function loadNutrition(date: string): Promise<{ settings: Nutrition
     meal_items: (Nutrition & { name: string; grams: number; estimated: boolean; position: number })[]
   }[]
   return {
-    settings: { targets, consent: settings.data?.photo_consent_version === FOOD_CONSENT_VERSION },
+    settings: { targets, consent: settings.data?.photo_consent_version === FOOD_CONSENT_VERSION, fromProfile: settings.data?.targets_from_profile ?? true },
     meals: rows.map((row) => ({
       id: row.id, consumed_on: row.consumed_on, title: row.title,
       items: row.meal_items.sort((a, b) => a.position - b.position).map((item) => ({
@@ -34,7 +35,13 @@ export async function loadNutrition(date: string): Promise<{ settings: Nutrition
 
 export async function saveNutritionTargets(targets: NutritionTargets): Promise<void> {
   if (!validateTargets(targets)) throw new Error('Bitte alle fünf Tagesziele prüfen.')
-  const { error } = await supabase.from('nutrition_settings').upsert(targets, { onConflict: 'user_id' })
+  const { error } = await supabase.from('nutrition_settings').upsert({ ...targets, targets_from_profile: false }, { onConflict: 'user_id' })
+  if (error) throw error
+}
+
+/** Schaltet zurück auf Ziele aus dem Profil. Die eigenen Werte bleiben gespeichert. */
+export async function enableProfileTargets(): Promise<void> {
+  const { error } = await supabase.from('nutrition_settings').upsert({ targets_from_profile: true }, { onConflict: 'user_id' })
   if (error) throw error
 }
 
@@ -80,3 +87,35 @@ export async function loadNutritionProfile(user: User) {
   return loadProfile(user, 3)
 }
 
+
+export type Supplement = { id: string; name: string; dose: string | null }
+
+/** Liste der Supplemente und welche davon am Tag schon abgehakt sind. */
+export async function loadSupplements(date: string): Promise<{ list: Supplement[]; taken: Set<string> }> {
+  const [list, intakes] = await Promise.all([
+    supabase.from('supplements').select('id, name, dose').order('created_at'),
+    supabase.from('supplement_intakes').select('supplement_id').eq('taken_on', date),
+  ])
+  if (list.error) throw list.error
+  if (intakes.error) throw intakes.error
+  return { list: list.data, taken: new Set(intakes.data.map((row) => row.supplement_id)) }
+}
+
+export async function addSupplement(name: string, dose: string | null): Promise<Supplement> {
+  const { data, error } = await supabase.from('supplements').insert({ name, dose }).select('id, name, dose').single()
+  if (error) throw error
+  return data
+}
+
+export async function removeSupplement(id: string): Promise<void> {
+  const { error } = await supabase.from('supplements').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** Haken setzen legt eine Zeile an, Haken entfernen löscht sie. Doppelt setzen ist harmlos. */
+export async function setSupplementTaken(id: string, date: string, taken: boolean): Promise<void> {
+  const { error } = taken
+    ? await supabase.from('supplement_intakes').upsert({ supplement_id: id, taken_on: date }, { onConflict: 'supplement_id,taken_on', ignoreDuplicates: true })
+    : await supabase.from('supplement_intakes').delete().eq('supplement_id', id).eq('taken_on', date)
+  if (error) throw error
+}

@@ -115,14 +115,14 @@ isOneToOne: false
                   ]
                 },"nutrition_settings": {
                   Row: {
-                    "carbs": number | null,"fat": number | null,"fiber": number | null,"kcal": number | null,"photo_consent_at": string | null,"photo_consent_version": string | null,"protein": number | null,"user_id": string
+                    "carbs": number | null,"fat": number | null,"fiber": number | null,"kcal": number | null,"photo_consent_at": string | null,"photo_consent_version": string | null,"protein": number | null,"targets_from_profile": boolean,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"user_id"?: string
+                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"targets_from_profile"?: boolean,"user_id"?: string
                   }
                   Update: {
-                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"user_id"?: string
+                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"targets_from_profile"?: boolean,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -212,6 +212,40 @@ isOneToOne: false
       referencedRelation: "workouts"
       referencedColumns: ["id","user_id"]
     }
+                  ]
+                },"supplement_intakes": {
+                  Row: {
+                    "supplement_id": string,"taken_on": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "supplement_id": string,"taken_on": string,"user_id"?: string
+                  }
+                  Update: {
+                    "supplement_id"?: string,"taken_on"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "supplement_intakes_supplement_id_user_id_fkey"
+      columns: ["supplement_id","user_id"]
+isOneToOne: false
+      referencedRelation: "supplements"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"supplements": {
+                  Row: {
+                    "created_at": string,"dose": string | null,"id": string,"name": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"dose"?: string | null,"id"?: string,"name": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"dose"?: string | null,"id"?: string,"name"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
                   ]
                 },"training_plan_settings": {
                   Row: {

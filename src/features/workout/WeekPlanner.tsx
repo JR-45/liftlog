@@ -1,12 +1,12 @@
 import type { ScheduledDay } from '../../domain/week'
 import { shiftDate, weekStart } from '../../domain/week'
-import { CheckIcon } from '../../lib/icons'
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from '../../lib/icons'
+import { NAV_BUTTON } from '../../lib/ui'
 import type { PlanDay, WeekWorkout } from './api'
 
 const DAY = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 const SHORT = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' })
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-const NAV = 'min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground disabled:opacity-40'
 const LINK = 'min-h-11 px-2 text-sm font-medium text-muted disabled:opacity-40'
 
 export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dirty, busy, onDate, onChange, onSave, onDiscard, onTemplate }: {
@@ -18,12 +18,12 @@ export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dir
   const start = weekStart(selectedDate)
   return <section aria-label="Wochenplanung" className="mt-4">
     <div className="flex items-center justify-between gap-2">
-      <button className={NAV} type="button" aria-label="Vorherige Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, -7))}>‹</button>
+      <button className={NAV_BUTTON} type="button" aria-label="Vorherige Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, -7))}><ChevronLeftIcon className="h-5 w-5" /></button>
       <div className="min-w-0 text-center">
-        <h2 className="font-semibold tracking-tight text-foreground">Deine Wochenplanung</h2>
+        <h2 className="text-xl">Deine Wochenplanung</h2>
         <p className="text-sm tabular-nums text-muted">{SHORT.format(new Date(`${start}T12:00:00`))} – {SHORT.format(new Date(`${shiftDate(start, 6)}T12:00:00`))}</p>
       </div>
-      <button className={NAV} type="button" aria-label="Nächste Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, 7))}>›</button>
+      <button className={NAV_BUTTON} type="button" aria-label="Nächste Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, 7))}><ChevronRightIcon className="h-5 w-5" /></button>
     </div>
     {weekStart(today) !== start && (
       <div className="mt-2 text-center">

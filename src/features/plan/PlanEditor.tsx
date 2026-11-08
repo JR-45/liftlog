@@ -62,7 +62,7 @@ export function PlanEditor({ hasPlan, onSaved }: { hasPlan: boolean; onSaved: ()
   return (
     <section className="mt-4">
       {hasPlan
-        ? <h2 className="mt-4 border-t border-line/[0.08] pt-6 font-semibold tracking-tight text-foreground">Wochenvorlage</h2>
+        ? <h2 className="mt-4 border-t border-line/[0.08] pt-6 text-xl">Wochenvorlage</h2>
         : <h2 className="text-xl font-bold tracking-tight text-foreground">Dein erster Trainingsplan</h2>}
       {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
       {loading ? <p className="mt-4 text-sm text-muted">Plan wird geladen …</p> : loadFailed ? null : (

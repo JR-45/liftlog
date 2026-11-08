@@ -37,7 +37,6 @@ type Props = {
   defaultWeeklyTarget: number
   onAvatarChange: (avatarUrl: string | null) => void
   onNameChange: (displayName: string) => void
-  onSignOut: () => void
 }
 
 /** Lädt Profil und Profilbild aus der Datenbank und zeigt danach die Ansicht. */
@@ -64,9 +63,9 @@ export function ProfileScreen(props: Props) {
   if (failed) {
     return (
       <div className="mt-6">
-        <p role="alert" className="text-sm text-red-300">Dein Profil konnte nicht geladen werden.</p>
+        <p role="alert" className="text-sm text-danger">Dein Profil konnte nicht geladen werden.</p>
         <button
-          className="mt-2 py-2 text-sm text-neutral-200 underline"
+          className="mt-2 min-h-11 text-sm font-medium text-accent-ink"
           type="button"
           onClick={() => {
             setFailed(false)
@@ -78,7 +77,7 @@ export function ProfileScreen(props: Props) {
       </div>
     )
   }
-  if (loaded === null) return <p className="mt-6 text-sm text-neutral-400">Profil wird geladen …</p>
+  if (loaded === null) return <p className="mt-6 text-sm text-muted">Profil wird geladen …</p>
   return <ProfileView {...props} initialProfile={loaded.profile} initialAvatar={loaded.avatar} />
 }
 
@@ -87,7 +86,6 @@ function ProfileView({
   today,
   onAvatarChange,
   onNameChange,
-  onSignOut,
   initialProfile,
   initialAvatar,
 }: Props & { initialProfile: UserProfile; initialAvatar: string | null }) {
@@ -368,7 +366,7 @@ function ProfileView({
       {/* 2. Wochenziel mit Serie */}
       <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Wochenziel</span>
+          <h2 className="text-xl">Wochenziel</h2>
           <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-success">
             {stats.activeWeeksStreak} {stats.activeWeeksStreak === 1 ? 'Woche' : 'Wochen'} Serie
           </span>
@@ -398,7 +396,7 @@ function ProfileView({
                 <TrophyIcon className="h-4 w-4" />
               </span>
               <div>
-                <h3 className="text-base font-bold tracking-tight text-foreground">Persönliche Rekorde (PRs)</h3>
+                <h3 className="text-xl font-bold tracking-tight text-foreground">Persönliche Rekorde (PRs)</h3>
                 <p className="text-xs text-muted">Schwerster Satz & geschätztes 1RM je Übung</p>
               </div>
             </div>
@@ -454,22 +452,6 @@ function ProfileView({
 
       {/* 5. Datenexport. Die Pausenlänge wählst du direkt in der Pausenleiste. */}
       <ExportCard today={today} />
-
-      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">{user.email}</p>
-            <p className="text-xs text-muted">Angemeldetes Konto</p>
-          </div>
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="min-h-11 shrink-0 rounded-xl bg-danger/15 px-4 text-sm font-semibold text-danger transition-colors hover:bg-danger/25 active:scale-95"
-          >
-            Abmelden
-          </button>
-        </div>
-      </div>
 
       {user.email && <DeleteAccountCard email={user.email} />}
     </section>

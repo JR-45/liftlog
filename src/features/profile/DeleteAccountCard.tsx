@@ -33,7 +33,7 @@ export function DeleteAccountCard({ email }: { email: string }) {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold text-danger underline underline-offset-2"
+            className="min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold text-danger"
           >
             Löschen …
           </button>

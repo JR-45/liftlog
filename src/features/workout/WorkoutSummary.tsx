@@ -30,7 +30,7 @@ export function WorkoutSummary({ summary, finished }: Props) {
             <TrophyIcon className="h-4 w-4" />
           </span>
           <div>
-            <h3 className="text-base font-bold tracking-tight text-foreground">
+            <h3 className="text-xl font-bold tracking-tight text-foreground">
               {finished ? 'Training abgeschlossen' : 'Heutige Bilanz'}
             </h3>
             <p className="text-xs text-muted">

@@ -236,7 +236,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
   return (
     <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
       <div>
-        <h3 className="text-base font-bold tracking-tight text-foreground">Körperdaten</h3>
+        <h3 className="text-xl font-bold tracking-tight text-foreground">Körperdaten</h3>
         <p className="text-xs text-muted">Gewicht, Umfänge und daraus berechnete Werte</p>
       </div>
 
@@ -341,7 +341,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
 
         <button
           type="button"
-          className="min-h-11 text-sm text-muted underline"
+          className="min-h-11 text-sm font-medium text-accent-ink"
           aria-expanded={showCircumferences}
           onClick={() => setShowCircumferences((current) => !current)}
         >

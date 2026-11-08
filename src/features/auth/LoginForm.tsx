@@ -5,7 +5,7 @@ import { ACCOUNT_DELETED_FLAG, resendConfirmation, sendPasswordReset, signIn, si
 
 const inputClass =
   'mt-1.5 w-full rounded-xl border border-transparent bg-control px-3.5 py-3 text-base text-foreground outline-none transition-colors focus:border-neon focus:bg-control-hover'
-const linkClass = 'min-h-11 text-sm font-semibold text-accent-ink underline underline-offset-2'
+const linkClass = 'min-h-11 text-sm font-semibold text-accent-ink'
 
 type Mode = 'login' | 'signup' | 'forgot' | 'check-signup' | 'check-reset'
 
