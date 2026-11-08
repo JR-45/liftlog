@@ -10,6 +10,8 @@ export type ExportRow = {
   reps: number | null
   duration_seconds: number | null
   distance_km?: number | null
+  /** Satz gehört zu einem Zirkel: Er zählt als abgehakte Runde, nicht als Wiederholungen. */
+  is_round?: boolean
 }
 
 const HEADER = ['Datum', 'Trainingstag', 'Übung', 'Satz', 'Gewicht (kg)', 'Gewichtshilfe', 'Wiederholungen', 'Dauer (Sek.)']

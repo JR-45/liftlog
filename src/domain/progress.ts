@@ -45,6 +45,7 @@ export function buildExerciseProgress(rows: ExportRow[], exerciseName: string): 
   const latestRow = matching.reduce((latest, current) =>
     current.performed_on >= latest.performed_on ? current : latest,
   )
+  if (latestRow.is_round) return buildRoundProgress(matching.filter((row) => row.is_round), exerciseName)
   const isDuration = latestRow.duration_seconds !== null
   const isWeighted = !isDuration && latestRow.weight_kg !== null
   const isAssisted = isWeighted && latestRow.is_assisted
@@ -149,6 +150,37 @@ export function buildExerciseProgress(rows: ExportRow[], exerciseName: string): 
   }
 }
 
+/** Zirkel: pro Training zählt, wie viele Runden abgehakt wurden. */
+function buildRoundProgress(rows: ExportRow[], exerciseName: string): ExerciseProgress {
+  const counts = new Map<string, number>()
+  for (const row of rows) counts.set(row.performed_on, (counts.get(row.performed_on) ?? 0) + 1)
+  const dates = [...counts.keys()].sort()
+  const values = dates.map((date) => counts.get(date)!)
+  const min = Math.min(...values)
+  const span = Math.max(...values) - min
+  const points = dates.map((date, index) => ({
+    date,
+    value: values[index],
+    label: formatRoundCount(values[index]),
+    normX: dates.length === 1 ? 0.5 : index / (dates.length - 1),
+    normY: span > 0 ? (values[index] - min) / span : 0.5,
+  }))
+  const diff = values[values.length - 1] - values[0]
+  return {
+    exercise: exerciseName,
+    isAssisted: false,
+    unitLabel: 'Runden',
+    points,
+    latestLabel: points[points.length - 1].label,
+    bestLabel: formatRoundCount(Math.max(...values)),
+    deltaLabel: values.length < 2 ? null : diff === 0 ? '±0' : `${diff > 0 ? '+' : '−'}${formatRoundCount(Math.abs(diff))}`,
+  }
+}
+
+function formatRoundCount(count: number): string {
+  return `${count} ${count === 1 ? 'Runde' : 'Runden'}`
+}
+
 export function buildDayHistory(rows: ExportRow[], date: string): DayHistory | null {
   const dayRows = rows.filter((row) => row.performed_on === date)
   if (dayRows.length === 0) return null
@@ -165,7 +197,7 @@ export function buildDayHistory(rows: ExportRow[], date: string): DayHistory | n
     const unit = sorted.some((s) => (s.duration_seconds ?? 0) >= 120) ? 'minutes' : 'seconds'
     return {
       name,
-      summary: formatPerformance(sorted, unit, name === 'Laufband' ? 'speed' : 'pace'),
+      summary: sorted.every((s) => s.is_round) ? formatRoundCount(sorted.length) : formatPerformance(sorted, unit, name === 'Laufband' ? 'speed' : 'pace'),
     }
   })
 

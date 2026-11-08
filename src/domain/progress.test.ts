@@ -99,3 +99,23 @@ describe('buildDayHistory', () => {
     ])
   })
 })
+
+describe('Zirkel in der Statistik', () => {
+  const round = (performed_on: string, set_number: number): ExportRow => ({
+    performed_on, plan_day: 'Kettlebell', exercise: 'Kettlebell Complex', set_number,
+    weight_kg: null, is_assisted: false, reps: 30, duration_seconds: null, is_round: true,
+  })
+  const rows = [round('2026-11-01', 1), round('2026-11-01', 2), round('2026-11-01', 3), round('2026-11-08', 1), round('2026-11-08', 2), round('2026-11-08', 3), round('2026-11-08', 4), round('2026-11-08', 5)]
+
+  it('zählt Runden pro Training statt Wiederholungen', () => {
+    const progress = buildExerciseProgress(rows, 'Kettlebell Complex')
+    expect(progress?.unitLabel).toBe('Runden')
+    expect(progress?.points.map((point) => point.label)).toEqual(['3 Runden', '5 Runden'])
+    expect(progress?.bestLabel).toBe('5 Runden')
+    expect(progress?.deltaLabel).toBe('+2 Runden')
+  })
+
+  it('zeigt im Tagesverlauf die Runden', () => {
+    expect(buildDayHistory(rows, '2026-11-08')?.exercises).toEqual([{ name: 'Kettlebell Complex', summary: '5 Runden' }])
+  })
+})
