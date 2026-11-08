@@ -1,26 +1,54 @@
-import { computeAthleteStats } from '../../domain/profile'
-import { formatWeight } from '../../domain/sets'
+import { weekStreak } from '../../domain/motivation'
+import { formatRange } from '../../domain/sets'
+import { gymWeeks } from '../../domain/social'
+import { CheckIcon } from '../../lib/icons'
 import { CARD, SECTION_TITLE } from '../../lib/ui'
 import type { SharedOverview } from './api'
 
-/** Nur freigegebenes Profil und Training; private Bereiche werden überhaupt nicht gerendert. */
+const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+const WEEKDAY = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+
+/** Was Follower sehen: wann trainiert wurde und den Plan, wenn er veröffentlicht ist. */
 export function SharedProfileOverview({ overview, today }: { overview: SharedOverview; today: string }) {
-  const profile = overview.profile
-  const stats = computeAthleteStats(overview.sets, today, profile.weeklyTarget)
+  const weeks = gymWeeks(overview.gymDays, today, 4)
+  const thisWeek = weeks[weeks.length - 1].filter((day) => day.trained).length
+  const streak = weekStreak(overview.gymDays, today)
   return <>
-    <div className={CARD}>
-      <h3 className={SECTION_TITLE}>Profilübersicht</h3>
-      {profile.bio && <p className="mt-2 whitespace-pre-wrap break-words text-sm">{profile.bio}</p>}
-      <p className="mt-2 text-sm text-muted">{({ hypertrophy: 'Muskelaufbau', strength: 'Maximalkraft', cut: 'Definition & Fettabbau', fitness: 'Allgemeine Fitness' })[profile.goal]}</p>
-      <p className="mt-3 text-xl font-semibold tabular-nums">{stats.thisWeekWorkouts} / {profile.weeklyTarget} Trainings diese Woche</p>
-      <p className="text-sm text-muted">{stats.activeWeeksStreak} Wochen Serie</p>
-    </div>
-    <div className={CARD}><h3 className={SECTION_TITLE}>Persönliche Rekorde</h3>
-      {!stats.personalRecords.length && <p className="mt-2 text-sm text-muted">Noch keine Rekorde.</p>}
-      <ul className="mt-2 divide-y divide-line/[0.06]">{stats.personalRecords.map(record => <li key={record.name} className="flex justify-between gap-3 py-2 text-sm"><span>{record.name}</span><span className="text-right text-success">{record.maxWeightKg !== null ? `${formatWeight(record.maxWeightKg)} × ${record.bestSetReps}` : `${record.maxRepsOnly} Wdh.`}</span></li>)}</ul>
-      <details className="mt-3"><summary className="min-h-11 cursor-pointer py-2 text-sm text-accent-ink">Trainingsverlauf</summary>
-        <ul className="divide-y divide-line/[0.06]">{overview.sets.map((set, index) => <li key={index} className="py-2 text-sm"><p>{set.performed_on.split('-').reverse().join('.')} · {set.exercise} · Satz {set.set_number}</p><p className="text-muted">{set.weight_kg !== null && `${set.is_assisted ? 'Unterstützung ' : ''}${formatWeight(set.weight_kg)} · `}{set.reps !== null && `${set.reps} Wdh.`}{set.duration_seconds !== null && `${set.duration_seconds} s`}{set.distance_km !== null && ` · ${set.distance_km} km`}</p></li>)}</ul>
-      </details>
-    </div>
+    <section className={CARD} aria-labelledby="gym-days-heading">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id="gym-days-heading" className={SECTION_TITLE}>Gym-Tage</h3>
+        {streak > 0 && <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">{streak} {streak === 1 ? 'Woche' : 'Wochen'} Serie</span>}
+      </div>
+      <p className="mt-1 text-sm tabular-nums text-muted">{thisWeek} / {overview.profile.weeklyTarget} diese Woche</p>
+      <div className="mt-3 grid grid-cols-7 gap-1.5 text-center text-xs text-muted" aria-hidden="true">{DAYS.map((day) => <span key={day}>{day}</span>)}</div>
+      <ul className="mt-1.5 space-y-1.5" aria-label="Trainingstage der letzten vier Wochen">
+        {weeks.map((week) => <li key={week[0].date} className="grid grid-cols-7 gap-1.5">
+          {week.map((day) => <span key={day.date} aria-label={`${day.date.split('-').reverse().join('.')}: ${day.trained ? 'trainiert' : 'kein Training'}`}
+            className={`flex aspect-square items-center justify-center rounded-lg ${day.trained ? 'bg-success text-black' : day.future ? 'bg-transparent' : 'bg-control'} ${day.date === today ? 'ring-2 ring-neon' : ''}`}>
+            {day.trained && <CheckIcon className="h-4 w-4 stroke-[3]" />}
+          </span>)}
+        </li>)}
+      </ul>
+    </section>
+    {overview.plan && <section className={CARD} aria-labelledby="shared-plan-heading">
+      <h3 id="shared-plan-heading" className={SECTION_TITLE}>Trainingsplan</h3>
+      {!overview.plan.length && <p className="mt-2 text-sm text-muted">Noch kein Plan.</p>}
+      <ul className="mt-2 divide-y divide-line/[0.06]">
+        {overview.plan.map((day) => <li key={day.weekday}>
+          <details>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2">
+              <span className="font-medium text-foreground"><span className="mr-2 text-muted">{WEEKDAY[day.weekday]}</span>{day.name}</span>
+              <span className="text-sm text-muted">{day.exercises.length} {day.exercises.length === 1 ? 'Übung' : 'Übungen'}</span>
+            </summary>
+            <ul className="pb-2 text-sm text-muted">
+              {day.exercises.map((exercise, index) => <li key={index} className="flex justify-between gap-3 py-0.5">
+                <span className="truncate">{exercise.name}</span>
+                <span className="shrink-0 tabular-nums">{formatRange(exercise.setsMin, exercise.setsMax)} × {exercise.repsMin !== null ? formatRange(exercise.repsMin, exercise.repsMax) : `${formatRange(exercise.durationMin, exercise.durationMax)} Sek.`}</span>
+              </li>)}
+            </ul>
+          </details>
+        </li>)}
+      </ul>
+    </section>}
   </>
 }

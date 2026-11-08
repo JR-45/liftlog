@@ -130,3 +130,10 @@ Der echte lokale Browserablauf umfasst registrierte Konten suchen, fremdes Profi
 ## Übergabesperre
 
 Auf ausdrücklichen Nutzerauftrag: PR #48 vorerst nicht mergen und seine Migrationen nicht online einspielen. Kein Commit oder Push bis zu den angekündigten Befehlen. Osman soll während der lokalen Fertigstellung ebenfalls nicht auf `feature/account-privacy` pushen.
+
+## Gym-Tage, Plan und Suche (Migration 20261108200000)
+
+- Angenommene Follower sehen nur noch Anzeigename, Wochenziel und die **Gym-Tage** des letzten Jahres (Datum mit mindestens einem Satz, ohne Inhalte). Die Oberfläche zeigt die letzten vier Wochen und die Serie. Keine Bio, kein Ziel, keine Sätze, Gewichte oder Rekorde.
+- Der **Trainingsplan** (Wochenvorlage) ist nur sichtbar, wenn der Eigentümer „Trainingsplan veröffentlichen“ einschaltet (`social_profiles.share_plan`, Standard aus).
+- Die **Suche** findet nur Benutzernamen, keine Anzeigenamen.
+- Alle Einstellungen liegen hinter dem Zahnrad im Profil: Profil (Name, Benutzername, Motto, Ziel, Wochenziel), Sichtbarkeit (privat/öffentlich, Plan veröffentlichen), Folgeanfragen und „Profil verbergen“. Den Knopf „Profil bearbeiten“ gibt es nicht mehr.

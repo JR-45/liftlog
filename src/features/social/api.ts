@@ -1,4 +1,3 @@
-import type { ExportRow } from '../../domain/export'
 import { socialSearchPattern } from '../../domain/social'
 import { normalizeUsername } from '../../domain/username'
 import { supabase } from '../../lib/supabase'
@@ -12,7 +11,11 @@ export type Person = {
   followers_count: number; relationship: Relationship; following: boolean
 }
 export type PeoplePage = { people: Person[]; hasMore: boolean }
-export type SharedOverview = { profile: Pick<UserProfile, 'displayName' | 'bio' | 'goal' | 'weeklyTarget'>; sets: ExportRow[] }
+/** Was angenommene Follower sehen: Name, Wochenziel, Gym-Tage und den Plan nur, wenn veröffentlicht. */
+export type SharedPlanDay = { weekday: number; name: string; exercises: { name: string; setsMin: number; setsMax: number; repsMin: number | null; repsMax: number | null; durationMin: number | null; durationMax: number | null }[] }
+export type SharedOverview = { profile: { displayName: string; weeklyTarget: number }; gymDays: string[]; plan: SharedPlanDay[] | null }
+/** Eigene Sichtbarkeit: Wer folgen darf und ob der Trainingsplan veröffentlicht ist. */
+export type Sharing = { is_private: boolean; share_plan: boolean }
 export const PEOPLE_PAGE_SIZE = 20
 const DIRECTORY_COLUMNS = 'user_id, display_name, username, avatar, is_private, followers_count'
 type DirectoryPerson = Omit<Person, 'relationship' | 'following'>
@@ -59,14 +62,20 @@ export async function disableSocialProfile(userId: string): Promise<void> {
   if (error) throw error
 }
 
-export async function savePrivacy(userId: string, isPrivate: boolean): Promise<void> {
-  const { error } = await supabase.from('social_profiles').update({ is_private: isPrivate }).eq('user_id', userId)
+export async function loadSharing(userId: string): Promise<Sharing> {
+  const { data, error } = await supabase.from('social_profiles').select('is_private, share_plan').eq('user_id', userId).single()
+  if (error) throw error
+  return data
+}
+
+export async function saveSharing(userId: string, sharing: Sharing): Promise<void> {
+  const { error } = await supabase.from('social_profiles').update(sharing).eq('user_id', userId)
   if (error) throw error
 }
 
 export async function saveUsername(userId: string, input: string): Promise<string> {
   const username = normalizeUsername(input)
-  if (!username) throw new Error('3–40 Zeichen: a–z, Zahlen, Punkt und Unterstrich.')
+  if (!username) throw new Error('Benutzername geht so nicht: 3 bis 40 Zeichen, nur Kleinbuchstaben, Zahlen, Punkt und Unterstrich.')
   const { error } = await supabase.from('social_profiles').update({ username }).eq('user_id', userId)
   if (error?.code === '23505') throw new Error('Dieser Benutzername ist bereits vergeben.')
   if (error) throw new Error('Benutzername konnte nicht gespeichert werden.')
@@ -75,7 +84,7 @@ export async function saveUsername(userId: string, input: string): Promise<strin
 
 export async function saveProfileIdentity(profile: UserProfile, input: string): Promise<string> {
   const username = normalizeUsername(input)
-  if (!username) throw new Error('3–40 Zeichen: a–z, Zahlen, Punkt und Unterstrich.')
+  if (!username) throw new Error('Benutzername geht so nicht: 3 bis 40 Zeichen, nur Kleinbuchstaben, Zahlen, Punkt und Unterstrich.')
   const { error } = await supabase.rpc('save_profile_identity', {
     p_username: username, p_name: profile.displayName, p_bio: profile.bio, p_goal: profile.goal, p_weekly_target: profile.weeklyTarget,
   })

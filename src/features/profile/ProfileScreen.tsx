@@ -3,13 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportRow } from '../../domain/export'
 import { computeAthleteStats } from '../../domain/profile'
 import { formatWeight } from '../../domain/sets'
-import { CameraIcon, CheckIcon, SettingsIcon, TrophyIcon } from '../../lib/icons'
-import { NAV_BUTTON, SECONDARY_BUTTON } from '../../lib/ui'
+import { CameraIcon, CheckIcon, ChevronLeftIcon, SettingsIcon, TrophyIcon } from '../../lib/icons'
+import { CARD, NAV_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
 import { loadExportRows } from '../stats/api'
 import { ExportCard } from '../stats/ExportCard'
 import { ConnectionsSummary } from '../social/ConnectionsSummary'
 import { SocialNavigator, type SocialRoute } from '../social/SocialNavigator'
-import { loadAccount, saveProfileIdentity, type Person, type SocialTab } from '../social/api'
+import { disableSocialProfile, enableSocialProfile, loadAccount, saveProfileIdentity, type Person, type SocialTab } from '../social/api'
+import { SocialSettings } from '../social/AccountSettings'
 import { DeleteAccountCard } from './DeleteAccountCard'
 import { BodyCard } from './BodyCard'
 import {
@@ -210,6 +211,16 @@ function ProfileView({
     }
   }
 
+  function openSettings() {
+    setNameDraft(profile.displayName)
+    setUsernameDraft(account?.username ?? '')
+    setBioDraft(profile.bio)
+    setGoalDraft(profile.goal)
+    setWeeklyDraft(profile.weeklyTarget)
+    setError(null)
+    setEditingProfile(true)
+  }
+
   const visiblePrs = showAllPrs ? stats.personalRecords : stats.personalRecords.slice(0, 5)
 
   if (socialRoute) return <SocialNavigator userId={user.id} today={today} account={account} initialRoute={socialRoute} onAccountChange={setAccount} onEnable={() => saveProfile(profile)}
@@ -222,12 +233,89 @@ function ProfileView({
       })
     }} />
 
+  // Eine Einstellungsseite für Profil und Sichtbarkeit, geöffnet über das Zahnrad.
+  if (editingProfile) return <section className="mt-5 space-y-4" aria-label="Einstellungen">
+    <div className="flex items-center gap-3">
+      <button type="button" className={NAV_BUTTON} aria-label="Zurück zum Profil" onClick={() => { setEditingProfile(false); setError(null) }}><ChevronLeftIcon className="h-5 w-5" /></button>
+      <h1 className={`min-w-0 flex-1 text-center ${SECTION_TITLE}`}>Einstellungen</h1><span className="w-11" aria-hidden="true" />
+    </div>
+    <section className={CARD} aria-labelledby="profile-settings-heading">
+      <h2 id="profile-settings-heading" className={SECTION_TITLE}>Profil</h2>
+      <form onSubmit={(event) => void handleSaveIdentity(event)} className="mt-3 space-y-3">
+            {account && <label className="block text-sm font-medium text-foreground/85">Benutzername
+              <input className={`${fieldClass} mt-1`} value={usernameDraft} maxLength={40} autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                onChange={event => setUsernameDraft(event.target.value)} placeholder="dein.benutzername" />
+            </label>}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-foreground/85">
+                Anzeigename
+                <input
+                  className={`${fieldClass} mt-1`}
+                  value={nameDraft}
+                  maxLength={40}
+                  onChange={(event) => setNameDraft(event.target.value)}
+                  placeholder="Dein Name"
+                />
+              </label>
+              <label className="block text-sm font-medium text-foreground/85">
+                Trainingsziel
+                <select
+                  className={`${fieldClass} mt-1`}
+                  value={goalDraft}
+                  onChange={(event) => setGoalDraft(event.target.value as TrainingGoal)}
+                >
+                  <option value="hypertrophy">Muskelaufbau</option>
+                  <option value="strength">Maximalkraft</option>
+                  <option value="cut">Definition & Fettabbau</option>
+                  <option value="fitness">Allgemeine Fitness</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[1fr_11rem]">
+              <label className="block text-sm font-medium text-foreground/85">
+                Motto / Trainings-Split
+                <input
+                  className={`${fieldClass} mt-1`}
+                  value={bioDraft}
+                  maxLength={80}
+                  onChange={(event) => setBioDraft(event.target.value)}
+                  placeholder="z. B. Push / Pull / Beine · Fokus Progression"
+                />
+              </label>
+              <label className="block text-sm font-medium text-foreground/85">
+                Wochenziel (Tage)
+                <select
+                  className={`${fieldClass} mt-1`}
+                  value={weeklyDraft}
+                  onChange={(event) => setWeeklyDraft(Number(event.target.value))}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7].map((days) => (
+                    <option key={days} value={days}>
+                      {days}× pro Woche
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+            <button type="submit" disabled={busy} className={`${PRIMARY_BUTTON} w-full`}>{busy ? 'Wird gespeichert …' : 'Speichern'}</button>
+          </form>
+    </section>
+    <SocialSettings key={account ? 'visible' : 'hidden'} account={account}
+      onEnable={async () => { await saveProfile(profile); await enableSocialProfile(); setAccount(await loadAccount(user.id, user.id)) }}
+      onHide={async () => { await disableSocialProfile(user.id); setAccount(null) }}
+      onSaved={isPrivate => setAccount(current => current && ({ ...current, is_private: isPrivate }))}
+      onOpenPerson={id => { setEditingProfile(false); setSocialRoute({ kind: 'profile', id }) }} />
+  </section>
+
   return (
     <section className="mt-5 space-y-5">
       {/* 1. Athleten-Header mit Profilbild-Upload */}
       <div className="relative rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
         <button id="profile-settings" type="button" className={`${NAV_BUTTON} absolute right-4 top-4`} aria-label="Profileinstellungen öffnen"
-          onClick={() => { connectionEntry.current = null; setSocialRoute({ kind: 'settings' }) }}><SettingsIcon /></button>
+          onClick={openSettings}><SettingsIcon /></button>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
@@ -292,19 +380,8 @@ function ProfileView({
             connectionEntry.current = { tab, scroll: window.scrollY }
             setSocialRoute({ kind: 'connections', id: user.id, tab, name: profile.displayName })
           }} />
-          <button
-            type="button"
-            onClick={() => {
-              setNameDraft(profile.displayName)
-              setUsernameDraft(account?.username ?? '')
-              setBioDraft(profile.bio)
-              setGoalDraft(profile.goal)
-              setWeeklyDraft(profile.weeklyTarget)
-              setEditingProfile((current) => !current)
-            }}
-            className={`${SECONDARY_BUTTON} w-full`}
-          >
-            {editingProfile ? 'Schließen' : 'Profil bearbeiten'}
+          <button type="button" className={`${SECONDARY_BUTTON} w-full`} onClick={() => { connectionEntry.current = null; setSocialRoute({ kind: 'search' }) }}>
+            Mitglieder suchen
           </button>
         </div>
 
@@ -320,84 +397,6 @@ function ProfileView({
           </p>
         )}
 
-        {editingProfile && (
-          <form onSubmit={(event) => void handleSaveIdentity(event)} className="mt-4 space-y-3 border-t border-line/[0.08] pt-4">
-            {account && <label className="block text-sm font-medium text-foreground/85">Benutzername
-              <input className={`${fieldClass} mt-1`} value={usernameDraft} minLength={3} maxLength={40} required autoCapitalize="none" autoCorrect="off" spellCheck={false}
-                onChange={event => setUsernameDraft(event.target.value)} placeholder="dein.benutzername" />
-              <span className="mt-1 block text-xs text-muted">Eindeutig · 3–40 Zeichen: a–z, Zahlen, Punkt und Unterstrich</span>
-            </label>}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-foreground/85">
-                Anzeigename
-                <input
-                  className={`${fieldClass} mt-1`}
-                  value={nameDraft}
-                  maxLength={40}
-                  onChange={(event) => setNameDraft(event.target.value)}
-                  placeholder="Dein Name"
-                />
-              </label>
-              <label className="block text-sm font-medium text-foreground/85">
-                Trainingsziel
-                <select
-                  className={`${fieldClass} mt-1`}
-                  value={goalDraft}
-                  onChange={(event) => setGoalDraft(event.target.value as TrainingGoal)}
-                >
-                  <option value="hypertrophy">Muskelaufbau</option>
-                  <option value="strength">Maximalkraft</option>
-                  <option value="cut">Definition & Fettabbau</option>
-                  <option value="fitness">Allgemeine Fitness</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-[1fr_11rem]">
-              <label className="block text-sm font-medium text-foreground/85">
-                Motto / Trainings-Split
-                <input
-                  className={`${fieldClass} mt-1`}
-                  value={bioDraft}
-                  maxLength={80}
-                  onChange={(event) => setBioDraft(event.target.value)}
-                  placeholder="z. B. Push / Pull / Beine · Fokus Progression"
-                />
-              </label>
-              <label className="block text-sm font-medium text-foreground/85">
-                Wochenziel (Tage)
-                <select
-                  className={`${fieldClass} mt-1`}
-                  value={weeklyDraft}
-                  onChange={(event) => setWeeklyDraft(Number(event.target.value))}
-                >
-                  {[1, 2, 3, 4, 5, 6, 7].map((days) => (
-                    <option key={days} value={days}>
-                      {days}× pro Woche
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setEditingProfile(false)}
-                className="min-h-11 rounded-xl bg-control px-4 text-sm font-medium text-muted"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="submit"
-                disabled={busy}
-                className="min-h-11 rounded-xl bg-neon px-5 text-sm font-semibold text-black shadow-sm transition-transform active:scale-95 disabled:opacity-50"
-              >
-                Speichern
-              </button>
-            </div>
-          </form>
-        )}
       </div>
 
       {/* 2. Wochenziel mit Serie */}

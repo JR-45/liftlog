@@ -36,7 +36,24 @@ select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-0000000
 update follows set status = 'accepted' where followed_user_id = auth.uid();
 select is((select status from follows where followed_user_id = auth.uid()), 'accepted', 'Nur Empfänger nimmt Anfrage an');
 select set_config('request.jwt.claims', '{"sub":"b1111111-0000-0000-0000-000000000002","role":"authenticated"}', true);
-select is((select overview->'profile'->>'bio' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 'Geschützte Bio', 'Angenommener Follower sieht die soziale Profilübersicht');
+select is((select overview->'profile'->>'displayName' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 'Anna', 'Angenommener Follower sieht die soziale Profilübersicht');
+select is((select overview->'profile'->>'bio' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), null, 'Bio und Ziel bleiben privat');
+select is((select overview ? 'sets' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), false, 'Follower sehen keine Sätze oder Gewichte');
+select is((select jsonb_typeof(overview->'gymDays') from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 'array', 'Follower sehen die Gym-Tage');
+select is((select overview->'plan' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 'null'::jsonb, 'Trainingsplan bleibt ohne Veröffentlichung privat');
+select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-000000000001","role":"authenticated"}', true);
+insert into plan_days (weekday, name) values (1, 'Push');
+update social_profiles set share_plan = true where user_id = auth.uid();
+select set_config('request.jwt.claims', '{"sub":"b1111111-0000-0000-0000-000000000002","role":"authenticated"}', true);
+select is((select overview->'plan'->0->>'name' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 'Push', 'Veröffentlichter Trainingsplan ist sichtbar');
+select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-000000000001","role":"authenticated"}', true);
+update social_profiles set username = 'a.kraft' where user_id = auth.uid();
+select set_config('request.jwt.claims', '{"sub":"b1111111-0000-0000-0000-000000000002","role":"authenticated"}', true);
+select is((select count(*)::int from search_social_accounts('Anna')), 0, 'Suche findet keine Anzeigenamen');
+select is((select count(*)::int from search_social_accounts('kraft')), 1, 'Suche findet Benutzernamen');
+select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-000000000001","role":"authenticated"}', true);
+update social_profiles set username = 'anna' where user_id = auth.uid();
+select set_config('request.jwt.claims', '{"sub":"b1111111-0000-0000-0000-000000000002","role":"authenticated"}', true);
 select is((select overview ? 'measurements' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), false, 'Auch angenommene Follower erhalten keinen Messungsbereich');
 select is((select overview ? 'meals' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), false, 'Auch angenommene Follower erhalten keinen Ernährungsbereich');
 select is((select (overview->'profile') ?| array['heightCm', 'targetWeightKg', 'sex', 'birthYear', 'activityLevel'] from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), false, 'Die soziale Profilprojektion enthält keine Körper- oder Berechnungsgrundlagen');
@@ -72,7 +89,8 @@ select is((select count(*)::int from follows where followed_user_id = auth.uid()
 select set_config('request.jwt.claims', '{"sub":"c1111111-0000-0000-0000-000000000003","role":"authenticated"}', true);
 select is((select count(*)::int from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 1, 'Öffentlichwechsel gibt bestätigten Anfragen Zugriff');
 select is_empty($$update body_measurements set weight_kg = 90 where user_id = 'a1111111-0000-0000-0000-000000000001' returning user_id$$, 'Follower erhalten keine fremden Schreibrechte');
-select throws_ok($$update shared_profile_overviews set overview = '{}'::jsonb$$, '0A000', null, 'Freigegebene Übersicht ist nicht beschreibbar');
+-- Die Ansicht verbindet mehrere Tabellen und ist deshalb grundsätzlich nicht beschreibbar.
+select throws_like($$update shared_profile_overviews set overview = '{}'::jsonb$$, 'cannot update view%', 'Freigegebene Übersicht ist nicht beschreibbar');
 select is(has_table_privilege('authenticated', 'public.shared_profile_overviews', 'UPDATE'), false, 'Auch schreibbare Basisspalten der Ansicht haben keine Update-Rechte');
 reset role;
 set local role anon;

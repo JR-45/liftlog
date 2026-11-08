@@ -1,14 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { CARD, LINK, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
-import { decideRequest, loadRequests, savePrivacy, type Person } from './api'
+import { decideRequest, loadRequests, loadSharing, saveSharing, type Person, type Sharing } from './api'
 
-/** Ohne sichtbares Profil nur der Knopf zum Sichtbarmachen. Sonst Privatsphäre, Anfragen und Verbergen. */
-export function SettingsMenu({ account, onEnable, onHide, onPrivacy, onRequests }: {
-  account: Person | null; onEnable: () => Promise<void>; onHide: () => Promise<void>; onPrivacy: () => void; onRequests: () => void
+/**
+ * Sichtbarkeit im Einstellungs-Bereich: Profil sichtbar machen, wer folgen darf, Plan veröffentlichen,
+ * offene Folgeanfragen und Verbergen. Ohne sichtbares Profil nur der Knopf zum Sichtbarmachen.
+ */
+export function SocialSettings({ account, onEnable, onHide, onSaved, onOpenPerson }: {
+  account: Person | null; onEnable: () => Promise<void>; onHide: () => Promise<void>
+  onSaved: (isPrivate: boolean) => void; onOpenPerson: (id: string) => void
 }) {
+  const [sharing, setSharing] = useState<Sharing | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
   const [confirmHide, setConfirmHide] = useState(false)
+  useEffect(() => {
+    if (!account) return
+    let cancelled = false
+    loadSharing(account.user_id).then(value => { if (!cancelled) setSharing(value) })
+      .catch(() => { if (!cancelled) setError('Einstellungen konnten nicht geladen werden.') })
+    return () => { cancelled = true }
+  }, [account])
   useEffect(() => {
     if (!confirmHide) return
     const timeout = window.setTimeout(() => setConfirmHide(false), 3000)
@@ -18,53 +31,47 @@ export function SettingsMenu({ account, onEnable, onHide, onPrivacy, onRequests 
     if (busy) return
     setBusy(true)
     setError('')
+    setSaved(false)
     void action().catch(() => setError(message)).finally(() => setBusy(false))
   }
-  if (!account) return <div className={CARD}>
-    <h2 className={SECTION_TITLE}>Personen finden und folgen</h2>
-    <p className="mt-2 text-sm text-muted">Andere finden dich dann über Name und Benutzername. Follower sehen nur dein Profil und deine Trainings.</p>
+
+  if (!account) return <section className={CARD} aria-labelledby="visibility-heading">
+    <h2 id="visibility-heading" className={SECTION_TITLE}>Sichtbarkeit</h2>
     {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
     <button type="button" disabled={busy} className={`${PRIMARY_BUTTON} mt-3 w-full`}
       onClick={() => run(onEnable, 'Profil konnte nicht sichtbar gemacht werden.')}>Profil sichtbar machen</button>
-  </div>
-  return <div className={`${CARD} space-y-2`}>
-    <button type="button" className={`${SECONDARY_BUTTON} w-full text-left`} onClick={onPrivacy}>Privatsphäre-Konto</button>
-    <button type="button" className={`${SECONDARY_BUTTON} w-full text-left`} onClick={onRequests}>Folgeanfragen</button>
-    {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-    <button type="button" disabled={busy} className={`${SECONDARY_BUTTON} w-full text-left ${confirmHide ? 'bg-danger/15 text-danger' : 'text-danger'}`}
-      onClick={() => { if (!confirmHide) { setConfirmHide(true); return } setConfirmHide(false); run(onHide, 'Profil konnte nicht verborgen werden.') }}>
-      {confirmHide ? 'Sicher? Nochmal tippen' : 'Profil verbergen'}
-    </button>
-    {confirmHide && <p className="text-xs text-muted">Du bist dann nicht mehr auffindbar, und alle Follower werden entfernt.</p>}
-  </div>
-}
+  </section>
 
-export function PrivacySettings({ account, onSaved }: { account: Person; onSaved: (isPrivate: boolean) => void }) {
-  const [isPrivate, setIsPrivate] = useState(account.is_private)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const lock = useRef(false)
-  return <form className={`${CARD} space-y-4`} onSubmit={event => {
-    event.preventDefault()
-    if (lock.current) return
-    lock.current = true
-    setBusy(true)
-    setError('')
-    void savePrivacy(account.user_id, isPrivate).then(() => onSaved(isPrivate))
-      .catch(() => setError('Kontoprivatsphäre konnte nicht gespeichert werden.'))
-      .finally(() => { lock.current = false; setBusy(false) })
-  }}>
-    <fieldset disabled={busy} className="space-y-3"><legend className={`mb-3 ${SECTION_TITLE}`}>Kontosichtbarkeit</legend>
-      {([{ value: false, label: 'Öffentlich', note: 'Folgen wird sofort angenommen.' }, { value: true, label: 'Privat', note: 'Du bestätigst neue Follower zuerst.' }]).map(option => <label key={option.label} className="flex min-h-11 items-start gap-3 text-sm">
-        <input type="radio" name="privacy" className="mt-1 h-5 w-5 shrink-0 accent-neon" checked={isPrivate === option.value} onChange={() => setIsPrivate(option.value)} />
-        <span><span className="block font-semibold">{option.label}</span><span className="text-muted">{option.note}</span></span>
-      </label>)}
-    </fieldset>
-    <p className="text-sm text-muted">Fremde sehen Name, Benutzername, Bild und Follower-Zähler. Bestätigte Follower sehen Profil und Training. Körperdaten und Ernährung bleiben nur für dich sichtbar.</p>
-    {account.is_private && !isPrivate && <p className="text-sm text-warning">Offene Folgeanfragen werden beim Speichern angenommen.</p>}
-    {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-    <button type="submit" disabled={busy} className={PRIMARY_BUTTON}>{busy ? 'Wird gespeichert …' : 'Sichtbarkeit speichern'}</button>
-  </form>
+  return <>
+    <form className={`${CARD} space-y-4`} aria-labelledby="visibility-heading" onSubmit={event => {
+      event.preventDefault()
+      if (!sharing) return
+      run(async () => { await saveSharing(account.user_id, sharing); onSaved(sharing.is_private); setSaved(true) }, 'Einstellungen konnten nicht gespeichert werden.')
+    }}>
+      <h2 id="visibility-heading" className={SECTION_TITLE}>Sichtbarkeit</h2>
+      {!sharing ? <p role="status" className="text-sm text-muted">Wird geladen …</p> : <fieldset disabled={busy} className="space-y-2">
+        {([{ value: true, label: 'Privat' }, { value: false, label: 'Öffentlich' }]).map(option => <label key={option.label} className="flex min-h-11 items-center gap-3 text-sm">
+          <input type="radio" name="privacy" className="h-5 w-5 shrink-0 accent-neon" checked={sharing.is_private === option.value} onChange={() => setSharing({ ...sharing, is_private: option.value })} />
+          <span className="font-semibold">{option.label}</span>
+        </label>)}
+        <label className="flex min-h-11 items-center gap-3 border-t border-line/[0.06] pt-3 text-sm">
+          <input type="checkbox" className="h-5 w-5 shrink-0 accent-neon" checked={sharing.share_plan} onChange={event => setSharing({ ...sharing, share_plan: event.target.checked })} />
+          <span className="font-semibold">Trainingsplan veröffentlichen</span>
+        </label>
+      </fieldset>}
+      {sharing && !sharing.is_private && account.is_private && <p className="text-sm text-warning">Offene Anfragen werden angenommen.</p>}
+      {saved && <p role="status" className="text-sm text-success">Gespeichert.</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <button type="submit" disabled={busy || !sharing} className={`${PRIMARY_BUTTON} w-full`}>{busy ? 'Wird gespeichert …' : 'Speichern'}</button>
+    </form>
+    <FollowRequests userId={account.user_id} onOpenPerson={onOpenPerson} />
+    <div>
+      <button type="button" disabled={busy} className={`${SECONDARY_BUTTON} w-full ${confirmHide ? 'bg-danger/15 text-danger' : 'text-danger'}`}
+        onClick={() => { if (!confirmHide) { setConfirmHide(true); return } setConfirmHide(false); run(onHide, 'Profil konnte nicht verborgen werden.') }}>
+        {confirmHide ? 'Sicher? Nochmal tippen' : 'Profil verbergen'}
+      </button>
+    </div>
+  </>
 }
 
 export function FollowRequests({ userId, onOpenPerson }: { userId: string; onOpenPerson: (id: string) => void }) {
@@ -89,15 +96,17 @@ export function FollowRequests({ userId, onOpenPerson }: { userId: string; onOpe
       .catch(() => setError('Anfrage konnte nicht geändert werden.'))
       .finally(() => { lock.current = false; setBusy(false) })
   }
+  // Ohne offene Anfragen keine Karte.
+  if (!error && !people?.length) return null
   return <div className={CARD}>
-    <p className="mb-3 text-sm text-muted">Mit der Annahme werden Profil und Training sichtbar. Körperdaten und Ernährung bleiben privat.</p>
+    <h2 className={`mb-2 ${SECTION_TITLE}`}>Anfragen</h2>
     {error && <div role="alert"><p className="text-sm text-danger">{error}</p><button className={LINK} type="button" onClick={refresh}>Erneut laden</button></div>}
-    {!error && (people === null ? <p role="status" className="text-sm text-muted">Wird geladen …</p> : !people.length ? <p className="text-sm text-muted">Keine offenen Folgeanfragen.</p> : <ul className="divide-y divide-line/[0.06]">{people.map(person => <li key={person.user_id} className="space-y-3 py-3">
+    {!error && people && <ul className="divide-y divide-line/[0.06]">{people.map(person => <li key={person.user_id} className="space-y-3 py-3">
       <button type="button" disabled={busy} className="flex min-h-11 w-full items-center gap-3 text-left" onClick={() => onOpenPerson(person.user_id)}>
         {person.avatar ? <img src={person.avatar} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" /> : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-control">{person.display_name[0]}</span>}
         <span className="min-w-0"><span className="block break-words text-sm font-semibold">{person.display_name}</span><span className="block break-all text-xs text-muted">@{person.username}</span></span>
       </button>
       <div className="grid grid-cols-2 gap-2"><button type="button" className={PRIMARY_BUTTON} disabled={busy} onClick={() => decide(person.user_id, true)}>Annehmen</button><button type="button" className={SECONDARY_BUTTON} disabled={busy} onClick={() => decide(person.user_id, false)}>Ablehnen</button></div>
-    </li>)}</ul>)}
+    </li>)}</ul>}
   </div>
 }
