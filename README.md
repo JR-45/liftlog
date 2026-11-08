@@ -59,8 +59,9 @@ Trainings. Einen gespeicherten Satz nimmst du mit dem Haken zurück, die ganze �
 In der **Wochenplanung** wählst du eine Kalenderwoche und planst Training und Ruhetage für jeden Tag.
 Neue Wochen übernehmen zunächst die gespeicherte Vorlage. **Woche speichern** speichert nur diese Kalenderwoche.
 In der **Wochenvorlage** öffnet jeder Tagesbutton ein eigenes Popup: Dort erstellst du den Trainingsplan für
-diesen Tag oder machst ihn zum Ruhetag. Farbig markierte Tagesbuttons enthalten eine Einheit. Im Bereich **Training**
-bleiben die bisherige Tagesauswahl und die Satzeingabe für heute erhalten.
+diesen Tag oder machst ihn zum Ruhetag. Farbig markierte Tagesbuttons enthalten eine Einheit. Der Bereich **Training**
+folgt der Wochenplanung: Ein in der Woche verschobener Tag oder Ruhetag erscheint dort genau so. Ohne Änderung gilt
+die Vorlage. Sätze werden nur für heute eingetragen.
 
 ## Befehle
 

@@ -10,7 +10,8 @@ import { loadProfileHeader } from '../profile/api'
 import { ProfileScreen } from '../profile/ProfileScreen'
 import { StatsScreen } from '../stats/StatsScreen'
 import { PlanEditor } from '../plan/PlanEditor'
-import { loadPlanDays, loadTrainedDates, type PlanDay } from './api'
+import { loadPlanDays, loadScheduledDays, loadTrainedDates, type PlanDay } from './api'
+import { planForDate, shiftDate, type ScheduledDay } from '../../domain/week'
 import { weekStreak } from '../../domain/motivation'
 import { FlameIcon } from '../../lib/icons'
 import { WeekPlanning } from './WeekPlanning'
@@ -63,6 +64,19 @@ export function HomeScreen({ session }: { session: Session }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [hour, setHour] = useState(() => new Date().getHours())
+  // Wochenplanung für heute und die nächsten 6 Tage. Sie bestimmt, was im Training dran ist.
+  const [schedule, setSchedule] = useState<{ from: string; days: ScheduledDay[] } | null>(null)
+  const [scheduleVersion, setScheduleVersion] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    loadScheduledDays(today, shiftDate(today, 6))
+      .then((days) => { if (!cancelled) setSchedule({ from: today, days }) })
+      // Ohne Wochenplanung gilt die Vorlage, das Training bleibt nutzbar.
+      .catch(() => { if (!cancelled) setSchedule({ from: today, days: [] }) })
+    return () => { cancelled = true }
+  }, [today, scheduleVersion, planVersion])
+  const scheduleDays = schedule?.from === today ? schedule.days : null
 
   // Die Begrüßung folgt der Tageszeit, auch wenn die App lange offen bleibt.
   useEffect(() => {
@@ -183,7 +197,7 @@ export function HomeScreen({ session }: { session: Session }) {
   )
   const dateLabel = DATE_FORMAT.format(new Date(`${today}T12:00:00`))
   // Trainingstag laut Wochenvorlage. Die Großschreibung übernimmt das CSS der Überschrift.
-  const isTrainingDay = planDays?.some((day) => day.weekday === new Date(`${today}T12:00:00`).getDay()) ?? false
+  const isTrainingDay = planDays ? planForDate(today, planDays, scheduleDays ?? []).planDayId !== null : false
   const title = headline(isTrainingDay, displayName)
   // Ohne gespeicherten Namen ein dezenter Hinweis statt des Mail-Anfangs als Name.
   const nameHint = displayName === null && (
@@ -322,11 +336,11 @@ export function HomeScreen({ session }: { session: Session }) {
             )}
             {/* Bleibt beim Tab-Wechsel erhalten, damit Eingaben und offene Übung nicht verloren gehen. */}
             {planDays.length > 0 && <div className={tab === 'training' ? '' : 'hidden'}>
-              <TrainingDays key={planVersion} today={today} userId={userId} planDays={planDays} restSeconds={restTimer.duration} onSetLogged={handleSetLogged} />
+              <TrainingDays key={planVersion} today={today} userId={userId} planDays={planDays} schedule={scheduleDays} restSeconds={restTimer.duration} onSetLogged={handleSetLogged} />
             </div>}
             {/* Wochenplanung und Vorlage stehen auf einer Seite: oben die Woche, darunter die Vorlage. */}
             {planDays.length > 0 && <div className={tab === 'plan' ? '' : 'hidden'}>
-              <WeekPlanning key={planVersion} today={today} planDays={planDays} active={tab === 'plan'} />
+              <WeekPlanning key={planVersion} today={today} planDays={planDays} active={tab === 'plan'} onSaved={() => setScheduleVersion((value) => value + 1)} />
             </div>}
             {planArea && (
               <PlanEditor

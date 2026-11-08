@@ -17,8 +17,10 @@ Wochenplan als Vorlage. Änderungen betreffen nur die ausgewählte Woche.
 - Andere Wochen und die ursprüngliche Wochenvorlage bleiben unverändert.
 - Nicht gespeicherte Wochenänderungen gehen beim Wochenwechsel nicht stillschweigend verloren: Der Wechsel wird
   zunächst gesperrt; Speichern und Verwerfen bleiben möglich.
-- Die Wochenplanung bleibt im Bereich „Trainingsplan“. Der Bereich „Training“ behält die bisherige Tagesauswahl und
-  protokolliert Sätze für den aktuellen Tag. Die Satzanzahl kommt aus dem Plan und ist im Training fest.
+- Die Wochenplanung bleibt im Bereich „Trainingsplan“ und steuert den Bereich „Training“: Die Tagesleiste dort zeigt
+  heute und die nächsten 6 Tage, und jeder Tag nimmt die Einheit aus der Wochenplanung, sonst aus der Vorlage
+  (`planForDate` in `src/domain/week.ts`). Sätze werden nur für heute protokolliert. Die Satzanzahl kommt aus dem Plan
+  und ist im Training fest.
 - Bereits gespeicherte Sätze bleiben auch beim Umplanen oder Markieren eines Ruhetags erhalten. Die Wochenansicht zeigt
   trainierte Tage mit einem Haken, die Sätze selbst stehen im Kalender der Statistik.
 - Die Statistik berücksichtigt ausdrücklich geplante Ruhetage und ungeplante Tage. Diese gelten nicht als verpasst.

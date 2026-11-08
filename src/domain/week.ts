@@ -23,3 +23,19 @@ export function buildWeek(start: string, template: { id: string; weekday: number
     return { day_date, plan_day_id: plan?.id ?? null, is_rest_day: !plan }
   })
 }
+
+export type DayPlan = { planDayId: string | null; kind: 'plan' | 'rest' | 'unplanned' }
+
+/**
+ * Was an einem Datum dran ist. Die Wochenplanung gewinnt, sonst gilt die Vorlage für den Wochentag.
+ * „Ungeplant“ aus der Wochenplanung heißt: kein Training eingeplant, aber auch kein bewusster Ruhetag.
+ */
+export function planForDate(date: string, template: { id: string; weekday: number }[], overrides: ScheduledDay[]): DayPlan {
+  const override = overrides.find((item) => item.day_date === date)
+  if (override) {
+    if (override.plan_day_id) return { planDayId: override.plan_day_id, kind: 'plan' }
+    return { planDayId: null, kind: override.is_rest_day ? 'rest' : 'unplanned' }
+  }
+  const plan = template.find((item) => item.weekday === new Date(`${date}T12:00:00`).getDay())
+  return plan ? { planDayId: plan.id, kind: 'plan' } : { planDayId: null, kind: 'rest' }
+}

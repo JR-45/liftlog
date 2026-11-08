@@ -5,8 +5,10 @@ import { WeekPlanner } from './WeekPlanner'
 
 type LoadedWeek = { start: string; days: ScheduledDay[]; original: ScheduledDay[]; workouts: WeekWorkout[] }
 
-export function WeekPlanning({ today, planDays, active }: {
+export function WeekPlanning({ today, planDays, active, onSaved }: {
   today: string; planDays: PlanDay[]; active: boolean
+  /** Nach dem Speichern, damit das Training die neue Planung sofort übernimmt. */
+  onSaved: () => void
 }) {
   const [selectedDate, setSelectedDate] = useState(today)
   const [loaded, setLoaded] = useState<LoadedWeek | null>(null)
@@ -50,6 +52,7 @@ export function WeekPlanning({ today, planDays, active }: {
     setMessage(null)
     try {
       await saveTrainingWeek(start, data.days)
+      onSaved()
       setLoaded({ ...data, original: data.days })
       setMessage('Woche gespeichert.')
     } catch {
