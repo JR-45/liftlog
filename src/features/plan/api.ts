@@ -16,12 +16,12 @@ export function newExercise(): PlanExerciseDraft {
 export async function loadPlan(): Promise<PlanDayDraft[]> {
   const [days, result] = await Promise.all([
     loadPlanDays(),
-    supabase.from('plan_exercises').select(`plan_day_id, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max, steps, step_reps,
+    supabase.from('plan_exercises').select(`plan_day_id, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max, steps, step_reps, step_weights,
       alternative_exercise_id, exercise:exercises!plan_exercises_exercise_id_user_id_fkey(name, tracking_type)`)
       .order('position'),
   ])
   if (result.error) throw result.error
-  const entries = result.data as unknown as (Pick<PlanEntry, 'sets_min' | 'sets_max' | 'reps_min' | 'reps_max' | 'duration_min' | 'duration_max' | 'steps' | 'step_reps'> & {
+  const entries = result.data as unknown as (Pick<PlanEntry, 'sets_min' | 'sets_max' | 'reps_min' | 'reps_max' | 'duration_min' | 'duration_max' | 'steps' | 'step_reps' | 'step_weights'> & {
     plan_day_id: string; alternative_exercise_id: string | null; exercise: { name: string; tracking_type: TrackingType }
   })[]
   return days.map((day) => ({
@@ -35,7 +35,7 @@ export async function loadPlan(): Promise<PlanDayDraft[]> {
         sets_max: entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name) ? 1 : entry.sets_max,
         reps_min: entry.reps_min, reps_max: entry.reps_max,
         duration_min: entry.duration_min, duration_max: entry.duration_max,
-        ...(entry.steps ? { steps: circuitSteps(entry.steps, entry.step_reps, entry.reps_max) } : {}),
+        ...(entry.steps ? { steps: circuitSteps(entry.steps, entry.step_reps, entry.step_weights, entry.reps_max) } : {}),
       })),
   }))
 }

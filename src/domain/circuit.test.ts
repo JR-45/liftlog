@@ -3,24 +3,28 @@ import { circuitPayload, circuitSteps, formatCircuit, roundReps } from './circui
 
 describe('Zirkel', () => {
   it('nimmt die Vorgabe der Übung, wenn eigene Wiederholungen fehlen', () => {
-    expect(circuitSteps(['Swing', 'Clean'], null, 5)).toEqual([{ name: 'Swing', reps: 5 }, { name: 'Clean', reps: 5 }])
-    expect(circuitSteps(['Swing', 'Clean'], [10, 5], 5)).toEqual([{ name: 'Swing', reps: 10 }, { name: 'Clean', reps: 5 }])
-    expect(circuitSteps(null, null, 5)).toEqual([])
+    expect(circuitSteps(['Swing', 'Clean'], null, null, 5))
+      .toEqual([{ name: 'Swing', reps: 5, weightKg: null }, { name: 'Clean', reps: 5, weightKg: null }])
+    expect(circuitSteps(['Swing', 'Clean'], [10, 5], [16, null], 5))
+      .toEqual([{ name: 'Swing', reps: 10, weightKg: 16 }, { name: 'Clean', reps: 5, weightKg: null }])
+    expect(circuitSteps(null, null, null, 5)).toEqual([])
   })
 
   it('zeigt die Bewegungen in einer Zeile', () => {
-    expect(formatCircuit([{ name: 'Swing', reps: 10 }, { name: 'Clean', reps: null }])).toBe('10 Swing · Clean')
+    expect(formatCircuit([{ name: 'Push-Up', reps: 5, weightKg: null }, { name: 'Swing', reps: 10, weightKg: 16 }, { name: 'Clean', reps: null, weightKg: null }]))
+      .toBe('5 Push-Up · 10 × 16 kg Swing · Clean')
   })
 
   it('zählt die Wiederholungen einer Runde', () => {
-    expect(roundReps([{ name: 'Swing', reps: 10 }, { name: 'Thruster', reps: 5 }])).toBe(15)
+    expect(roundReps([{ name: 'Swing', reps: 10, weightKg: 16 }, { name: 'Thruster', reps: 5, weightKg: null }])).toBe(15)
   })
 
   it('bereitet Zirkel fürs Speichern vor', () => {
     const base = { name: 'Kettlebell Complex', reps_min: 5, reps_max: 5 }
-    expect(circuitPayload({ ...base, steps: [{ name: ' Swing ', reps: 10 }, { name: '', reps: 3 }, { name: 'Clean', reps: null }] }))
-      .toEqual({ name: 'Kettlebell Complex', steps: ['Swing', 'Clean'], step_reps: [10, 1], reps_min: 11, reps_max: 11 })
-    expect(circuitPayload({ ...base, steps: [{ name: '  ', reps: 5 }] })).toEqual(base)
+    expect(circuitPayload({ ...base, steps: [
+      { name: ' Swing ', reps: 10, weightKg: 16 }, { name: '', reps: 3, weightKg: null }, { name: 'Clean', reps: null, weightKg: 0 },
+    ] })).toEqual({ name: 'Kettlebell Complex', steps: ['Swing', 'Clean'], step_reps: [10, 1], step_weights: [16, null], reps_min: 11, reps_max: 11 })
+    expect(circuitPayload({ ...base, steps: [{ name: '  ', reps: 5, weightKg: 10 }] })).toEqual(base)
     expect(circuitPayload({ ...base, steps: undefined })).toEqual(base)
   })
 })

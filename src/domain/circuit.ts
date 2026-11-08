@@ -1,16 +1,21 @@
 import { formatWeight, type SetValues } from './sets'
 
-/** Eine Bewegung eines Zirkels, z. B. 10 Swings. reps null = noch nicht eingetragen. */
-export type CircuitStep = { name: string; reps: number | null }
+/** Eine Bewegung eines Zirkels, z. B. 10 Swings mit 16 kg. null = nicht eingetragen bzw. ohne Gewicht. */
+export type CircuitStep = { name: string; reps: number | null; weightKg: number | null }
 
 /** Baut die Bewegungen aus den DB-Spalten. Ohne eigene Angabe gilt die Wiederholungsvorgabe der Übung. */
-export function circuitSteps(names: string[] | null, reps: number[] | null, fallbackReps: number | null): CircuitStep[] {
-  return (names ?? []).map((name, i) => ({ name, reps: reps?.[i] ?? fallbackReps }))
+export function circuitSteps(
+  names: string[] | null, reps: number[] | null, weights: (number | null)[] | null, fallbackReps: number | null,
+): CircuitStep[] {
+  return (names ?? []).map((name, i) => ({ name, reps: reps?.[i] ?? fallbackReps, weightKg: weights?.[i] ?? null }))
 }
 
-/** Kurze Zeile fürs Training: „5 Push-Up · 10 Swing · Clean“. */
+/** Kurze Zeile fürs Training: „5 Push-Up · 10 × 16 kg Swing · Clean“. */
 export function formatCircuit(steps: CircuitStep[]): string {
-  return steps.map((step) => (step.reps === null ? step.name : `${step.reps} ${step.name}`)).join(' · ')
+  return steps.map((step) => {
+    const amount = step.reps === null ? '' : step.weightKg === null ? `${step.reps} ` : `${step.reps} × ${formatWeight(step.weightKg)} `
+    return `${amount}${step.name}`
+  }).join(' · ')
 }
 
 /** Wiederholungen einer ganzen Runde. Damit wird jede abgehakte Runde als ein Satz gespeichert. */
@@ -23,14 +28,21 @@ export function roundReps(steps: CircuitStep[]): number {
  * Die Vorgabe der Übung ist die Summe einer Runde. Ohne Bewegungen bleibt eine normale Übung übrig.
  */
 export function circuitPayload<T extends { steps?: CircuitStep[] }>(exercise: T):
-  Omit<T, 'steps'> | (Omit<T, 'steps'> & { steps: string[]; step_reps: number[]; reps_min: number; reps_max: number }) {
+  Omit<T, 'steps'> | (Omit<T, 'steps'> & {
+    steps: string[]; step_reps: number[]; step_weights: (number | null)[]; reps_min: number; reps_max: number
+  }) {
   const { steps, ...rest } = exercise
   const filled = (steps ?? [])
-    .map((step) => ({ name: step.name.trim(), reps: step.reps !== null && step.reps > 0 ? Math.round(step.reps) : 1 }))
+    .map((step) => ({
+      name: step.name.trim(),
+      reps: step.reps !== null && step.reps > 0 ? Math.round(step.reps) : 1,
+      weightKg: step.weightKg !== null && Number.isFinite(step.weightKg) && step.weightKg > 0 ? step.weightKg : null,
+    }))
     .filter((step) => step.name !== '')
   if (filled.length === 0) return rest
   const total = roundReps(filled)
-  return { ...rest, steps: filled.map((step) => step.name), step_reps: filled.map((step) => step.reps), reps_min: total, reps_max: total }
+  return { ...rest, steps: filled.map((step) => step.name), step_reps: filled.map((step) => step.reps),
+    step_weights: filled.map((step) => step.weightKg), reps_min: total, reps_max: total }
 }
 
 /** Vorgabe eines Zirkels, auch im zugeklappten Zustand: „4–5 Runden · 6 Bewegungen“. */
