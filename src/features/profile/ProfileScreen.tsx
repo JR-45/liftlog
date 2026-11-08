@@ -6,6 +6,9 @@ import { formatWeight } from '../../domain/sets'
 import { CameraIcon, CheckIcon, TrashIcon, TrophyIcon } from '../../lib/icons'
 import { loadExportRows } from '../stats/api'
 import { ExportCard } from '../stats/ExportCard'
+import { ConnectionsPage } from '../social/ConnectionsPage'
+import { ConnectionsSummary } from '../social/ConnectionsSummary'
+import { enableSocialProfile, type SocialTab } from '../social/api'
 import { DeleteAccountCard } from './DeleteAccountCard'
 import { BodyCard } from './BodyCard'
 import {
@@ -93,6 +96,8 @@ function ProfileView({
   const [avatar, setAvatar] = useState<string | null>(initialAvatar)
   const [rows, setRows] = useState<ExportRow[]>([])
   const [editingProfile, setEditingProfile] = useState(false)
+  const [connections, setConnections] = useState<SocialTab | null>(null)
+  const connectionEntry = useRef<{ tab: SocialTab; scroll: number } | null>(null)
   const [showAllPrs, setShowAllPrs] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -194,6 +199,17 @@ function ProfileView({
 
   const visiblePrs = showAllPrs ? stats.personalRecords : stats.personalRecords.slice(0, 5)
 
+  if (connections) return <ConnectionsPage userId={user.id} displayName={profile.displayName} initialTab={connections}
+    onEnable={async () => { await saveProfile(profile); await enableSocialProfile() }}
+    onBack={() => {
+      setConnections(null)
+      requestAnimationFrame(() => {
+        if (!connectionEntry.current) return
+        document.getElementById(`profile-${connectionEntry.current.tab}`)?.focus({ preventScroll: true })
+        window.scrollTo(0, connectionEntry.current.scroll)
+      })
+    }} />
+
   return (
     <section className="mt-5 space-y-5">
       {/* 1. Athleten-Header mit Profilbild-Upload */}
@@ -250,6 +266,10 @@ function ProfileView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <ConnectionsSummary userId={user.id} onOpen={tab => {
+              connectionEntry.current = { tab, scroll: window.scrollY }
+              setConnections(tab)
+            }} />
             <button
               type="button"
               onClick={() => {

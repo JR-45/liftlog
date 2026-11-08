@@ -65,6 +65,32 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"follows": {
+                  Row: {
+                    "created_at": string,"followed_user_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"followed_user_id": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"followed_user_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "follows_followed_user_id_fkey"
+      columns: ["followed_user_id"]
+isOneToOne: false
+      referencedRelation: "social_profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "follows_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "social_profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
                 },"food_scan_usage": {
                   Row: {
                     "last_scan_at": string,"scan_count": number,"usage_date": string,"user_id": string
@@ -213,6 +239,20 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"social_profiles": {
+                  Row: {
+                    "avatar": string | null,"created_at": string,"display_name": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "avatar"?: string | null,"created_at"?: string,"display_name": string,"user_id"?: string
+                  }
+                  Update: {
+                    "avatar"?: string | null,"created_at"?: string,"display_name"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"supplement_intakes": {
                   Row: {
                     "supplement_id": string,"taken_on": string,"user_id": string
@@ -308,6 +348,9 @@ isOneToOne: false
           }
           Functions: {
             "delete_own_account":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"enable_social_profile":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "last_performance":
