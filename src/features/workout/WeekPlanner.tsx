@@ -37,13 +37,14 @@ export function WeekPlanner({ selectedDate, today, home, days, planDays, workout
         const date = new Date(`${day.day_date}T12:00:00`)
         const trained = workouts.some((workout) => workout.performed_on === day.day_date)
         const isToday = day.day_date === today
-        // Vergangene Tage bleiben änderbar, sind aber blass, damit man nicht aus Versehen dort plant.
-        return <li key={day.day_date} className={`flex items-center gap-3 py-2 ${day.day_date < today ? 'opacity-45' : ''}`}>
+        // Vergangene Tage sind gesperrt und blass. Geplant wird nur ab heute.
+        const past = day.day_date < today
+        return <li key={day.day_date} className={`flex items-center gap-3 py-2 ${past ? 'opacity-45' : ''}`}>
           <span className="w-16 shrink-0">
             <span className={`block text-sm font-semibold ${isToday ? 'text-accent-ink' : 'text-foreground'}`}>{WEEKDAYS[date.getDay()]}</span>
             <span className="block text-xs tabular-nums text-muted">{SHORT.format(date)}</span>
           </span>
-          <select className="h-11 min-w-0 flex-1 rounded-xl bg-control px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-neon" disabled={busy}
+          <select className="h-11 min-w-0 flex-1 rounded-xl bg-control px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-neon disabled:cursor-not-allowed" disabled={busy || past}
             aria-label={`Plan für ${DAY.format(date)}`}
             value={day.plan_day_id ?? (day.is_rest_day ? 'rest' : 'unplanned')} onChange={(event) => onChange(index, event.target.value)}>
             <option value="unplanned">Ungeplant</option>
@@ -65,7 +66,7 @@ export function WeekPlanner({ selectedDate, today, home, days, planDays, workout
         <button className={LINK} type="button" disabled={busy} onClick={onDiscard}>Verwerfen</button>
       </div>
     ) : (
-      <button className={`${LINK} mt-2`} type="button" disabled={busy} onClick={onTemplate}>Vorlage übernehmen</button>
+      days.some((day) => day.day_date >= today) && <button className={`${LINK} mt-2`} type="button" disabled={busy} onClick={onTemplate}>Vorlage übernehmen</button>
     )}
   </section>
 }
