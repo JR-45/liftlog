@@ -177,6 +177,32 @@ export function SetRow(props: Props) {
   const distanceKm = Number(draft.distance?.replace(',', '.')) / (distanceUnit === 'm' ? 1000 : 1)
   const metric = tracking === 'duration' ? (metricMode === 'speed' ? formatSpeed : formatPace)(Number(draft.duration.replace(',', '.')) * (unit === 'minutes' ? 60 : 1), distanceKm) : null
 
+  // Zirkel: Eine Runde wird als Ganzes abgehakt, die ganze Zeile ist die Tippfläche.
+  if (roundReps !== undefined) {
+    return (
+      <li className="mt-2">
+        <button
+          className={`flex w-full items-center justify-between gap-3 rounded-xl p-1 pl-3 text-left transition-colors disabled:opacity-50 ${
+            isSaved ? 'bg-success/10' : 'bg-surface-inset'
+          }`}
+          type="button"
+          aria-label={isSaved ? `${label} geschafft, Haken entfernen` : `${label} abhaken`}
+          aria-pressed={isSaved}
+          disabled={busy}
+          onClick={() => void (isSaved ? handleUncheck() : handleSave())}
+        >
+          <span className={`text-sm font-semibold ${isSaved ? 'text-success' : 'text-foreground'}`}>{label}</span>
+          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 ${
+            isSaved ? 'bg-success-fill text-black shadow-sm shadow-success/20' : 'bg-control text-muted'
+          }`}>
+            <CheckIcon className="h-5 w-5 stroke-[2.5]" />
+          </span>
+        </button>
+        {error && <p role="alert" className="mt-1 text-xs text-danger">{error}</p>}
+      </li>
+    )
+  }
+
   return (
     <li className="mt-2">
       <div

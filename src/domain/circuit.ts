@@ -10,12 +10,10 @@ export function circuitSteps(
   return (names ?? []).map((name, i) => ({ name, reps: reps?.[i] ?? fallbackReps, weightKg: weights?.[i] ?? null }))
 }
 
-/** Kurze Zeile fürs Training: „5 Push-Up · 10 × 16 kg Swing · Clean“. */
-export function formatCircuit(steps: CircuitStep[]): string {
-  return steps.map((step) => {
-    const amount = step.reps === null ? '' : step.weightKg === null ? `${step.reps} ` : `${step.reps} × ${formatWeight(step.weightKg)} `
-    return `${amount}${step.name}`
-  }).join(' · ')
+/** Vorgabe einer Bewegung fürs Training: „5“ oder „10 × 16 kg“. */
+export function formatStepTarget(step: CircuitStep): string {
+  if (step.reps === null) return step.weightKg === null ? '' : formatWeight(step.weightKg)
+  return step.weightKg === null ? String(step.reps) : `${step.reps} × ${formatWeight(step.weightKg)}`
 }
 
 /** Wiederholungen einer ganzen Runde. Damit wird jede abgehakte Runde als ein Satz gespeichert. */

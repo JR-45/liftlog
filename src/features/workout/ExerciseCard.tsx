@@ -29,7 +29,7 @@ import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
 import { readDraft, removeDraft } from './drafts'
 import { DoneStamp } from '../../components/DoneStamp'
 import { SetRow } from './SetRow'
-import { circuitSteps, circuitTarget, formatCircuit, formatRounds, roundReps } from '../../domain/circuit'
+import { circuitSteps, circuitTarget, formatRounds, formatStepTarget, roundReps } from '../../domain/circuit'
 
 const fieldClass =
   'h-11 rounded-xl border border-transparent bg-control px-3 text-base text-foreground outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
@@ -94,6 +94,7 @@ export function ExerciseCard(props: Props) {
   const [error, setError] = useState<string | null>(null)
   // null: Das Feld zeigt den gespeicherten Wert, sonst die laufende Eingabe.
   const [stepText, setStepText] = useState<string | null>(null)
+  const [showSteps, setShowSteps] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [resetRequest, setResetRequest] = useState(0)
   const [confirmingReset, setConfirmingReset] = useState(false)
@@ -514,7 +515,23 @@ export function ExerciseCard(props: Props) {
         </div>
       )}
 
-      {isCircuit && <p className="mb-1.5 text-sm text-foreground">{formatCircuit(steps)}</p>}
+      {isCircuit && (
+        <button className="mb-1 flex min-h-11 items-center gap-1 text-sm font-medium text-accent-ink" type="button"
+          aria-expanded={showSteps} onClick={() => setShowSteps((current) => !current)}>
+          {showSteps ? 'Bewegungen ausblenden' : 'Bewegungen anzeigen'}
+          <ChevronRightIcon className={`h-4 w-4 transition-transform ${showSteps ? 'rotate-90' : ''}`} />
+        </button>
+      )}
+      {isCircuit && showSteps && (
+        <ul className="mb-2 divide-y divide-line/[0.06]" aria-label="Bewegungen pro Runde">
+          {steps.map((step, index) => (
+            <li key={index} className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
+              <span className="min-w-0 text-foreground">{step.name}</span>
+              <span className="shrink-0 tabular-nums text-muted">{formatStepTarget(step)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <p className="text-sm tabular-nums text-muted">
         {logged.length > 0 && <span className="mr-2 text-muted/75">Vorgabe {target} ·</span>}
@@ -529,21 +546,21 @@ export function ExerciseCard(props: Props) {
 
       {error && bodyVisible && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
 
-      <div className="mt-3.5 flex gap-1 px-1 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
+      {isCircuit ? null : <div className="mt-3.5 flex gap-1 px-1 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
         {!cardio && <span className="w-4 shrink-0" />}
         {exercise.tracking_type === 'duration' ? (
           <><span className="flex-1">h / min</span>{cardio && <span className="flex-1">Strecke</span>}</>
         ) : (
           <>
             {weighted && <span className="flex-1">{assisted ? 'Hilfe (kg)' : 'kg'}</span>}
-            {isCircuit ? !weighted && <span className="flex-1" /> : <span className="flex-1">Wdh.</span>}
+            <span className="flex-1">Wdh.</span>
           </>
         )}
         <span className="w-11 shrink-0" />
-      </div>
+      </div>}
 
       <fieldset disabled={busy} aria-label={cardio ? 'Cardio-Einheit' : 'Sätze'}>
-      <ul>
+      <ul className={isCircuit ? 'mt-1.5' : undefined}>
         {rows.map((setNumber) => {
           const lastSet = last.find((set) => set.set_number === setNumber)
           const placeholderValue =
