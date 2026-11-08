@@ -12,6 +12,7 @@ import { ConnectionsSummary } from '../social/ConnectionsSummary'
 import { SocialNavigator, type SocialRoute } from '../social/SocialNavigator'
 import { disableSocialProfile, enableSocialProfile, loadAccount, saveProfileIdentity, type Person, type SocialTab } from '../social/api'
 import { SocialSettings } from '../social/AccountSettings'
+import { Avatar } from '../../components/Avatar'
 import { CountBadge } from '../../components/CountBadge'
 import { BodyCard } from './BodyCard'
 import { enableProfileTargets } from '../nutrition/api'
@@ -343,10 +344,10 @@ function ProfileView({
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
               {avatar ? (
-                <img
+                <Avatar
                   src={avatar}
                   alt={`Profilbild von ${profile.displayName}`}
-                  className="h-22 w-22 rounded-full object-cover ring-2 ring-neon/80"
+                  className="h-22 w-22 rounded-full ring-2 ring-neon/80"
                 />
               ) : (
                 <div

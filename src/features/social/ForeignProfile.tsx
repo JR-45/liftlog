@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Avatar } from '../../components/Avatar'
 import { CARD, LINK, SECTION_TITLE } from '../../lib/ui'
 import { ConnectionsSummary } from './ConnectionsSummary'
 import { FollowButton } from './FollowButton'
@@ -28,7 +29,7 @@ export function ForeignProfile({ personId, viewerId, today, onConnections }: {
   return <>
     <div className={CARD}>
       <div className="flex items-center gap-3">
-        {person.avatar ? <img src={person.avatar} alt="" className="h-16 w-16 shrink-0 rounded-full object-cover" /> : <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-control text-2xl font-semibold">{person.display_name[0]?.toUpperCase()}</span>}
+        {person.avatar ? <Avatar src={person.avatar} className="h-16 w-16 shrink-0 rounded-full" /> : <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-control text-2xl font-semibold">{person.display_name[0]?.toUpperCase()}</span>}
         <div className="min-w-0 flex-1"><h2 className={`${SECTION_TITLE} break-words`}>{person.display_name}</h2><p className="break-all text-sm text-muted">@{person.username}</p>
           {person.relationship !== 'accepted' && <p className="mt-2 text-sm tabular-nums">{person.followers_count} Follower</p>}</div>
         <div className="shrink-0"><FollowButton person={person} viewerId={viewerId} onChanged={refresh} onError={setError} /></div>
