@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildWeek, planForDate, shiftDate, weekStart } from './week'
+import { buildWeek, planForDate, planningDate, shiftDate, weekStart } from './week'
 import { buildMonth } from './calendar'
 
 describe('Kalenderwochen', () => {
@@ -88,5 +88,17 @@ describe('planForDate', () => {
   it('betrifft nur das geplante Datum, nicht denselben Wochentag eine Woche später', () => {
     const overrides = [{ day_date: '2026-11-09', plan_day_id: null, is_rest_day: true }]
     expect(planForDate('2026-11-16', template, overrides)).toEqual({ planDayId: 'push', kind: 'plan' })
+  })
+})
+
+describe('planningDate', () => {
+  it('bleibt unter der Woche in der laufenden Woche', () => {
+    expect(planningDate('2026-11-09')).toBe('2026-11-09')
+    expect(planningDate('2026-11-14')).toBe('2026-11-14')
+  })
+
+  it('springt sonntags in die kommende Woche', () => {
+    expect(planningDate('2026-11-08')).toBe('2026-11-09')
+    expect(weekStart(planningDate('2026-11-08'))).toBe('2026-11-09')
   })
 })

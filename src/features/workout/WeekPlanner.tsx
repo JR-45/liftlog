@@ -9,8 +9,9 @@ const SHORT = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const LINK = 'min-h-11 px-2 text-sm font-medium text-muted disabled:opacity-40'
 
-export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dirty, busy, onDate, onChange, onSave, onDiscard, onTemplate }: {
-  selectedDate: string; today: string; days: ScheduledDay[]; planDays: PlanDay[]; workouts: WeekWorkout[]
+export function WeekPlanner({ selectedDate, today, home, days, planDays, workouts, dirty, busy, onDate, onChange, onSave, onDiscard, onTemplate }: {
+  /** home: Startdatum der Planung, sonntags schon die kommende Woche. */
+  selectedDate: string; today: string; home: string; days: ScheduledDay[]; planDays: PlanDay[]; workouts: WeekWorkout[]
   dirty: boolean; busy: boolean
   onDate: (date: string) => void; onChange: (index: number, value: string) => void
   onSave: () => void; onDiscard: () => void; onTemplate: () => void
@@ -25,9 +26,9 @@ export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dir
       </div>
       <button className={NAV_BUTTON} type="button" aria-label="Nächste Woche" disabled={dirty || busy} onClick={() => onDate(shiftDate(selectedDate, 7))}><ChevronRightIcon className="h-5 w-5" /></button>
     </div>
-    {weekStart(today) !== start && (
+    {weekStart(home) !== start && (
       <div className="mt-2 text-center">
-        <button className={LINK} type="button" disabled={dirty || busy} onClick={() => onDate(today)}>Zurück zu dieser Woche</button>
+        <button className={LINK} type="button" disabled={dirty || busy} onClick={() => onDate(home)}>{weekStart(home) === weekStart(today) ? 'Zurück zu dieser Woche' : 'Zur kommenden Woche'}</button>
       </div>
     )}
 
@@ -36,7 +37,8 @@ export function WeekPlanner({ selectedDate, today, days, planDays, workouts, dir
         const date = new Date(`${day.day_date}T12:00:00`)
         const trained = workouts.some((workout) => workout.performed_on === day.day_date)
         const isToday = day.day_date === today
-        return <li key={day.day_date} className="flex items-center gap-3 py-2">
+        // Vergangene Tage bleiben änderbar, sind aber blass, damit man nicht aus Versehen dort plant.
+        return <li key={day.day_date} className={`flex items-center gap-3 py-2 ${day.day_date < today ? 'opacity-45' : ''}`}>
           <span className="w-16 shrink-0">
             <span className={`block text-sm font-semibold ${isToday ? 'text-accent-ink' : 'text-foreground'}`}>{WEEKDAYS[date.getDay()]}</span>
             <span className="block text-xs tabular-nums text-muted">{SHORT.format(date)}</span>
