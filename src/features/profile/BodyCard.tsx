@@ -107,9 +107,8 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
   const [showCircumferences, setShowCircumferences] = useState(() =>
     CIRCUMFERENCES.some(({ key }) => profile.measurements.some((entry) => entry[key] !== null)),
   )
-  const [showDetails, setShowDetails] = useState(
-    () => profile.heightCm === null || profile.sex === null || profile.birthYear === null,
-  )
+  // Zugeklappt. Fehlen Angaben, öffnet „Angaben ergänzen“ unter den Werten den Bereich.
+  const [showDetails, setShowDetails] = useState(false)
   const [height, setHeight] = useState(toText(profile.heightCm))
   const [target, setTarget] = useState(toText(profile.targetWeightKg))
   const [sex, setSex] = useState<Sex | ''>(profile.sex ?? '')
@@ -235,10 +234,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
   const diff = analysis.diffToTargetKg
   return (
     <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
-      <div>
-        <h3 className="text-xl font-bold tracking-tight text-foreground">Körperdaten</h3>
-        <p className="text-xs text-muted">Gewicht, Umfänge und daraus berechnete Werte</p>
-      </div>
+      <h3 className="text-xl font-bold tracking-tight text-foreground">Körperdaten</h3>
 
       {/* Auswertung */}
       <div className="mt-3.5 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
@@ -258,7 +254,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         <Tile
           label="Körperfett"
           value={analysis.bodyFatPct === null ? '—' : `${formatNumber(analysis.bodyFatPct)} %`}
-          note={analysis.bodyFatSource === 'navy' ? 'geschätzt (Navy-Formel)' : analysis.bodyFatSource === 'measured' ? 'gemessen' : undefined}
+          note={analysis.bodyFatSource === 'navy' ? 'geschätzt' : analysis.bodyFatSource === 'measured' ? 'gemessen' : undefined}
         />
         {analysis.leanMassKg !== null && (
           <Tile
@@ -267,7 +263,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
             note={analysis.fatMassKg === null ? undefined : `Fett ${formatNumber(analysis.fatMassKg)} kg`}
           />
         )}
-        {analysis.ffmi !== null && <Tile label="FFMI" value={formatNumber(analysis.ffmi)} note="Fettfreie-Masse-Index" />}
+        {analysis.ffmi !== null && <Tile label="FFMI" value={formatNumber(analysis.ffmi)} />}
         {analysis.waistToHeight !== null && analysis.waistToHeightRating !== null && (
           <Tile
             label="Taille / Größe"
@@ -284,15 +280,16 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
             noteClass={analysis.waistToHipRating === null ? undefined : RATING_STYLE[analysis.waistToHipRating]}
           />
         )}
-        {analysis.bmrKcal !== null && <Tile label="Grundumsatz" value={`${analysis.bmrKcal} kcal`} note="in Ruhe pro Tag" />}
-        {analysis.tdeeKcal !== null && <Tile label="Tagesbedarf" value={`${analysis.tdeeKcal} kcal`} note="mit Aktivität" />}
-        {analysis.targetKcal !== null && <Tile label="Kalorienziel" value={`${analysis.targetKcal} kcal`} note="passend zu deinem Ziel" />}
-        {analysis.proteinG !== null && <Tile label="Eiweiß" value={`${analysis.proteinG} g`} note="pro Tag empfohlen" />}
+        {analysis.tdeeKcal !== null && <Tile label="Tagesbedarf" value={`${analysis.tdeeKcal} kcal`} />}
+        {analysis.targetKcal !== null && <Tile label="Kalorienziel" value={`${analysis.targetKcal} kcal`} />}
+        {analysis.proteinG !== null && <Tile label="Eiweiß" value={`${analysis.proteinG} g`} />}
       </div>
       {missing.length > 0 && (
-        <p className="mt-2 text-xs text-muted">Für mehr Werte fehlt noch: {missing.join(', ')}.</p>
+        <p className="mt-2 text-xs text-muted">
+          Für mehr Werte fehlt: {missing.join(', ')}.{' '}
+          {!showDetails && <button type="button" className="font-medium text-accent-ink" onClick={() => setShowDetails(true)}>Angaben ergänzen</button>}
+        </p>
       )}
-      <p className="mt-1 text-[11px] text-muted/70">Alle Werte sind Schätzungen und ersetzen keine ärztliche Beratung.</p>
 
       {/* Heutige Messung */}
       <form onSubmit={(event) => void handleSaveMeasurement(event)} className="mt-4 space-y-3 border-t border-line/[0.06] pt-4">
@@ -441,9 +438,6 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 ))}
               </select>
             </label>
-            <p className="text-xs text-muted">
-              Geschlecht und Geburtsjahr nutzt die App nur für Grundumsatz und Körperfett-Schätzung.
-            </p>
             <button
               type="submit"
               disabled={busy}

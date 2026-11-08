@@ -397,7 +397,6 @@ function ProfileView({
               </span>
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-foreground">Persönliche Rekorde (PRs)</h3>
-                <p className="text-xs text-muted">Schwerster Satz & geschätztes 1RM je Übung</p>
               </div>
             </div>
           </div>
