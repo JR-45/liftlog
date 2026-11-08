@@ -5,10 +5,13 @@ import {
   type Goal,
   type Location,
   type OnboardingAnswers,
+  isValidSessionMinutes,
+  PRESET_MINUTES,
   type SessionMinutes,
   suggestWeekdays,
 } from '../../domain/onboarding'
 import { localDateString } from '../../domain/sets'
+import { TimeWheelInput } from '../../components/TimeWheelInput'
 import { Wordmark } from '../../lib/Wordmark'
 import { PlanEditor } from '../plan/PlanEditor'
 import { savePlan } from '../plan/api'
@@ -43,9 +46,13 @@ type Draft = {
   location: Location | null
   weekdays: number[]
   minutes: SessionMinutes | null
+  /** „Eigene“ Dauer gewählt: Das Zeit-Rad ist sichtbar. */
+  customMinutes: boolean
 }
 
-const EMPTY: Draft = { step: 'welcome', name: '', goal: null, experience: null, location: null, weekdays: [], minutes: null }
+const EMPTY: Draft = {
+  step: 'welcome', name: '', goal: null, experience: null, location: null, weekdays: [], minutes: null, customMinutes: false,
+}
 
 function draftKey(userId: string) {
   return `liftlog:onboarding:${userId}`
@@ -349,14 +356,42 @@ export function Onboarding({ userId, onFinish }: Props) {
             })}
           </div>
           <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-white/70">Wie lange pro Training?</p>
-          <div className="mt-2 grid grid-cols-4 gap-1.5" role="group" aria-label="Trainingsdauer">
-            {([30, 45, 60, 90] as const).map((minutes) => (
-              <button key={minutes} type="button" aria-pressed={draft.minutes === minutes} onClick={() => update({ minutes })}
-                className={`min-h-12 rounded-xl font-display text-xl font-extrabold ${draft.minutes === minutes ? 'bg-neon text-black' : 'border border-white/15 bg-black/45 text-white backdrop-blur-md'}`}>
-                {minutes}<span className="ml-0.5 text-xs font-semibold">Min</span>
-              </button>
-            ))}
+          <div className="mt-2 grid grid-cols-5 gap-1.5" role="group" aria-label="Trainingsdauer">
+            {PRESET_MINUTES.map((minutes) => {
+              const on = !draft.customMinutes && draft.minutes === minutes
+              return (
+                <button key={minutes} type="button" aria-pressed={on} onClick={() => update({ minutes, customMinutes: false })}
+                  className={`min-h-12 rounded-xl font-display text-xl font-extrabold ${on ? 'bg-neon text-black' : 'border border-white/15 bg-black/45 text-white backdrop-blur-md'}`}>
+                  {minutes}<span className="ml-0.5 text-xs font-semibold">Min</span>
+                </button>
+              )
+            })}
+            <button type="button" aria-pressed={draft.customMinutes}
+              onClick={() => update({ customMinutes: true, minutes: draft.customMinutes && draft.minutes ? draft.minutes : 75 })}
+              className={`min-h-12 rounded-xl font-display text-base font-extrabold uppercase ${draft.customMinutes ? 'bg-neon text-black' : 'border border-white/15 bg-black/45 text-white backdrop-blur-md'}`}>
+              Eigene
+            </button>
           </div>
+          {draft.customMinutes && (
+            <label className="mt-3 block text-xs font-bold uppercase tracking-wider text-white/70">
+              Deine Trainingsdauer (10 Min. bis 4 Std.)
+              <TimeWheelInput
+                className={`${fieldClass} cursor-pointer text-center font-display text-xl font-extrabold tracking-wide`}
+                aria-label="Eigene Trainingsdauer"
+                placeholder="Tippen zum Einstellen"
+                valueSeconds={draft.minutes ? draft.minutes * 60 : null}
+                onSecondsChange={(seconds) => {
+                  const minutes = seconds === null ? null : Math.round(seconds / 60)
+                  if (minutes !== null && !isValidSessionMinutes(minutes)) {
+                    update({ minutes: null })
+                    setError('Wähle eine Dauer von 10 Minuten bis 4 Stunden.')
+                    return
+                  }
+                  update({ minutes })
+                }}
+              />
+            </label>
+          )}
           {count > 6 && <p className="mt-3 text-sm text-[#ff9f9a]">Plane mindestens einen Ruhetag ein, höchstens 6 Trainingstage.</p>}
           <div className="mt-6">
             <PrimaryButton disabled={count === 0 || count > 6 || !draft.minutes} onClick={next}>Plan erstellen</PrimaryButton>
