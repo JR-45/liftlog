@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js'
+import { parseOpenFoodFacts, type BarcodeProduct } from '../../domain/barcode'
 import { FOOD_CONSENT_VERSION, parseFoodScan, type FoodScan } from '../../domain/foodScan'
 import { EMPTY_TARGETS, NUTRIENTS, validateMealItems, validateTargets, type Meal, type Nutrition, type NutritionTargets } from '../../domain/nutrition'
 import type { Json } from '../../lib/database.types'
@@ -118,4 +119,18 @@ export async function setSupplementTaken(id: string, date: string, taken: boolea
     ? await supabase.from('supplement_intakes').upsert({ supplement_id: id, taken_on: date }, { onConflict: 'supplement_id,taken_on', ignoreDuplicates: true })
     : await supabase.from('supplement_intakes').delete().eq('supplement_id', id).eq('taken_on', date)
   if (error) throw error
+}
+
+/**
+ * Produkt zu einem Barcode aus Open Food Facts (offene Datenbank, ohne Schlüssel). Übertragen wird nur die Nummer.
+ * null, wenn das Produkt dort nicht bekannt ist.
+ */
+export async function lookupBarcode(code: string, signal?: AbortSignal): Promise<BarcodeProduct | null> {
+  const fields = 'product_name,product_name_de,brands,serving_quantity,nutriments'
+  const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${fields}`, {
+    signal: signal ?? AbortSignal.timeout(10_000),
+  })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error('Die Produktdatenbank ist gerade nicht erreichbar. Bitte später erneut versuchen.')
+  return parseOpenFoodFacts(await response.json())
 }
