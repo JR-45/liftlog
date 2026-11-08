@@ -12,6 +12,16 @@ Bestehende und neue Konten sind zunächst privat. Vorhandene Folgebeziehungen bl
 
 Diese Sichtbarkeitsgrenze ist durch die letzte Nutzeranweisung bestätigt. Die Umsetzung erfolgt lokal; eine Online-Migration bleibt dem Projekt-Owner vorbehalten.
 
+## Sichtbar nur auf Wunsch (Migration 20261108190000)
+
+Die erste Fassung hat für jedes Konto automatisch eine auffindbare Identität angelegt und das Verbergen entfernt. Das ist zurückgenommen:
+
+- Niemand ist automatisch auffindbar. Sichtbar wird man nur über „Profil sichtbar machen“ (`enable_social_profile()`), in den Einstellungen oder unter Follower.
+- „Profil verbergen“ (Einstellungen, mit „Sicher? Nochmal tippen“) löscht die eigene Zeile in `social_profiles`. Alle Folgebeziehungen verschwinden mit, eigene Trainings-, Körper- und Ernährungsdaten bleiben.
+- Folgen setzt ein eigenes sichtbares Profil voraus.
+- Beim Einspielen werden automatisch angelegte Identitäten ohne Folgebeziehung entfernt. Wer schon Beziehungen hat, bleibt sichtbar und kann sich selbst verbergen.
+- Benutzernamen gibt es nur mit sichtbarem Profil.
+
 ## Oberfläche
 
 ### Eigenes Profil und Einstellungen

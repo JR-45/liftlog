@@ -1,15 +1,4 @@
-# Kontoprivatsphäre
-
-- [x] Datenmodell und Tests: neue Schutzmigration schließt Körper- und Ernährungsfelder auch für bestätigte Follower vollständig aus. Alle 248 pgTAP-Tests bestehen.
-- [x] Navigation und API: Suche findet bestehende Konten; Namen/Bilder öffnen zuerst deren Profile. Zurück erhält Suchbegriff, Reiter und Listenseite.
-- [x] Einstellungen: Zahnrad, deaktivierte Platzhalter, Öffentlich/Privat und Anfrageverwaltung.
-- [x] Profil: Benutzername und Profil werden atomar gespeichert. Profil/Training erst nach Annahme; Körperdaten und Ernährung nur für den Besitzer. Private Bereiche werden vollständig ausgeblendet, keine leeren Karten.
-- [x] Drei-Konten-Prüfung: drei getrennte Browser-Sitzungen prüfen Anfrage/Rücknahme/Ablehnung/Annahme, öffentliche Freigabe, direkten API-Zugriff und unveränderte eigene Körper-/Ernährungsansichten. 290 Unit-Tests bestehen.
-- [x] Letzter UI-Schritt: anklickbare Follower-/Gefolgt-Zähler öffnen den passenden Reiter. Erneuter Drei-Konten-Browserdurchlauf, Build und Lint bestanden; Doku aktualisiert.
-
-Kein Commit, Push, Online-Migration oder Merge bis zu den angekündigten Befehlen. PR #48 bleibt unverändert.
-
-## Vorheriger abgeschlossener Stand
+# Gemini-Foodscanner
 
 - [x] Rechenlogik und Scan-Vertrag: 17 fokussierte Vitest-Tests bestehen.
 - [x] Migration und pgTAP: nach lokalem Reset bestehen alle 185 Tests; Typen aus lokalem Schema generiert.
