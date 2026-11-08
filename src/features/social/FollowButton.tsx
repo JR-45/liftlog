@@ -18,5 +18,5 @@ export function FollowButton({ person, viewerId, onChanged, onError }: {
       void setFollowing(person.user_id, !active, viewerId).then(onChanged)
         .catch(() => onError('Folgen konnte nicht geändert werden.'))
         .finally(() => { lock.current = false; setBusy(false) })
-    }}>{busy ? 'Wird gespeichert …' : label}</button>
+    }}>{label}</button>
 }

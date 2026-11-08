@@ -8,10 +8,10 @@ import type { SharedOverview } from './api'
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const WEEKDAY = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
-/** Was Follower sehen: wann trainiert wurde und den Plan, wenn er veröffentlicht ist. */
+/** Was Follower sehen: die laufende Woche, die Serie und den Plan, wenn er veröffentlicht ist. */
 export function SharedProfileOverview({ overview, today }: { overview: SharedOverview; today: string }) {
-  const weeks = gymWeeks(overview.gymDays, today, 4)
-  const thisWeek = weeks[weeks.length - 1].filter((day) => day.trained).length
+  const week = gymWeeks(overview.gymDays, today, 1)[0]
+  const thisWeek = week.filter((day) => day.trained).length
   const streak = weekStreak(overview.gymDays, today)
   return <>
     <section className={CARD} aria-labelledby="gym-days-heading">
@@ -21,13 +21,11 @@ export function SharedProfileOverview({ overview, today }: { overview: SharedOve
       </div>
       <p className="mt-1 text-sm tabular-nums text-muted">{thisWeek} / {overview.profile.weeklyTarget} diese Woche</p>
       <div className="mt-3 grid grid-cols-7 gap-1.5 text-center text-xs text-muted" aria-hidden="true">{DAYS.map((day) => <span key={day}>{day}</span>)}</div>
-      <ul className="mt-1.5 space-y-1.5" aria-label="Trainingstage der letzten vier Wochen">
-        {weeks.map((week) => <li key={week[0].date} className="grid grid-cols-7 gap-1.5">
-          {week.map((day) => <span key={day.date} aria-label={`${day.date.split('-').reverse().join('.')}: ${day.trained ? 'trainiert' : 'kein Training'}`}
+      <ul className="mt-1.5 grid grid-cols-7 gap-1.5" aria-label="Trainingstage dieser Woche">
+          {week.map((day) => <li key={day.date} aria-label={`${day.date.split('-').reverse().join('.')}: ${day.trained ? 'trainiert' : 'kein Training'}`}
             className={`flex aspect-square items-center justify-center rounded-lg ${day.trained ? 'bg-success text-black' : day.future ? 'bg-transparent' : 'bg-control'} ${day.date === today ? 'ring-2 ring-neon' : ''}`}>
             {day.trained && <CheckIcon className="h-4 w-4 stroke-[3]" />}
-          </span>)}
-        </li>)}
+          </li>)}
       </ul>
     </section>
     {overview.plan && <section className={CARD} aria-labelledby="shared-plan-heading">
