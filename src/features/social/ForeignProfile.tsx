@@ -27,12 +27,12 @@ export function ForeignProfile({ personId, viewerId, today, onConnections }: {
   const { person, overview } = data
   return <>
     <div className={CARD}>
-      <div className="flex items-center gap-4">
-        {person.avatar ? <img src={person.avatar} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" /> : <span aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-control text-2xl font-semibold">{person.display_name[0]?.toUpperCase()}</span>}
+      <div className="flex items-center gap-3">
+        {person.avatar ? <img src={person.avatar} alt="" className="h-16 w-16 shrink-0 rounded-full object-cover" /> : <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-control text-2xl font-semibold">{person.display_name[0]?.toUpperCase()}</span>}
         <div className="min-w-0 flex-1"><h2 className={`${SECTION_TITLE} break-words`}>{person.display_name}</h2><p className="break-all text-sm text-muted">@{person.username}</p>
           {person.relationship !== 'accepted' && <p className="mt-2 text-sm tabular-nums">{person.followers_count} Follower</p>}</div>
+        <div className="shrink-0"><FollowButton person={person} viewerId={viewerId} onChanged={refresh} onError={setError} /></div>
       </div>
-      <div className="mt-4"><FollowButton person={person} viewerId={viewerId} onChanged={refresh} onError={setError} /></div>
       {person.relationship === 'accepted' && <div className="mt-3"><ConnectionsSummary userId={personId} onOpen={onConnections} label={`${person.display_name}: Verbindungen`} /></div>}
     </div>
     {person.relationship !== 'accepted' ? <div className={CARD}><h3 className={SECTION_TITLE}>{person.is_private ? 'Dieses Konto ist privat' : 'Profilübersicht'}</h3>
