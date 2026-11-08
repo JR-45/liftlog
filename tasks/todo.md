@@ -1,9 +1,9 @@
-# Follower im Profil
+# Gemini-Foodscanner
 
-- [x] Datenmodell: Freigabe, private Beziehungen und Löschkaskaden; alle 234 pgTAP-Tests bestehen.
-- [x] API: Status, Zähler, paginierte Listen und Suche, Folgen/Entfolgen; Datenbanktypen aus lokalem Schema generiert.
-- [x] UI: Zähler am Profilkopf, eigene Unterseite, beide Reiter, Zurück, Laden/Fehler/Leerzustand und Freigabe.
-- [x] Prüfung: echter lokaler Mehrnutzerablauf, Neuladen, Tastatur, Pagination mit 21 Suchtreffern, 320/390/768/1280 px und Hell-/Dunkelmodus. 286 Unit-Tests, Lint und Build bestehen.
-- [x] PR vorbereitet: aktuelles `main` einschließlich Barcode-Änderungen übernommen; Migrationshinweis und Prüfnachweise dokumentiert.
+- [x] Rechenlogik und Scan-Vertrag: 17 fokussierte Vitest-Tests bestehen.
+- [x] Migration und pgTAP: nach lokalem Reset bestehen alle 185 Tests; Typen aus lokalem Schema generiert.
+- [x] Tagebuch und Ziele: Tagessummen, Profilvorschläge und Speicherung implementiert; Browserprüfung mit Neuladen bestanden.
+- [x] Gemini-Analyse: Einwilligung, Bildverarbeitung, Korrektur und Fehlerpfade geprüft. Erfolgreiche KI-Antwort im Browser simuliert.
+- [x] Integration: nach Übernahme des aktuellen `main` bestehen alle 265 Unit-Tests, Lint und vollständiger Build; responsive Browserprüfung abgeschlossen.
 
-Online-Migration ausschließlich durch den Projekt-Owner, danach Label `migration-online`. Bestehende Konten sind zunächst nicht auffindbar und können Name und Bild freiwillig freigeben.
+Betriebsvoraussetzung: Gemini-Key lokal bzw. als Function-Secret einrichten und anschließend einen echten Anbieter-Smoke-Test durchführen. Online-Migration und Deployment bleiben beim Projekt-Owner; der Pull Request benötigt die Bestätigung `migration-online`.

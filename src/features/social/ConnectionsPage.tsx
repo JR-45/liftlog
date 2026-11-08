@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { socialSearchPattern } from '../../domain/social'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../lib/icons'
-import { CARD, INPUT, LINK, NAV_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from '../../lib/ui'
+import { CARD, INPUT, LINK, NAV_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
 import { disableSocialProfile, loadPeople, loadSocialSummary, setFollowing, type PeoplePage, type SocialSummary, type SocialTab } from './api'
 
 type Props = { userId: string; displayName: string; initialTab: SocialTab; onBack: () => void; onEnable: () => Promise<void> }
@@ -17,7 +17,6 @@ export function ConnectionsPage({ userId, displayName, initialTab, onBack, onEna
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [agreed, setAgreed] = useState(false)
   const [confirmRevoke, setConfirmRevoke] = useState(false)
   const back = useRef<HTMLButtonElement>(null)
   const lock = useRef(false)
@@ -62,13 +61,17 @@ export function ConnectionsPage({ userId, displayName, initialTab, onBack, onEna
     document.getElementById(`connections-${next}`)?.focus()
   }
 
-  function search(event: FormEvent) {
-    event.preventDefault()
-    if (draft.trim() && !socialSearchPattern(draft)) { setError('Bitte 2 bis 50 Zeichen eingeben.'); return }
-    setQuery(draft.trim())
-    setPage(0)
-    refresh()
-  }
+  // Suche beim Tippen: kurz warten, dann ab 2 Zeichen suchen. Leeres Feld zeigt wieder die Liste.
+  useEffect(() => {
+    const next = draft.trim()
+    if (next === query || (next && !socialSearchPattern(next))) return
+    const timeout = window.setTimeout(() => {
+      setQuery(next)
+      setPage(0)
+      refresh()
+    }, 300)
+    return () => window.clearTimeout(timeout)
+  }, [draft, query])
 
   async function mutate(action: () => Promise<void>, message: string) {
     if (lock.current) return
@@ -87,7 +90,6 @@ export function ConnectionsPage({ userId, displayName, initialTab, onBack, onEna
       setQuery('')
       setDraft('')
       setPage(0)
-      setAgreed(false)
       setConfirmRevoke(false)
     }, 'Freigabe konnte nicht widerrufen werden.')
   }
@@ -95,38 +97,33 @@ export function ConnectionsPage({ userId, displayName, initialTab, onBack, onEna
   return <section className="mt-5 space-y-4" aria-label="Verbindungen">
     <div className="flex items-center gap-3">
       <button ref={back} className={NAV_BUTTON} type="button" aria-label="Zurück zum Profil" disabled={busy} onClick={onBack}><ChevronLeftIcon className="h-5 w-5" /></button>
-      <h2 className="min-w-0 flex-1 truncate text-center text-2xl">{displayName}</h2><span className="w-11" aria-hidden="true" />
+      <h2 className={`min-w-0 flex-1 truncate text-center ${SECTION_TITLE}`}>{displayName}</h2><span className="w-11" aria-hidden="true" />
     </div>
-    <div role="tablist" aria-label="Verbindungen" className="grid grid-cols-2 border-b border-line/10">
+    <div role="tablist" aria-label="Verbindungen" className="grid grid-cols-2 gap-1 rounded-2xl border border-line/[0.06] bg-surface p-1">
       {(['followers', 'following'] as const).map(value => <button key={value} id={`connections-${value}`} type="button" role="tab"
         aria-controls="connections-list" aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} disabled={busy}
         onClick={() => changeTab(value)} onKeyDown={navigateTabs}
-        className={`min-h-11 border-b-2 px-3 py-2 text-sm font-semibold ${tab === value ? 'border-neon text-accent-ink' : 'border-transparent text-muted'}`}>
+        className={`min-h-11 rounded-xl px-3 py-2 text-sm transition-all ${tab === value ? 'bg-neon font-semibold text-black shadow-sm' : 'text-foreground/75 hover:text-foreground'}`}>
         <span className="tabular-nums">{summary ? summary[value] : '…'}</span> {value === 'followers' ? 'Follower' : 'Gefolgt'}
       </button>)}
     </div>
 
     {summary && !summary.enabled && <div className={CARD}>
-      <h3 className="text-xl">Personen finden und folgen</h3>
-      <label className="mt-3 flex min-h-11 items-start gap-3 text-sm"><input type="checkbox" checked={agreed} disabled={busy}
-        onChange={event => setAgreed(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-neon" />
-        Mein Name und Profilbild dürfen für angemeldete Personen sichtbar sein.</label>
-      <button type="button" disabled={!agreed || busy || loading} className={`${PRIMARY_BUTTON} mt-3`}
-        onClick={() => { void mutate(onEnable, 'Profil konnte nicht freigegeben werden.') }}>Profil freigeben</button>
+      <h3 className={SECTION_TITLE}>Personen finden und folgen</h3>
+      <p className="mt-2 text-sm text-muted">Andere sehen dann deinen Namen und dein Profilbild, sonst nichts.</p>
+      <button type="button" disabled={busy || loading} className={`${PRIMARY_BUTTON} mt-3 w-full`}
+        onClick={() => { void mutate(onEnable, 'Profil konnte nicht sichtbar gemacht werden.') }}>Profil sichtbar machen</button>
     </div>}
 
-    {summary?.enabled && <form className="flex flex-wrap items-end gap-2" onSubmit={search}>
-      <label className="min-w-0 flex-1 text-sm"><span className="mb-1 block text-muted">Personen suchen</span>
-        <input type="search" className={INPUT} maxLength={50} value={draft} disabled={busy} placeholder="Anzeigename"
-          onChange={event => setDraft(event.target.value)} /></label>
-      <button type="submit" className={SECONDARY_BUTTON} disabled={busy || loading}>Suchen</button>
-      {query && <button className={LINK} type="button" disabled={busy} onClick={() => { setQuery(''); setDraft(''); setPage(0); refresh() }}>Suche schließen</button>}
+    {summary?.enabled && <form role="search" onSubmit={(event) => event.preventDefault()}>
+      <input type="search" className={INPUT} maxLength={50} value={draft} placeholder="Personen suchen" aria-label="Personen suchen"
+        enterKeyHint="search" onChange={event => setDraft(event.target.value)} />
     </form>}
 
     {error && <div role="alert" className="text-sm text-danger"><p>{error}</p>
       <button className={LINK} type="button" disabled={busy || loading} onClick={refresh}>Erneut laden</button></div>}
     <div id="connections-list" role="tabpanel" aria-labelledby={`connections-${tab}`} aria-busy={loading} className={CARD}>
-      {query && <h3 className="mb-2 text-xl">Suchergebnisse</h3>}
+      {query && <h3 className={`mb-2 ${SECTION_TITLE}`}>Suchergebnisse</h3>}
       {loading ? <p role="status" className="text-sm text-muted">Wird geladen …</p> : !error && <>
         {!result.people.length && <p className="text-sm text-muted">{page > 0 ? 'Keine weiteren Personen.' : query ? 'Keine Personen gefunden.' : tab === 'followers' ? 'Dir folgt noch niemand.' : 'Du folgst noch niemandem.'}</p>}
         <ul className="divide-y divide-line/[0.06]">
@@ -135,7 +132,7 @@ export function ConnectionsPage({ userId, displayName, initialTab, onBack, onEna
               : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-control font-semibold">{person.display_name.charAt(0).toUpperCase()}</span>}
             <span className="min-w-0 flex-1 break-words text-sm font-semibold">{person.display_name}</span>
             <button type="button" disabled={busy || !summary?.enabled} aria-label={`${person.display_name} ${person.following ? 'entfolgen' : 'folgen'}`}
-              className={SECONDARY_BUTTON} onClick={() => { void mutate(() => setFollowing(person.user_id, !person.following), 'Folgen konnte nicht geändert werden.') }}>
+              className={person.following ? SECONDARY_BUTTON : PRIMARY_BUTTON} onClick={() => { void mutate(() => setFollowing(person.user_id, !person.following), 'Folgen konnte nicht geändert werden.') }}>
               {person.following ? 'Entfolgen' : 'Folgen'}
             </button>
           </li>)}
@@ -150,9 +147,9 @@ export function ConnectionsPage({ userId, displayName, initialTab, onBack, onEna
     {busy && <p role="status" className="text-sm text-muted">Wird gespeichert …</p>}
     {summary?.enabled && <details>
       <summary className={`${LINK} cursor-pointer py-2`}>Sichtbarkeit ändern</summary>
-      <p className="mt-2 text-sm text-muted">Beim Widerruf werden dein Name und Bild ausgeblendet und alle Folgebeziehungen entfernt.</p>
+      <p className="mt-2 text-sm text-muted">Dann bist du nicht mehr auffindbar, und alle Folgebeziehungen werden entfernt.</p>
       <button type="button" disabled={busy || loading} className={`${SECONDARY_BUTTON} mt-3 ${confirmRevoke ? 'bg-danger/15 text-danger' : ''}`}
-        onClick={() => { void revoke() }}>{confirmRevoke ? 'Sicher? Nochmal tippen' : 'Freigabe widerrufen'}</button>
+        onClick={() => { void revoke() }}>{confirmRevoke ? 'Sicher? Nochmal tippen' : 'Profil verbergen'}</button>
     </details>}
   </section>
 }
