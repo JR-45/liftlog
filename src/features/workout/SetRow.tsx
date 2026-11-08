@@ -4,23 +4,18 @@ import { useEffect, useState } from 'react'
 import {
   type DurationUnit,
   parseSetDraft,
-  parseWeightInput,
   type SetDraft,
   type SetValues,
-  stepWeight,
   type TrackingType,
   usesWeight,
 } from '../../domain/sets'
-import { CheckIcon, PlusIcon } from '../../lib/icons'
+import { CheckIcon } from '../../lib/icons'
 import { formatPace, formatSpeed } from '../../domain/cardio'
 import { GpsTracker } from './GpsTracker'
 import { removeDraft, writeDraft } from './drafts'
 
 const inputClass =
   'h-11 w-full min-w-0 rounded-xl border border-transparent bg-control px-1 text-center text-base font-medium tabular-nums text-foreground outline-none transition-colors placeholder:text-muted/60 focus:border-neon focus:bg-control-hover'
-const stepClass =
-  'h-11 w-11 shrink-0 rounded-xl bg-control text-lg font-medium text-foreground transition-all active:scale-95 active:bg-control-hover disabled:opacity-35 disabled:active:scale-100'
-
 type Props = {
   label: string
   rowNumber: number
@@ -43,7 +38,6 @@ type Props = {
   plannedWeight: number | null
   /** Ändert sich bei einem Wechsel der Erfassungsart. Offene Sätze verwerfen dann ihr altes Gewicht. */
   resetRequest: number
-  weightStep: number
   onSave: (setNumber: number, values: SetValues | null) => Promise<void>
   /** Meldet der Karte, dass es jetzt Eingaben gibt, die sich zurücksetzen lassen. */
   onEdit: () => void
@@ -79,7 +73,6 @@ export function SetRow(props: Props) {
     placeholder,
     plannedWeight,
     resetRequest,
-    weightStep,
     onSave,
     onEdit,
   } = props
@@ -104,7 +97,6 @@ export function SetRow(props: Props) {
 
   const workingWeightText = workingWeight === null ? '' : String(workingWeight).replace('.', ',')
   const shownWeight = draft.weight ?? workingWeightText
-  const weightValue = parseWeightInput(shownWeight)
   const weightName = tracking === 'assisted_reps' ? 'Gewichtshilfe' : 'Gewicht'
 
   const [followedRequest, setFollowedRequest] = useState(resetRequest)
@@ -131,22 +123,6 @@ export function SetRow(props: Props) {
     setDirty(true)
     setError(null)
     onEdit()
-  }
-
-  function handleWeightStep(direction: 1 | -1) {
-    const next = stepWeight(weightValue, weightStep, direction)
-    if (next !== null) change({ weight: String(next).replace('.', ',') })
-  }
-
-  /** Ein leeres Feld übernimmt zuerst den Wert vom letzten Mal, danach zählt jeder Tipp eins hoch. */
-  function handleRepsIncrement() {
-    const current = Number(draft.reps.trim())
-    if (draft.reps.trim() !== '' && Number.isInteger(current)) {
-      change({ reps: String(Math.max(1, current + 1)) })
-      return
-    }
-    const fromLast = Number(placeholder)
-    change({ reps: String(placeholder !== '' && Number.isInteger(fromLast) && fromLast > 0 ? fromLast : 1) })
   }
 
   /** Nimmt den Haken zurück. Die Werte bleiben stehen, damit ein weiterer Tipp sie wieder speichert. */
@@ -228,53 +204,24 @@ export function SetRow(props: Props) {
         ) : (
           <>
             {usesWeight(tracking) && (
-              <div className="flex min-w-0 flex-[2] items-center gap-1">
-                <button
-                  className={stepClass}
-                  type="button"
-                  aria-label={`${label} ${weightName} um ${weightStep} kg senken`}
-                  disabled={!weightValue}
-                  onClick={() => handleWeightStep(-1)}
-                >
-                  −
-                </button>
-                <input
-                  className={inputClass}
-                  aria-label={`${label} ${weightName} in kg`}
-                  inputMode="decimal"
-                  enterKeyHint="done"
-                  value={shownWeight}
-                  onChange={(event) => change({ weight: event.target.value })}
-                />
-                <button
-                  className={stepClass}
-                  type="button"
-                  aria-label={`${label} ${weightName} um ${weightStep} kg erhöhen`}
-                  onClick={() => handleWeightStep(1)}
-                >
-                  +
-                </button>
-              </div>
-            )}
-            <div className="flex min-w-0 flex-1 items-center gap-1">
               <input
-                className={inputClass}
-                aria-label={`${label} Wiederholungen`}
-                inputMode="numeric"
+                className={`${inputClass} flex-1`}
+                aria-label={`${label} ${weightName} in kg`}
+                inputMode="decimal"
                 enterKeyHint="done"
-                placeholder={placeholder}
-                value={draft.reps}
-                onChange={(event) => change({ reps: event.target.value })}
+                value={shownWeight}
+                onChange={(event) => change({ weight: event.target.value })}
               />
-              <button
-                className={`${stepClass} flex items-center justify-center`}
-                type="button"
-                aria-label={`${label} eine Wiederholung mehr`}
-                onClick={handleRepsIncrement}
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
-            </div>
+            )}
+            <input
+              className={`${inputClass} flex-1`}
+              aria-label={`${label} Wiederholungen`}
+              inputMode="numeric"
+              enterKeyHint="done"
+              placeholder={placeholder}
+              value={draft.reps}
+              onChange={(event) => change({ reps: event.target.value })}
+            />
           </>
         )}
 

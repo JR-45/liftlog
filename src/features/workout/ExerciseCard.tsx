@@ -520,17 +520,17 @@ export function ExerciseCard(props: Props) {
 
       {error && bodyVisible && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
 
-      <div className="mt-3.5 flex gap-1.5 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
-        {!cardio && <span className="w-4 shrink-0">{isRounds ? 'R' : '#'}</span>}
+      <div className="mt-3.5 flex gap-1 px-1 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
+        {!cardio && <span className="w-4 shrink-0" />}
         {exercise.tracking_type === 'duration' ? (
           <><span className="flex-1">h / min</span>{cardio && <span className="flex-1">Strecke</span>}</>
         ) : (
           <>
-            {weighted && <span className="flex-[2]">{assisted ? 'Hilfe (kg)' : 'kg'}</span>}
-            <span className="flex-[1.35]">Wdh.</span>
+            {weighted && <span className="flex-1">{assisted ? 'Hilfe (kg)' : 'kg'}</span>}
+            <span className="flex-1">Wdh.</span>
           </>
         )}
-        <span className={isDetail && entry.sets_max > 1 ? 'w-[5.75rem] shrink-0' : 'w-11 shrink-0'} />
+        <span className="w-11 shrink-0" />
       </div>
 
       <fieldset disabled={busy} aria-label={cardio ? 'Cardio-Einheit' : 'Sätze'}>
@@ -566,7 +566,6 @@ export function ExerciseCard(props: Props) {
               placeholder={String(placeholderValue).replace('.', ',')}
               plannedWeight={lastSet && lastSet.is_assisted === assisted && weighted ? plannedWeight(lastSet) : null}
               resetRequest={resetRequest}
-              weightStep={exercise.weight_step_kg}
               onSave={handleSaveSet}
               onEdit={() => setHasEdits(true)}
             />
