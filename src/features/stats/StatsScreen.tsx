@@ -314,24 +314,12 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
 
         {calendar && (
           <div className="md:[&>figure:first-child]:mt-0">
-            <AttendanceChart key={shownIndex} trained={calendar.trained} missed={calendar.missed} />
-            {calendar.marked > 0 && (
-              <p className="mt-3 text-sm font-medium text-muted" data-testid="marked-count">
-                {calendar.marked === 1 ? '1 Tag markiert' : `${calendar.marked} Tage markiert`}
-              </p>
-            )}
-            <p className="mt-3 text-xs leading-relaxed text-muted">
-              Tippe auf einen grünen Trainingstag im Kalender, um deine Sätze von diesem Tag zu sehen. Einen offenen
-              Trainingstag kannst du antippen und als krank, Urlaub oder verschoben markieren.{' '}
-              <CloseIcon className="mr-0.5 inline h-3.5 w-3.5 align-[-2px] text-danger" /> zählt nur an deinen
-              Trainingstagen, heute erst ab morgen.
-            </p>
-
+            {/* Tagesdetails stehen über dem Diagramm, damit sie nach dem Antippen sofort sichtbar sind. */}
             {selectedDate && (() => {
               const dayHistory = buildDayHistory(historyRows, selectedDate)
               if (!dayHistory) return null
               return (
-                <div className="mt-3 rounded-2xl border border-line/[0.08] bg-surface p-3.5">
+                <div className="mb-3 rounded-2xl border border-line/[0.08] bg-surface p-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider text-accent-ink">
@@ -361,6 +349,17 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                 </div>
               )
             })()}
+            <AttendanceChart key={shownIndex} trained={calendar.trained} missed={calendar.missed} />
+            {calendar.marked > 0 && (
+              <p className="mt-3 text-sm font-medium text-muted" data-testid="marked-count">
+                {calendar.marked === 1 ? '1 Tag markiert' : `${calendar.marked} Tage markiert`}
+              </p>
+            )}
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Tag antippen: Sätze ansehen oder als krank, Urlaub oder verschoben markieren.{' '}
+              <CloseIcon className="mr-0.5 inline h-3.5 w-3.5 align-[-2px] text-danger" /> = verpasstes Training.
+            </p>
+
           </div>
         )}
       </div>
