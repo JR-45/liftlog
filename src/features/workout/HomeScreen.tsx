@@ -62,6 +62,7 @@ export function HomeScreen({ session }: { session: Session }) {
   const [attempt, setAttempt] = useState(0)
   const [today, setToday] = useState(() => localDateString())
   const [tab, setTab] = useState<Tab>('training')
+  const [profileHeaderActions, setProfileHeaderActions] = useState<HTMLDivElement | null>(null)
   const [planVersion, setPlanVersion] = useState(0)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
@@ -265,8 +266,8 @@ export function HomeScreen({ session }: { session: Session }) {
       </aside>
 
       <main className="page-shell mx-auto min-h-dvh max-w-xl px-4 pb-[calc(11rem+env(safe-area-inset-bottom))] pt-6 md:max-w-4xl md:px-6 lg:max-w-7xl lg:px-8 lg:pb-10 lg:pt-8">
-        <header className="flex items-center justify-between lg:hidden">
-          <div className="min-w-0">
+        <header className={tab === 'profile' ? 'flex items-center justify-between gap-3 lg:has-[button]:mt-5 lg:justify-end' : 'flex items-center justify-between lg:hidden'}>
+          <div className={`min-w-0 ${tab === 'profile' ? 'flex-1 lg:hidden' : ''}`}>
             <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted">
               {tab === 'training'
                 ? `${greetingFor(hour)} · ${SHORT_DATE_FORMAT.format(new Date(`${today}T12:00:00`))}`
@@ -284,6 +285,7 @@ export function HomeScreen({ session }: { session: Session }) {
               </h1>
             )}
           </div>
+          {tab === 'profile' && <div ref={setProfileHeaderActions} className="flex shrink-0 gap-2" />}
         </header>
 
         {failed ? (
@@ -347,6 +349,7 @@ export function HomeScreen({ session }: { session: Session }) {
 
             {tab === 'profile' && (
               <ProfileScreen
+                headerActionsTarget={profileHeaderActions}
                 onSignOut={handleSignOut}
                 user={session.user}
                 today={today}
