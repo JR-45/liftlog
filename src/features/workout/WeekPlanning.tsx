@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { buildWeek, shiftDate, weekStart, type ScheduledDay } from '../../domain/week'
+import { buildWeek, planningDate, shiftDate, weekStart, type ScheduledDay } from '../../domain/week'
 import { loadScheduledDays, loadWeekWorkouts, saveTrainingWeek, type PlanDay, type WeekWorkout } from './api'
 import { WeekPlanner } from './WeekPlanner'
 
@@ -10,7 +10,8 @@ export function WeekPlanning({ today, planDays, active, onSaved }: {
   /** Nach dem Speichern, damit das Training die neue Planung sofort übernimmt. */
   onSaved: () => void
 }) {
-  const [selectedDate, setSelectedDate] = useState(today)
+  // Sonntags startet die Planung mit der kommenden Woche, die laufende ist dann vorbei.
+  const [selectedDate, setSelectedDate] = useState(() => planningDate(today))
   const [loaded, setLoaded] = useState<LoadedWeek | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -69,7 +70,7 @@ export function WeekPlanning({ today, planDays, active, onSaved }: {
   if (!data) return <p className="mt-6 text-sm text-muted">Woche wird geladen …</p>
 
   return <>
-    <WeekPlanner selectedDate={selectedDate} today={today} days={data.days} planDays={planDays} workouts={data.workouts}
+    <WeekPlanner selectedDate={selectedDate} today={today} home={planningDate(today)} days={data.days} planDays={planDays} workouts={data.workouts}
       dirty={dirty} busy={busy} onDate={selectDate}
       onChange={(index, value) => {
         setMessage(null)

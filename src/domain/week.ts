@@ -39,3 +39,11 @@ export function planForDate(date: string, template: { id: string; weekday: numbe
   const plan = template.find((item) => item.weekday === new Date(`${date}T12:00:00`).getDay())
   return plan ? { planDayId: plan.id, kind: 'plan' } : { planDayId: null, kind: 'rest' }
 }
+
+/**
+ * Datum, mit dem die Wochenplanung startet. Sonntags ist die laufende Woche praktisch vorbei,
+ * dann geht es direkt mit der kommenden Woche los.
+ */
+export function planningDate(today: string): string {
+  return new Date(`${today}T12:00:00`).getDay() === 0 ? shiftDate(today, 1) : today
+}
