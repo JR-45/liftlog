@@ -107,7 +107,6 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
     hipsCm: null,
   })
 
-  const firstWeight = profile.measurements.find((entry) => entry.weightKg !== null)?.weightKg ?? null
 
   function flash(message: string) {
     setFeedback(message)
@@ -206,7 +205,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
 
   const diff = analysis.diffToTargetKg
   // Messungen nur mit alten Umfängen haben nichts mehr zu zeigen.
-  const history = profile.measurements.filter((entry) => entry.weightKg !== null || entry.bodyFatPct !== null)
+  const lastEntry = profile.measurements.filter((entry) => entry.weightKg !== null || entry.bodyFatPct !== null).at(-1)
   return (
     <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
       <h3 className="text-xl font-bold tracking-tight text-foreground">Körperdaten</h3>
@@ -382,43 +381,23 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
       {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
       {feedback && <p role="status" className="mt-3 text-sm text-success">{feedback}</p>}
 
-      {/* Verlauf */}
-      {history.length > 0 && (
-        <div className="mt-4 border-t border-line/[0.06] pt-3">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Verlauf</p>
-            <p className="text-xs tabular-nums text-muted">
-              {[
-                firstWeight !== null && latest.weightKg !== null && firstWeight !== latest.weightKg
-                  ? `Seit Beginn ${latest.weightKg > firstWeight ? '+' : ''}${formatNumber(latest.weightKg - firstWeight)} kg`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </p>
-          </div>
-          <ul className="mt-2 divide-y divide-line/[0.06]">
-            {[...history]
-              .reverse()
-              .slice(0, 10)
-              .map((entry) => (
-                <li key={entry.date} className="flex items-center justify-between gap-3 py-1.5 text-sm">
-                  <span className="shrink-0 tabular-nums text-muted">
-                    {SHORT_DATE.format(new Date(`${entry.date}T12:00:00`))}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-right tabular-nums text-foreground">{summary(entry)}</span>
-                  <button
-                    type="button"
-                    aria-label={`Messung vom ${entry.date} löschen`}
-                    disabled={busy}
-                    onClick={() => void handleDelete(entry.date)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:text-danger"
-                  >
-                    <TrashIcon className="h-3.5 w-3.5" />
-                  </button>
-                </li>
-              ))}
-          </ul>
+      {/* Letzte Messung, zum Korrigieren. Der Verlauf steht in der Statistik. */}
+      {lastEntry && (
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-line/[0.06] pt-3 text-sm">
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted">Zuletzt</span>
+          <span className="min-w-0 flex-1 truncate text-right tabular-nums text-foreground">
+            <span className="text-muted">{SHORT_DATE.format(new Date(`${lastEntry.date}T12:00:00`))} · </span>
+            {summary(lastEntry)}
+          </span>
+          <button
+            type="button"
+            aria-label={`Messung vom ${lastEntry.date} löschen`}
+            disabled={busy}
+            onClick={() => void handleDelete(lastEntry.date)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:text-danger"
+          >
+            <TrashIcon className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
     </div>
