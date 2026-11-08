@@ -6,6 +6,8 @@ Shared instructions for every coding agent in this repository (Claude Code, Code
 
 Project skills live in `.agents/skills/<name>/SKILL.md` (frontmatter `name` + `description`, load the full file only when the task matches). `.claude/skills` and `.agent/skills` are symlinks to the same folder. Shared checklists the skills link to are in `.agents/references/`. Add or change skills only in `.agents/skills/`.
 
+**UI work:** always follow the `liftlog-design` skill (`.agents/skills/liftlog-design/SKILL.md`). It takes precedence over the generic design skills in this folder.
+
 ## Project
 
 LiftLog is a workout tracker: a mobile-first PWA (used as an installed app on phones, with tablet and laptop layouts) with a React 19 + TypeScript + Vite + Tailwind 4 frontend and Supabase (Auth + Postgres) as the only backend. There is no custom server. UI text, code comments, SQL comments and CI step names are all written in **German**; keep it that way. Commit messages are English Conventional Commits (`feat(workout): …`, `fix(…)`, `ci:`, `docs:`).

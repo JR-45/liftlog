@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { NUTRIENTS, NUTRIENT_LABELS, parseNutritionNumber, TARGET_LIMITS, validateTargets, type NutritionTargets } from '../../domain/nutrition'
 import { saveNutritionTargets } from './api'
-import { fieldClass, primaryClass } from './NutritionValues'
+import { INPUT as fieldClass, PRIMARY_BUTTON as primaryClass } from '../../lib/ui'
 
 /** Eigene Tagesziele. Speichern schaltet die Berechnung aus dem Profil ab. */
 export function NutritionTargetsForm({ targets, onSaved }: { targets: NutritionTargets; onSaved: (targets: NutritionTargets) => void }) {

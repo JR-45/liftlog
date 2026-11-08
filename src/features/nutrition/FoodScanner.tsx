@@ -5,7 +5,7 @@ import { CameraIcon, TrashIcon } from '../../lib/icons'
 import { analyzeFood, setPhotoConsent } from './api'
 import { prepareFoodPhoto } from './image'
 import { MealReview } from './MealReview'
-import { primaryClass, secondaryClass } from './NutritionValues'
+import { PRIMARY_BUTTON as primaryClass, SECONDARY_BUTTON as secondaryClass } from '../../lib/ui'
 
 export function FoodScanner({ consent, date, targets, onConsent, onSaved }: {
   consent: boolean; date: string; targets: NutritionTargets; onConsent: (value: boolean) => void; onSaved: (meal: Meal) => void
