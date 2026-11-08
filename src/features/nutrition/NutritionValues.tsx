@@ -1,8 +1,5 @@
 import { formatNutrition, NUTRIENTS, NUTRIENT_LABELS, nutrientProgress, type Nutrition, type NutritionTargets } from '../../domain/nutrition'
 
-export const fieldClass = 'h-11 w-full rounded-xl border border-line/15 bg-control px-3 text-base text-foreground outline-none focus:border-neon disabled:opacity-50'
-export const primaryClass = 'min-h-11 rounded-xl bg-neon px-4 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50'
-export const secondaryClass = 'min-h-11 rounded-xl border border-line/15 bg-control px-4 py-2.5 text-sm font-medium transition-colors hover:bg-control-hover disabled:opacity-50'
 
 export function NutritionValues({ values }: { values: Nutrition }) {
   return <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm sm:grid-cols-3 xl:grid-cols-5">

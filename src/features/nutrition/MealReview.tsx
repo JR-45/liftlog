@@ -3,7 +3,8 @@ import type { FoodScan } from '../../domain/foodScan'
 import { NUTRIENTS, NUTRIENT_LABELS, parseMealDraftItem, sumNutrition, type Meal, type MealItem, type NutritionTargets } from '../../domain/nutrition'
 import { TrashIcon } from '../../lib/icons'
 import { saveMeal } from './api'
-import { fieldClass, NutritionProgress, NutritionValues, primaryClass, secondaryClass } from './NutritionValues'
+import { INPUT as fieldClass, PRIMARY_BUTTON as primaryClass, SECONDARY_BUTTON as secondaryClass } from '../../lib/ui'
+import { NutritionProgress, NutritionValues } from './NutritionValues'
 
 type Draft = { id: string; name: string; grams: string; values: Record<typeof NUTRIENTS[number], string>; question: string | null; confirmed: boolean }
 
