@@ -2,7 +2,7 @@ import type { TrackingType } from '../../domain/sets'
 import { isCardioExercise } from '../../domain/cardio'
 import { supabase } from '../../lib/supabase'
 import { loadPlanDays, type PlanEntry } from '../workout/api'
-import type { PlanDayDraft, PlanExerciseDraft } from '../../domain/trainingPlan'
+import { withCleanSteps, type PlanDayDraft, type PlanExerciseDraft } from '../../domain/trainingPlan'
 export type { PlanDayDraft, PlanExerciseDraft } from '../../domain/trainingPlan'
 
 export function newExercise(): PlanExerciseDraft {
@@ -15,12 +15,12 @@ export function newExercise(): PlanExerciseDraft {
 export async function loadPlan(): Promise<PlanDayDraft[]> {
   const [days, result] = await Promise.all([
     loadPlanDays(),
-    supabase.from('plan_exercises').select(`plan_day_id, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max,
+    supabase.from('plan_exercises').select(`plan_day_id, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max, steps,
       alternative_exercise_id, exercise:exercises!plan_exercises_exercise_id_user_id_fkey(name, tracking_type)`)
       .order('position'),
   ])
   if (result.error) throw result.error
-  const entries = result.data as unknown as (Pick<PlanEntry, 'sets_min' | 'sets_max' | 'reps_min' | 'reps_max' | 'duration_min' | 'duration_max'> & {
+  const entries = result.data as unknown as (Pick<PlanEntry, 'sets_min' | 'sets_max' | 'reps_min' | 'reps_max' | 'duration_min' | 'duration_max' | 'steps'> & {
     plan_day_id: string; alternative_exercise_id: string | null; exercise: { name: string; tracking_type: TrackingType }
   })[]
   return days.map((day) => ({
@@ -34,6 +34,7 @@ export async function loadPlan(): Promise<PlanDayDraft[]> {
         sets_max: entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name) ? 1 : entry.sets_max,
         reps_min: entry.reps_min, reps_max: entry.reps_max,
         duration_min: entry.duration_min, duration_max: entry.duration_max,
+        ...(entry.steps ? { steps: entry.steps } : {}),
       })),
   }))
 }
@@ -45,6 +46,6 @@ export async function loadPlanSettings(): Promise<{ method: string; split: strin
 }
 
 export async function savePlan(days: PlanDayDraft[], method: string, split: string): Promise<void> {
-  const { error } = await supabase.rpc('save_training_plan_config', { days, chosen_method: method, chosen_split: split })
+  const { error } = await supabase.rpc('save_training_plan_config', { days: withCleanSteps(days), chosen_method: method, chosen_split: split })
   if (error) throw error
 }

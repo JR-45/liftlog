@@ -5,8 +5,21 @@ export type PlanExerciseDraft = {
   name: string; tracking_type: TrackingType; alternative_exercise_id: string | null
   sets_min: number; sets_max: number; reps_min: number | null; reps_max: number | null
   duration_min: number | null; duration_max: number | null
+  /** Bewegungen eines Zirkels, z. B. Swing, Clean, Thruster. Leer oder fehlend = normale Übung. */
+  steps?: string[]
 }
 export type PlanDayDraft = { weekday: number; name: string; exercises: PlanExerciseDraft[] }
+
+/** Entfernt leere Bewegungsfelder vor dem Speichern. Ohne Bewegungen bleibt eine normale Übung übrig. */
+export function withCleanSteps(days: PlanDayDraft[]): PlanDayDraft[] {
+  return days.map((day) => ({
+    ...day,
+    exercises: day.exercises.map(({ steps, ...exercise }) => {
+      const filled = (steps ?? []).map((step) => step.trim()).filter(Boolean)
+      return filled.length > 0 ? { ...exercise, steps: filled } : exercise
+    }),
+  }))
+}
 
 export const PLAN_SPLITS = [
   { id: 'custom', name: 'Individuell' },

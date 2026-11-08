@@ -44,6 +44,8 @@ export type PlanEntry = {
   reps_max: number | null
   duration_min: number | null
   duration_max: number | null
+  /** Bewegungen eines Zirkels, pro Runde nacheinander. null = normale Übung. */
+  steps: string[] | null
   exercise: Exercise
   alternative: Exercise | null
 }
@@ -88,7 +90,7 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
     supabase
       .from('plan_exercises')
       .select(
-        `id, position, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max,
+        `id, position, sets_min, sets_max, reps_min, reps_max, duration_min, duration_max, steps,
          exercise:exercises!plan_exercises_exercise_id_user_id_fkey(${EXERCISE_COLUMNS}),
          alternative:exercises!plan_exercises_alternative_exercise_id_user_id_fkey(${EXERCISE_COLUMNS})`,
       )

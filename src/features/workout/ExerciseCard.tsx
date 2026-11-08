@@ -119,7 +119,9 @@ export function ExerciseCard(props: Props) {
   const assisted = exercise.tracking_type === 'assisted_reps'
   const cardio = exercise.tracking_type === 'duration' && isCardioExercise(exercise.name)
   const unit: DurationUnit = cardio ? 'minutes' : durationUnitForTarget(entry.duration_min)
-  const isRounds = entry.sets_min !== entry.sets_max
+  // Bewegungen gehören zur geplanten Übung, nicht zur Alternative.
+  const steps = activeId === entry.exercise.id ? (entry.steps ?? []) : []
+  const isRounds = entry.sets_min !== entry.sets_max || steps.length > 0
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min === null ? null : entry.duration_min / (unit === 'minutes' ? 60 : 1), entry.duration_max === null ? null : entry.duration_max / (unit === 'minutes' ? 60 : 1))
   const sets = formatRange(entry.sets_min, entry.sets_max)
@@ -505,6 +507,17 @@ export function ExerciseCard(props: Props) {
             Doch trainieren
           </button>
         </div>
+      )}
+
+      {steps.length > 0 && (
+        <ol className="mb-3 space-y-1 rounded-xl bg-surface-inset px-3 py-2.5 text-sm text-foreground" aria-label="Bewegungen pro Runde">
+          {steps.map((step, index) => (
+            <li key={index} className="flex gap-2.5">
+              <span className="w-4 shrink-0 text-right tabular-nums text-muted">{index + 1}</span>
+              <span className="min-w-0">{step}</span>
+            </li>
+          ))}
+        </ol>
       )}
 
       <p className="text-sm tabular-nums text-muted">

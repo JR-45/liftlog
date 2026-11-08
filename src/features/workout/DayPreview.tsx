@@ -11,7 +11,7 @@ function target(entry: PlanEntry): string {
   const sets = formatRange(entry.sets_min, entry.sets_max)
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min, entry.duration_max)
-  if (reps) return `${sets}${entry.sets_min !== entry.sets_max ? ' Runden' : ''} × ${reps}`
+  if (reps) return `${sets}${entry.sets_min !== entry.sets_max || (entry.steps?.length ?? 0) > 0 ? ' Runden' : ''} × ${reps}`
   return duration ? `${sets} × ${duration} Sek.` : 'Dauer frei'
 }
 
