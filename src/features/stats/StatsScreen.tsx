@@ -272,6 +272,11 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                 )}
               </div>
 
+              <p className="mt-3 text-xs leading-relaxed text-muted">
+                Tag antippen: Sätze ansehen oder als krank, Urlaub oder verschoben markieren.{' '}
+                <CloseIcon className="mr-0.5 inline h-3.5 w-3.5 align-[-2px] text-danger" /> = verpasstes Training.
+              </p>
+
               {selectedCell?.canMark && (
                 <div className="mt-3 rounded-xl bg-control p-3">
                   <p className="text-sm font-semibold text-foreground">
@@ -355,10 +360,6 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
                 {calendar.marked === 1 ? '1 Tag markiert' : `${calendar.marked} Tage markiert`}
               </p>
             )}
-            <p className="mt-3 text-xs leading-relaxed text-muted">
-              Tag antippen: Sätze ansehen oder als krank, Urlaub oder verschoben markieren.{' '}
-              <CloseIcon className="mr-0.5 inline h-3.5 w-3.5 align-[-2px] text-danger" /> = verpasstes Training.
-            </p>
 
           </div>
         )}
