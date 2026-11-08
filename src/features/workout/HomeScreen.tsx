@@ -359,7 +359,6 @@ export function HomeScreen({ session }: { session: Session }) {
                 defaultWeeklyTarget={planDays.length}
                 onAvatarChange={setAvatarUrl}
                 onNameChange={setDisplayName}
-                onSignOut={handleSignOut}
               />
             )}
 

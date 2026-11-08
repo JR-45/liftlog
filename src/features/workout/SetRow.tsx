@@ -281,7 +281,7 @@ export function SetRow(props: Props) {
         <button
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 disabled:opacity-50 ${
             isSaved
-              ? 'bg-success-fill text-black shadow-sm shadow-[#30D158]/20'
+              ? 'bg-success-fill text-black shadow-sm shadow-success/20'
               : 'bg-control text-muted hover:text-foreground'
           }`}
           type="button"

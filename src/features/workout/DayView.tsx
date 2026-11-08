@@ -408,7 +408,7 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
         <button
           type="button"
           onClick={() => void handleReset()}
-          className={`mt-1 min-h-8 text-xs font-semibold uppercase tracking-wider underline underline-offset-2 ${
+          className={`mt-1 min-h-8 text-xs font-semibold uppercase tracking-wider ${
             confirmReset ? 'text-danger' : 'text-muted'
           }`}
         >
@@ -441,7 +441,7 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
         ) : ended ? (
           <div className="flex min-h-14 flex-wrap items-center justify-between gap-3">
             <p className="font-display text-2xl font-extrabold uppercase text-foreground">Training beendet</p>
-            <button type="button" onClick={() => void handleResume()} className="min-h-11 rounded-xl px-3 text-sm font-semibold text-neon underline">
+            <button type="button" onClick={() => void handleResume()} className="min-h-11 rounded-xl px-3 text-sm font-semibold text-accent-ink">
               Fortsetzen
             </button>
           </div>

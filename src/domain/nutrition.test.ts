@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nutrientProgress, nutritionFor, parseMealDraftItem, parseNutritionNumber, profileNutritionSuggestion, sumNutrition, validateMealItems, validateTargets } from './nutrition'
+import { goalStatus, nutrientProgress, profileTargets, nutritionFor, parseMealDraftItem, parseNutritionNumber, profileNutritionSuggestion, sumNutrition, validateMealItems, validateTargets } from './nutrition'
 
 const per100g = { kcal: 200, protein: 10, carbs: 20, fat: 8, fiber: 3 }
 
@@ -49,5 +49,40 @@ describe('Ernährungsberechnungen', () => {
     expect(parseMealDraftItem(draft)).toEqual({ name: 'Reis', grams: 150.5, per100g: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4 }, estimated: true })
     expect(parseMealDraftItem({ ...draft, grams: '' })).toBeNull()
     expect(parseMealDraftItem({ ...draft, values: { ...draft.values, protein: '' } })).toBeNull()
+  })
+})
+
+describe('goalStatus', () => {
+  it('zeigt, wie viel noch offen ist', () => {
+    expect(goalStatus(12, 50, 'protein')).toEqual({ reached: false, fraction: 0.24, label: 'noch 38 g', tone: 'open' })
+  })
+
+  it('meldet ein erreichtes Ziel, auch wenn es überschritten ist', () => {
+    expect(goalStatus(62, 50, 'protein')).toMatchObject({ reached: true, fraction: 1, label: 'erreicht', tone: 'done' })
+  })
+
+  it('warnt bei zu vielen Kalorien', () => {
+    expect(goalStatus(2120, 2000, 'kcal')).toMatchObject({ reached: true, label: '120 kcal drüber', tone: 'over' })
+  })
+
+  it('zählt genau das Ziel als erreicht', () => {
+    expect(goalStatus(2000, 2000, 'kcal')).toMatchObject({ reached: true, label: 'erreicht', tone: 'done' })
+  })
+})
+
+describe('profileTargets', () => {
+  it('leitet alle fünf Ziele aus Kalorien und Protein ab', () => {
+    // 2400 kcal, 160 g Protein: Fett 67 g (25 %), Kohlenhydrate = Rest, Ballaststoffe 34 g
+    expect(profileTargets({ kcal: 2400, protein: 160 })).toEqual({ kcal: 2400, protein: 160, fat: 67, carbs: 289, fiber: 34 })
+  })
+
+  it('gibt mindestens 25 g Ballaststoffe vor', () => {
+    expect(profileTargets({ kcal: 1500, protein: 100 })?.fiber).toBe(25)
+  })
+
+  it('braucht Kalorien und Protein aus dem Profil', () => {
+    expect(profileTargets({ kcal: null, protein: 150 })).toBeNull()
+    expect(profileTargets({ kcal: 2200, protein: null })).toBeNull()
+    expect(profileTargets(null)).toBeNull()
   })
 })

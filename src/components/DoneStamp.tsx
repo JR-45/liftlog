@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 /**
- * Grüner „DONE“-Stempel, der einmal auf die Übungskarte knallt und wieder verschwindet.
+ * Grüner „DONE“-Stempel, der einmal auf eine Karte knallt und wieder verschwindet (Übung fertig, Tagesziel erreicht).
  * Wird über einen neuen key neu abgespielt. Rein dekorativ, der Status steht schon im Haken.
  */
 export function DoneStamp() {

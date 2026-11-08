@@ -83,3 +83,31 @@ export function profileNutritionSuggestion(profile: {
   })
   return { kcal: analysis.targetKcal, protein: analysis.proteinG, missing }
 }
+
+export type GoalStatus = { reached: boolean; fraction: number; label: string; tone: 'open' | 'done' | 'over' }
+
+/**
+ * Kurzer Stand eines Tagesziels für die Übersicht: „noch 38 g“, „erreicht“ oder bei Kalorien
+ * „120 kcal drüber“. Bei Kalorien ist zu viel nicht gut, bei den anderen Werten schon.
+ */
+export function goalStatus(consumed: number, target: number, key: Nutrient): GoalStatus {
+  const fraction = Math.max(0, Math.min(1, consumed / target))
+  if (consumed < target) return { reached: false, fraction, label: `noch ${formatNutrition(target - consumed, key)}`, tone: 'open' }
+  if (key === 'kcal' && consumed > target) return { reached: true, fraction, label: `${formatNutrition(consumed - target, key)} drüber`, tone: 'over' }
+  return { reached: true, fraction, label: 'erreicht', tone: 'done' }
+}
+
+/**
+ * Vollständige Tagesziele aus dem Profilvorschlag (Kalorien und Protein aus der Körperanalyse).
+ * Fett: 25 % der Kalorien. Kohlenhydrate: der Rest. Ballaststoffe: 14 g je 1000 kcal, mindestens 25 g.
+ * null, solange im Profil Angaben fehlen.
+ */
+export function profileTargets(suggestion: { kcal: number | null; protein: number | null } | null): Nutrition | null {
+  if (!suggestion || suggestion.kcal === null || suggestion.protein === null || suggestion.kcal <= 0) return null
+  const kcal = Math.round(suggestion.kcal)
+  const protein = Math.round(suggestion.protein)
+  const fat = Math.round(kcal * 0.25 / 9)
+  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4))
+  const fiber = Math.max(25, Math.round(kcal / 1000 * 14))
+  return { kcal, protein, carbs, fat, fiber }
+}

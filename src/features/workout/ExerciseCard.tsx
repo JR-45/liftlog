@@ -27,7 +27,7 @@ import {
 } from './api'
 import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
 import { readDraft, removeDraft } from './drafts'
-import { DoneStamp } from './DoneStamp'
+import { DoneStamp } from '../../components/DoneStamp'
 import { SetRow } from './SetRow'
 
 const fieldClass =
@@ -294,7 +294,7 @@ export function ExerciseCard(props: Props) {
     <span
       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${
         done
-          ? 'bg-success-fill text-black shadow-sm shadow-[#30D158]/25'
+          ? 'bg-success-fill text-black shadow-sm shadow-success/25'
           : 'border-2 border-control-hover bg-control/40'
       }`}
       aria-hidden="true"
@@ -576,11 +576,11 @@ export function ExerciseCard(props: Props) {
       </fieldset>
       {(logged.length > 0 || hasEdits) &&
         (confirmingReset ? (
-          <div className="mt-3 rounded-lg bg-neutral-900/60 p-3">
-            <p className="text-sm text-neutral-200">Eingaben und heutige Sätze dieser Übung löschen?</p>
+          <div className="mt-3 rounded-xl bg-control p-3">
+            <p className="text-sm text-foreground">Eingaben und heutige Sätze dieser Übung löschen?</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
-                className="min-h-11 rounded-lg border border-neutral-700 px-2 text-sm text-neutral-200 disabled:opacity-50"
+                className="min-h-11 rounded-xl bg-control-hover px-2 text-sm font-medium text-foreground disabled:opacity-50"
                 type="button"
                 disabled={busy}
                 onClick={() => setConfirmingReset(false)}
@@ -588,7 +588,7 @@ export function ExerciseCard(props: Props) {
                 Abbrechen
               </button>
               <button
-                className="min-h-11 rounded-lg bg-red-400 px-2 text-sm font-semibold text-black disabled:opacity-50"
+                className="min-h-11 rounded-xl bg-danger px-2 text-sm font-semibold text-white disabled:opacity-50"
                 type="button"
                 disabled={busy}
                 onClick={() => void handleResetExercise()}
@@ -599,7 +599,7 @@ export function ExerciseCard(props: Props) {
           </div>
         ) : (
           <button
-            className="mt-3 min-h-11 w-full text-sm text-neutral-400 underline"
+            className="mt-3 min-h-11 w-full text-sm font-medium text-muted"
             type="button"
             onClick={() => setConfirmingReset(true)}
           >

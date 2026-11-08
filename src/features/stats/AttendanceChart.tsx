@@ -25,7 +25,7 @@ export function AttendanceChart({ trained, missed }: { trained: number; missed: 
   return (
     <figure className="attendance-infographic mt-3 rounded-2xl border border-line/[0.08] bg-surface p-4">
       <figcaption className="flex items-center justify-between gap-3">
-        <span className="font-display text-lg font-extrabold uppercase tracking-wide text-foreground">Trainingsbilanz</span>
+        <span className="font-display text-xl font-extrabold uppercase tracking-wide text-foreground">Trainingsbilanz</span>
         <span className="rounded-full border border-line/[0.08] bg-control/40 px-2.5 py-1 text-[11px] font-medium text-muted">Monatsübersicht</span>
       </figcaption>
       <div className="mx-auto mt-2 w-full max-w-sm" role="img"
