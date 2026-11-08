@@ -192,10 +192,11 @@ export function HomeScreen({ session }: { session: Session }) {
     clearDrafts({ userId })
   }, [userId])
 
-  function handleSignOut() {
+  async function handleSignOut() {
     clearDrafts()
     restTimer.stop()
-    void supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
   }
 
   const timerRunning = restTimer.endsAt !== null
@@ -230,7 +231,7 @@ export function HomeScreen({ session }: { session: Session }) {
 
   return (
     <div className="lg:pl-64">
-      {/* Laptop: Navigation, Pause und Abmelden in einer festen Seitenleiste. */}
+      {/* Laptop: Navigation und Pause in einer festen Seitenleiste. */}
       <aside className="apple-glass fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-line/[0.08] p-4 lg:flex">
         <div className="flex items-center gap-3 px-1">
           <img className="h-10 w-10 rounded-xl shadow-sm ring-1 ring-line/10" src="/icons/icon-192.png" alt="" />
@@ -260,13 +261,6 @@ export function HomeScreen({ session }: { session: Session }) {
         )}
         <div className="mt-auto space-y-3">
           {showTimer && <RestTimerBar timer={restTimer} variant="panel" />}
-          <button
-            className="h-11 w-full rounded-xl px-3.5 text-left text-sm text-muted transition-colors hover:bg-surface hover:text-foreground"
-            type="button"
-            onClick={handleSignOut}
-          >
-            Abmelden
-          </button>
         </div>
       </aside>
 
@@ -289,39 +283,6 @@ export function HomeScreen({ session }: { session: Session }) {
                 <Wordmark />
               </h1>
             )}
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label="Profil öffnen"
-              onClick={() => setTab('profile')}
-              className="flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-95"
-            >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  className={`h-9 w-9 rounded-full object-cover ring-2 ${
-                    tab === 'profile' ? 'ring-neon' : 'ring-line/15'
-                  }`}
-                />
-              ) : (
-                <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-full bg-surface ring-1 ${
-                    tab === 'profile' ? 'text-accent-ink ring-neon' : 'text-muted ring-line/10'
-                  }`}
-                >
-                  <UserIcon className="h-4 w-4" />
-                </span>
-              )}
-            </button>
-            <button
-              className="-mr-2 min-h-11 shrink-0 whitespace-nowrap rounded-xl px-2.5 text-sm font-medium text-muted transition-colors active:text-foreground"
-              type="button"
-              onClick={handleSignOut}
-            >
-              Abmelden
-            </button>
           </div>
         </header>
 
@@ -386,6 +347,7 @@ export function HomeScreen({ session }: { session: Session }) {
 
             {tab === 'profile' && (
               <ProfileScreen
+                onSignOut={handleSignOut}
                 user={session.user}
                 today={today}
                 defaultWeeklyTarget={planDays.length}
