@@ -1,6 +1,6 @@
 import { ageFromBirthYear, analyzeBody, type ActivityLevel, type Goal, type Sex } from './body.ts'
 
-export const NUTRIENTS = ['kcal', 'protein', 'carbs', 'fat', 'fiber'] as const
+export const NUTRIENTS = ['kcal', 'protein', 'carbs', 'fat', 'fiber', 'sugar'] as const
 export type Nutrient = typeof NUTRIENTS[number]
 export type Nutrition = Record<Nutrient, number>
 export type NutritionTargets = Record<Nutrient, number | null>
@@ -8,11 +8,11 @@ export type MealItem = { name: string; grams: number; per100g: Nutrition; estima
 export type Meal = { id: string; consumed_on: string; title: string; items: MealItem[] }
 
 export const NUTRIENT_LABELS: Record<Nutrient, string> = {
-  kcal: 'Kalorien', protein: 'Protein', carbs: 'Kohlenhydrate', fat: 'Fett', fiber: 'Ballaststoffe',
+  kcal: 'Kalorien', protein: 'Protein', carbs: 'Kohlenhydrate', fat: 'Fett', fiber: 'Ballaststoffe', sugar: 'Zucker',
 }
-export const TARGET_LIMITS: Nutrition = { kcal: 15000, protein: 1000, carbs: 2000, fat: 1000, fiber: 300 }
-export const EMPTY_TARGETS: NutritionTargets = { kcal: null, protein: null, carbs: null, fat: null, fiber: null }
-const emptyNutrition = (): Nutrition => ({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 })
+export const TARGET_LIMITS: Nutrition = { kcal: 15000, protein: 1000, carbs: 2000, fat: 1000, fiber: 300, sugar: 500 }
+export const EMPTY_TARGETS: NutritionTargets = { kcal: null, protein: null, carbs: null, fat: null, fiber: null, sugar: null }
+const emptyNutrition = (): Nutrition => ({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 })
 
 export function nutritionFor(item: { grams: number; per100g: Nutrition }): Nutrition {
   return Object.fromEntries(NUTRIENTS.map((key) => [key, item.per100g[key] * item.grams / 100])) as Nutrition
@@ -89,10 +89,14 @@ export type GoalStatus = { reached: boolean; fraction: number; label: string; to
 
 /**
  * Kurzer Stand eines Tagesziels für die Übersicht: „noch 38 g“, „erreicht“ oder bei Kalorien
- * „120 kcal drüber“. Bei Kalorien ist zu viel nicht gut, bei den anderen Werten schon.
+ * und Zucker „120 kcal drüber“ bzw. „12 g drüber“. Zucker ist eine WHO-Obergrenze, kein Mindestziel.
  */
 export function goalStatus(consumed: number, target: number, key: Nutrient): GoalStatus {
   const fraction = Math.max(0, Math.min(1, consumed / target))
+  if (key === 'sugar') {
+    if (consumed > target) return { reached: true, fraction, label: `${formatNutrition(consumed - target, key)} drüber`, tone: 'over' }
+    return { reached: false, fraction, label: `${formatNutrition(consumed, key)} / max. ${formatNutrition(target, key)}`, tone: 'open' }
+  }
   if (consumed < target) return { reached: false, fraction, label: `noch ${formatNutrition(target - consumed, key)}`, tone: 'open' }
   if (key === 'kcal' && consumed > target) return { reached: true, fraction, label: `${formatNutrition(consumed - target, key)} drüber`, tone: 'over' }
   return { reached: true, fraction, label: 'erreicht', tone: 'done' }
@@ -101,6 +105,7 @@ export function goalStatus(consumed: number, target: number, key: Nutrient): Goa
 /**
  * Vollständige Tagesziele aus dem Profilvorschlag (Kalorien und Protein aus der Körperanalyse).
  * Fett: 25 % der Kalorien. Kohlenhydrate: der Rest. Ballaststoffe: 14 g je 1000 kcal, mindestens 25 g.
+ * Zucker: WHO-Obergrenze von 10 % der Kalorien (4 kcal/g), mindestens 10 g.
  * null, solange im Profil Angaben fehlen.
  */
 export function profileTargets(suggestion: { kcal: number | null; protein: number | null } | null): Nutrition | null {
@@ -110,5 +115,6 @@ export function profileTargets(suggestion: { kcal: number | null; protein: numbe
   const fat = Math.round(kcal * 0.25 / 9)
   const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4))
   const fiber = Math.max(25, Math.round(kcal / 1000 * 14))
-  return { kcal, protein, carbs, fat, fiber }
+  const sugar = Math.max(10, Math.round(kcal * 0.10 / 4))
+  return { kcal, protein, carbs, fat, fiber, sugar }
 }

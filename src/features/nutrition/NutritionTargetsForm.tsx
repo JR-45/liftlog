@@ -12,7 +12,7 @@ export function NutritionTargetsForm({ targets, onSaved }: { targets: NutritionT
   async function submit(event: FormEvent) {
     event.preventDefault()
     const values = Object.fromEntries(NUTRIENTS.map((key) => [key, parseNutritionNumber(draft[key], TARGET_LIMITS[key])])) as NutritionTargets
-    if (!validateTargets(values)) { setMessage('Bitte alle fünf Ziele mit einer Zahl größer als 0 ausfüllen.'); return }
+    if (!validateTargets(values)) { setMessage('Bitte alle sechs Ziele mit einer Zahl größer als 0 ausfüllen.'); return }
     setBusy(true)
     setMessage('')
     try { await saveNutritionTargets(values); onSaved(values) }
@@ -21,8 +21,8 @@ export function NutritionTargetsForm({ targets, onSaved }: { targets: NutritionT
 
   return <form className="mt-3 space-y-3" onSubmit={(event) => { void submit(event) }}>
     <fieldset disabled={busy} className="grid grid-cols-2 gap-3">
-      {NUTRIENTS.map((key) => <label key={key} className={`block text-sm ${key === 'kcal' ? 'col-span-2' : ''}`}>
-        <span className="mb-1 block text-muted">{NUTRIENT_LABELS[key]} ({key === 'kcal' ? 'kcal' : 'g'})</span>
+      {NUTRIENTS.map((key) => <label key={key} className="block text-sm">
+        <span className="mb-1 block text-muted">{key === 'sugar' ? 'Zucker-Max.' : NUTRIENT_LABELS[key]} ({key === 'kcal' ? 'kcal' : 'g'})</span>
         <input className={fieldClass} inputMode="decimal" enterKeyHint="done" value={draft[key]} maxLength={9} required onChange={(event) => setDraft((current) => ({ ...current, [key]: event.target.value }))} />
       </label>)}
     </fieldset>

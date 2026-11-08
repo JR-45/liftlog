@@ -23,7 +23,7 @@ export function NutritionGoals({ totals, targets, source, profileAvailable, miss
 }) {
   const hasTargets = NUTRIENTS.every((key) => targets[key] !== null)
   const [editing, setEditing] = useState(false)
-  const reached = NUTRIENTS.filter((key) => targets[key] !== null && totals[key] >= targets[key]!)
+  const reached = NUTRIENTS.filter((key) => key !== 'sugar' && targets[key] !== null && totals[key] >= targets[key]!)
   const reachedKey = reached.join(',')
   // Nur beim Erreichen stempeln, nicht beim Öffnen eines Tages, an dem das Ziel schon erreicht ist.
   const [seen, setSeen] = useState<{ reached: string; stamps: Partial<Record<typeof NUTRIENTS[number], number>> }>({ reached: reachedKey, stamps: {} })
@@ -67,7 +67,7 @@ export function NutritionGoals({ totals, targets, source, profileAvailable, miss
           return <li key={key} className="relative">
             {stamp && <DoneStamp key={stamp} />}
             <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="text-muted">{NUTRIENT_LABELS[key]}</span>
+              <span className="text-muted">{key === 'sugar' ? 'Zucker (WHO-Max.)' : NUTRIENT_LABELS[key]}</span>
               <span className={`font-semibold tabular-nums ${TONE[status.tone]}`}>{status.tone === 'done' ? '✓ erreicht' : status.label}</span>
             </div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-control" aria-hidden="true">

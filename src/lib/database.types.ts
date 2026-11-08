@@ -119,14 +119,14 @@ isOneToOne: false
                   ]
                 },"meal_items": {
                   Row: {
-                    "carbs": number,"estimated": boolean,"fat": number,"fiber": number,"grams": number,"id": string,"kcal": number,"meal_id": string,"name": string,"position": number,"protein": number,"user_id": string
+                    "carbs": number,"estimated": boolean,"fat": number,"fiber": number,"grams": number,"id": string,"kcal": number,"meal_id": string,"name": string,"position": number,"protein": number,"sugar": number,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "carbs": number,"estimated"?: boolean,"fat": number,"fiber": number,"grams": number,"id"?: string,"kcal": number,"meal_id": string,"name": string,"position": number,"protein": number,"user_id"?: string
+                    "carbs": number,"estimated"?: boolean,"fat": number,"fiber": number,"grams": number,"id"?: string,"kcal": number,"meal_id": string,"name": string,"position": number,"protein": number,"sugar"?: number,"user_id"?: string
                   }
                   Update: {
-                    "carbs"?: number,"estimated"?: boolean,"fat"?: number,"fiber"?: number,"grams"?: number,"id"?: string,"kcal"?: number,"meal_id"?: string,"name"?: string,"position"?: number,"protein"?: number,"user_id"?: string
+                    "carbs"?: number,"estimated"?: boolean,"fat"?: number,"fiber"?: number,"grams"?: number,"id"?: string,"kcal"?: number,"meal_id"?: string,"name"?: string,"position"?: number,"protein"?: number,"sugar"?: number,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -153,14 +153,14 @@ isOneToOne: false
                   ]
                 },"nutrition_settings": {
                   Row: {
-                    "carbs": number | null,"fat": number | null,"fiber": number | null,"kcal": number | null,"photo_consent_at": string | null,"photo_consent_version": string | null,"protein": number | null,"targets_from_profile": boolean,"user_id": string
+                    "carbs": number | null,"fat": number | null,"fiber": number | null,"kcal": number | null,"photo_consent_at": string | null,"photo_consent_version": string | null,"protein": number | null,"sugar": number | null,"targets_from_profile": boolean,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"targets_from_profile"?: boolean,"user_id"?: string
+                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"sugar"?: number | null,"targets_from_profile"?: boolean,"user_id"?: string
                   }
                   Update: {
-                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"targets_from_profile"?: boolean,"user_id"?: string
+                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"sugar"?: number | null,"targets_from_profile"?: boolean,"user_id"?: string
                   }
                   Relationships: [
                     

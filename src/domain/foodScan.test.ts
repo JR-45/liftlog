@@ -3,7 +3,7 @@ import { FOOD_SCAN_SCHEMA, parseFoodScan, validateScanImage } from './foodScan'
 
 const food = {
   name: 'Reis, gekocht', grams: 150, portion_uncertain: false, question: null,
-  per100g: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4 },
+  per100g: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4, sugar: 0.1 },
 }
 
 describe('Gemini-Ausgabevalidierung', () => {

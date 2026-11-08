@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createFoodScanHandler } from '../../supabase/functions/food-scan/handler'
 import { FOOD_CONSENT_VERSION } from './foodScan'
 
-const result = { foods: [{ name: 'Apfel', grams: 150, portion_uncertain: false, question: null, per100g: { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4 } }], note: '' }
+const result = { foods: [{ name: 'Apfel', grams: 150, portion_uncertain: false, question: null, per100g: { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4, sugar: 10.4 } }], note: '' }
 const request = (body: unknown = { mime: 'image/jpeg', image: '/9j/AA==' }, token = 'test') => new Request('https://local.test/food-scan', {
   method: 'POST', headers: { Authorization: `Bearer ${token}`, Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 })

@@ -12,7 +12,7 @@ export type NutritionSettings = { targets: NutritionTargets; consent: boolean; f
 export async function loadNutrition(date: string): Promise<{ settings: NutritionSettings; meals: Meal[] }> {
   const [settings, meals] = await Promise.all([
     supabase.from('nutrition_settings').select('*').maybeSingle(),
-    supabase.from('meals').select('id, consumed_on, title, meal_items(name, grams, kcal, protein, carbs, fat, fiber, estimated, position)').eq('consumed_on', date).order('created_at'),
+    supabase.from('meals').select('id, consumed_on, title, meal_items(name, grams, kcal, protein, carbs, fat, fiber, sugar, estimated, position)').eq('consumed_on', date).order('created_at'),
   ])
   if (settings.error) throw settings.error
   if (meals.error) throw meals.error
@@ -28,14 +28,14 @@ export async function loadNutrition(date: string): Promise<{ settings: Nutrition
       id: row.id, consumed_on: row.consumed_on, title: row.title,
       items: row.meal_items.sort((a, b) => a.position - b.position).map((item) => ({
         name: item.name, grams: item.grams, estimated: item.estimated,
-        per100g: { kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat, fiber: item.fiber },
+        per100g: { kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat, fiber: item.fiber, sugar: item.sugar },
       })),
     })),
   }
 }
 
 export async function saveNutritionTargets(targets: NutritionTargets): Promise<void> {
-  if (!validateTargets(targets)) throw new Error('Bitte alle fünf Tagesziele prüfen.')
+  if (!validateTargets(targets)) throw new Error('Bitte alle sechs Tagesziele prüfen.')
   const { error } = await supabase.from('nutrition_settings').upsert({ ...targets, targets_from_profile: false }, { onConflict: 'user_id' })
   if (error) throw error
 }

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { goalStatus, nutrientProgress, profileTargets, nutritionFor, parseMealDraftItem, parseNutritionNumber, profileNutritionSuggestion, sumNutrition, validateMealItems, validateTargets } from './nutrition'
 
-const per100g = { kcal: 200, protein: 10, carbs: 20, fat: 8, fiber: 3 }
+const per100g = { kcal: 200, protein: 10, carbs: 20, fat: 8, fiber: 3, sugar: 5 }
 
 describe('Ernährungsberechnungen', () => {
   it('skaliert alle Nährwerte mit der bestätigten Portion', () => {
-    expect(nutritionFor({ grams: 150, per100g })).toEqual({ kcal: 300, protein: 15, carbs: 30, fat: 12, fiber: 4.5 })
+    expect(nutritionFor({ grams: 150, per100g })).toEqual({ kcal: 300, protein: 15, carbs: 30, fat: 12, fiber: 4.5, sugar: 7.5 })
   })
   it('summiert ohne vorzeitige Rundung und liefert eine leere Tagessumme', () => {
     expect(sumNutrition([{ grams: 33.3, per100g }, { grams: 66.7, per100g }])).toEqual(per100g)
-    expect(sumNutrition([])).toEqual({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 })
+    expect(sumNutrition([])).toEqual({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 })
   })
   it('zeigt Überschreitungen und behandelt fehlende Ziele', () => {
     expect(nutrientProgress(120, 100)).toEqual({ percent: 120, remaining: 0, exceeded: 20 })
@@ -33,10 +33,11 @@ describe('Ernährungsberechnungen', () => {
     expect(validateMealItems([{ ...item, per100g: { ...per100g, fat: 101 } }])).toBe(false)
     expect(validateMealItems([{ ...item, per100g: { ...per100g, kcal: NaN } }])).toBe(false)
   })
-  it('verlangt fünf positive Tagesziele innerhalb der erlaubten Grenzen', () => {
-    expect(validateTargets({ kcal: 2200, protein: 140, carbs: 250, fat: 70, fiber: 30 })).toBe(true)
-    expect(validateTargets({ kcal: 0, protein: 140, carbs: 250, fat: 70, fiber: 30 })).toBe(false)
-    expect(validateTargets({ kcal: 2200, protein: 140, carbs: 250, fat: 70, fiber: Infinity })).toBe(false)
+  it('verlangt sechs positive Tagesziele innerhalb der erlaubten Grenzen', () => {
+    expect(validateTargets({ kcal: 2200, protein: 140, carbs: 250, fat: 70, fiber: 30, sugar: 55 })).toBe(true)
+    expect(validateTargets({ kcal: 0, protein: 140, carbs: 250, fat: 70, fiber: 30, sugar: 55 })).toBe(false)
+    expect(validateTargets({ kcal: 2200, protein: 140, carbs: 250, fat: 70, fiber: Infinity, sugar: 55 })).toBe(false)
+    expect(validateTargets({ kcal: 2200, protein: 140, carbs: 250, fat: 70, fiber: 30, sugar: 501 })).toBe(false)
   })
   it('nutzt die letzte bekannte Gewichtsmessung und benennt fehlende Profilangaben', () => {
     const suggestion = profileNutritionSuggestion({ heightCm: null, sex: null, birthYear: null, activityLevel: null, goal: 'fitness', measurements: [
@@ -45,8 +46,8 @@ describe('Ernährungsberechnungen', () => {
     expect(suggestion).toEqual({ kcal: null, protein: 112, missing: ['Größe', 'Geschlecht', 'Geburtsjahr', 'Aktivitätslevel'] })
   })
   it('validiert die korrigierten Lebensmitteleingaben vollständig', () => {
-    const draft = { name: ' Reis ', grams: '150,5', values: { kcal: '130', protein: '2,7', carbs: '28', fat: '0,3', fiber: '0,4' } }
-    expect(parseMealDraftItem(draft)).toEqual({ name: 'Reis', grams: 150.5, per100g: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4 }, estimated: true })
+    const draft = { name: ' Reis ', grams: '150,5', values: { kcal: '130', protein: '2,7', carbs: '28', fat: '0,3', fiber: '0,4', sugar: '0,1' } }
+    expect(parseMealDraftItem(draft)).toEqual({ name: 'Reis', grams: 150.5, per100g: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4, sugar: 0.1 }, estimated: true })
     expect(parseMealDraftItem({ ...draft, grams: '' })).toBeNull()
     expect(parseMealDraftItem({ ...draft, values: { ...draft.values, protein: '' } })).toBeNull()
   })
@@ -68,12 +69,18 @@ describe('goalStatus', () => {
   it('zählt genau das Ziel als erreicht', () => {
     expect(goalStatus(2000, 2000, 'kcal')).toMatchObject({ reached: true, label: 'erreicht', tone: 'done' })
   })
+
+  it('behandelt Zucker als WHO-Obergrenze ohne Erfolgsstempel und warnt bei Überschreitung', () => {
+    expect(goalStatus(18, 50, 'sugar')).toEqual({ reached: false, fraction: 0.36, label: '18 g / max. 50 g', tone: 'open' })
+    expect(goalStatus(50, 50, 'sugar')).toEqual({ reached: false, fraction: 1, label: '50 g / max. 50 g', tone: 'open' })
+    expect(goalStatus(62, 50, 'sugar')).toEqual({ reached: true, fraction: 1, label: '12 g drüber', tone: 'over' })
+  })
 })
 
 describe('profileTargets', () => {
-  it('leitet alle fünf Ziele aus Kalorien und Protein ab', () => {
-    // 2400 kcal, 160 g Protein: Fett 67 g (25 %), Kohlenhydrate = Rest, Ballaststoffe 34 g
-    expect(profileTargets({ kcal: 2400, protein: 160 })).toEqual({ kcal: 2400, protein: 160, fat: 67, carbs: 289, fiber: 34 })
+  it('leitet alle sechs Ziele inklusive WHO-Zuckergrenze (10 % der Kalorien) ab', () => {
+    // 2400 kcal, 160 g Protein: Fett 67 g (25 %), Kohlenhydrate = Rest, Ballaststoffe 34 g, Zucker 60 g (10 % = 240 kcal / 4)
+    expect(profileTargets({ kcal: 2400, protein: 160 })).toEqual({ kcal: 2400, protein: 160, fat: 67, carbs: 289, fiber: 34, sugar: 60 })
   })
 
   it('gibt mindestens 25 g Ballaststoffe vor', () => {

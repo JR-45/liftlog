@@ -94,7 +94,7 @@ export function MealReview({ foods, note, source, defaultTitle, date, targets, o
       </fieldset>)}
       <button type="button" disabled={drafts.length >= 20} className={secondaryClass} onClick={() => {
         if (isPhoto) setReviewed(false)
-        setDrafts((current) => [...current, { id: crypto.randomUUID(), name: '', grams: '', values: { kcal: '', protein: '', carbs: '', fat: '', fiber: '' }, question: null, confirmed: true }])
+        setDrafts((current) => [...current, { id: crypto.randomUUID(), name: '', grams: '', values: { kcal: '', protein: '', carbs: '', fat: '', fiber: '', sugar: '' }, question: null, confirmed: true }])
       }}>Fehlendes Lebensmittel ergänzen</button>
       {/* Anteil am Tagesziel nur, wenn Ziele gesetzt sind. */}
       {NUTRIENTS.some((key) => targets[key] !== null) && <div className="rounded-xl bg-surface-inset p-4">

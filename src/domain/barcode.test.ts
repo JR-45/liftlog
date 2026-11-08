@@ -17,12 +17,12 @@ describe('isBarcode', () => {
 describe('parseOpenFoodFacts', () => {
   const product = {
     product_name: 'Skyr Natur', product_name_de: 'Skyr', brands: 'Hofmarke', serving_quantity: 150,
-    nutriments: { 'energy-kcal_100g': 63, proteins_100g: 11, carbohydrates_100g: '4,1', fat_100g: 0.2 },
+    nutriments: { 'energy-kcal_100g': 63, proteins_100g: 11, carbohydrates_100g: '4,1', fat_100g: 0.2, sugars_100g: '3,8' },
   }
 
   it('übernimmt Name, Portion und Nährwerte pro 100 g', () => {
     expect(parseOpenFoodFacts({ status: 1, product })).toEqual({
-      name: 'Skyr', grams: 150, per100g: { kcal: 63, protein: 11, carbs: 4.1, fat: 0.2, fiber: null },
+      name: 'Skyr', grams: 150, per100g: { kcal: 63, protein: 11, carbs: 4.1, fat: 0.2, fiber: null, sugar: 3.8 },
     })
   })
 
