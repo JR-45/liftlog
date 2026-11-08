@@ -29,6 +29,7 @@ import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
 import { readDraft, removeDraft } from './drafts'
 import { DoneStamp } from '../../components/DoneStamp'
 import { SetRow } from './SetRow'
+import { circuitSteps, circuitTarget, formatCircuit, formatRounds, roundReps } from '../../domain/circuit'
 
 const fieldClass =
   'h-11 rounded-xl border border-transparent bg-control px-3 text-base text-foreground outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
@@ -120,12 +121,15 @@ export function ExerciseCard(props: Props) {
   const cardio = exercise.tracking_type === 'duration' && isCardioExercise(exercise.name)
   const unit: DurationUnit = cardio ? 'minutes' : durationUnitForTarget(entry.duration_min)
   // Bewegungen gehören zur geplanten Übung, nicht zur Alternative.
-  const steps = activeId === entry.exercise.id ? (entry.steps ?? []) : []
-  const isRounds = entry.sets_min !== entry.sets_max || steps.length > 0
+  const steps = activeId === entry.exercise.id ? circuitSteps(entry.steps, entry.step_reps, entry.reps_max) : []
+  const isCircuit = steps.length > 0 && exercise.tracking_type !== 'duration'
+  const isRounds = entry.sets_min !== entry.sets_max || isCircuit
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min === null ? null : entry.duration_min / (unit === 'minutes' ? 60 : 1), entry.duration_max === null ? null : entry.duration_max / (unit === 'minutes' ? 60 : 1))
   const sets = formatRange(entry.sets_min, entry.sets_max)
-  const target = reps
+  const target = isCircuit
+    ? circuitTarget(sets, steps.length)
+    : reps
     ? `${sets}${isRounds ? ' Runden' : ''} × ${reps}`
     : duration
       ? `${cardio ? '' : `${sets} × `}${duration} ${unit === 'minutes' ? 'Min.' : 'Sek.'}`
@@ -509,20 +513,11 @@ export function ExerciseCard(props: Props) {
         </div>
       )}
 
-      {steps.length > 0 && (
-        <ol className="mb-3 space-y-1 rounded-xl bg-surface-inset px-3 py-2.5 text-sm text-foreground" aria-label="Bewegungen pro Runde">
-          {steps.map((step, index) => (
-            <li key={index} className="flex gap-2.5">
-              <span className="w-4 shrink-0 text-right tabular-nums text-muted">{index + 1}</span>
-              <span className="min-w-0">{step}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {isCircuit && <p className="mb-1.5 text-sm text-foreground">{formatCircuit(steps)}</p>}
 
       <p className="text-sm tabular-nums text-muted">
         {logged.length > 0 && <span className="mr-2 text-muted/75">Vorgabe {target} ·</span>}
-        {last.length > 0 ? `Letztes Mal: ${formatPerformance(last, unit, exercise.name === 'Laufband' ? 'speed' : 'pace')}` : 'Noch kein letztes Training'}
+        {last.length > 0 ? `Letztes Mal: ${isCircuit ? formatRounds(last) : formatPerformance(last, unit, exercise.name === 'Laufband' ? 'speed' : 'pace')}` : 'Noch kein letztes Training'}
       </p>
 
       {hint && !done && (
@@ -540,7 +535,7 @@ export function ExerciseCard(props: Props) {
         ) : (
           <>
             {weighted && <span className="flex-1">{assisted ? 'Hilfe (kg)' : 'kg'}</span>}
-            <span className="flex-1">Wdh.</span>
+            {isCircuit ? !weighted && <span className="flex-1" /> : <span className="flex-1">Wdh.</span>}
           </>
         )}
         <span className="w-11 shrink-0" />
@@ -579,6 +574,7 @@ export function ExerciseCard(props: Props) {
               placeholder={String(placeholderValue).replace('.', ',')}
               plannedWeight={lastSet && lastSet.is_assisted === assisted && weighted ? plannedWeight(lastSet) : null}
               resetRequest={resetRequest}
+              roundReps={isCircuit ? roundReps(steps) : undefined}
               onSave={handleSaveSet}
               onEdit={() => setHasEdits(true)}
             />

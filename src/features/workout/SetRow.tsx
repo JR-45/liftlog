@@ -38,6 +38,8 @@ type Props = {
   plannedWeight: number | null
   /** Ändert sich bei einem Wechsel der Erfassungsart. Offene Sätze verwerfen dann ihr altes Gewicht. */
   resetRequest: number
+  /** Zirkel: Eine Runde hat feste Wiederholungen, abgehakt wird nur die ganze Runde. */
+  roundReps?: number
   onSave: (setNumber: number, values: SetValues | null) => Promise<void>
   /** Meldet der Karte, dass es jetzt Eingaben gibt, die sich zurücksetzen lassen. */
   onEdit: () => void
@@ -73,6 +75,7 @@ export function SetRow(props: Props) {
     placeholder,
     plannedWeight,
     resetRequest,
+    roundReps,
     onSave,
     onEdit,
   } = props
@@ -142,7 +145,7 @@ export function SetRow(props: Props) {
   }
 
   async function handleSave() {
-    const parsed = parseSetDraft({ weight: shownWeight, reps: draft.reps, duration: draft.duration,
+    const parsed = parseSetDraft({ weight: shownWeight, reps: roundReps === undefined ? draft.reps : String(roundReps), duration: draft.duration,
       ...(tracking === 'duration' && distanceEnabled ? { distance: draft.distance ?? '', distanceUnit } : {}),
     }, tracking, unit)
     if (parsed.kind === 'invalid') {
@@ -213,7 +216,7 @@ export function SetRow(props: Props) {
                 onChange={(event) => change({ weight: event.target.value })}
               />
             )}
-            <input
+            {roundReps === undefined ? <input
               className={`${inputClass} flex-1`}
               aria-label={`${label} Wiederholungen`}
               inputMode="numeric"
@@ -221,7 +224,7 @@ export function SetRow(props: Props) {
               placeholder={placeholder}
               value={draft.reps}
               onChange={(event) => change({ reps: event.target.value })}
-            />
+            /> : !usesWeight(tracking) && <span className="flex-1" />}
           </>
         )}
 
