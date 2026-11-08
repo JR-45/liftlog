@@ -42,7 +42,19 @@ export function PlanEditor({ hasPlan, onSaved }: { hasPlan: boolean; onSaved: ()
     }
   }
 
-  async function deletePlan() {
+  // Wie bei der Stoppuhr: Der erste Tipp fragt nach, nach 3 Sekunden ohne zweiten Tipp passiert nichts.
+  useEffect(() => {
+    if (!confirmDelete) return
+    const timer = setTimeout(() => setConfirmDelete(false), 3000)
+    return () => clearTimeout(timer)
+  }, [confirmDelete])
+
+  async function handleDelete() {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    setConfirmDelete(false)
     const message = await persist([])
     if (message) setError(message)
   }
@@ -56,14 +68,12 @@ export function PlanEditor({ hasPlan, onSaved }: { hasPlan: boolean; onSaved: ()
       {loading ? <p className="mt-4 text-sm text-muted">Plan wird geladen …</p> : loadFailed ? null : (
         <>
           <TemplateWeekdays days={days} onSave={persist} />
-          {hasPlan && !confirmDelete && <button className="mt-6 min-h-11 w-full text-sm font-medium text-danger" type="button" disabled={busy}
-            onClick={() => setConfirmDelete(true)}>Trainingsplan löschen</button>}
-          {hasPlan && confirmDelete && <div className="mt-4 rounded-2xl bg-surface p-3.5 ring-1 ring-danger/40">
-            <p className="text-sm text-foreground">Trainingsplan wirklich löschen? Deine bisherigen Trainingsdaten bleiben erhalten.</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button className={`${BUTTON} text-danger`} type="button" disabled={busy} onClick={() => void deletePlan()}>Ja, Plan löschen</button>
-              <button className={BUTTON} type="button" disabled={busy} onClick={() => setConfirmDelete(false)}>Behalten</button>
-            </div>
+          {hasPlan && <div className="mt-6 text-center">
+            <button className={`min-h-11 w-full rounded-xl text-sm transition-colors ${confirmDelete ? 'bg-danger/15 font-semibold text-danger' : 'font-medium text-danger'}`}
+              type="button" disabled={busy} onClick={() => void handleDelete()}>
+              {confirmDelete ? 'Sicher? Nochmal tippen' : 'Trainingsplan löschen'}
+            </button>
+            {confirmDelete && <p role="status" className="mt-1 text-xs text-muted">Deine bisherigen Trainingsdaten bleiben erhalten.</p>}
           </div>}
         </>
       )}
