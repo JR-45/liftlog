@@ -31,7 +31,7 @@ export function PrivacySettings({ account, onSaved }: { account: Person; onSaved
         <span><span className="block font-semibold">{option.label}</span><span className="text-muted">{option.note}</span></span>
       </label>)}
     </fieldset>
-    <p className="text-sm text-muted">Fremde sehen Name, Benutzername, Bild und Follower-Zähler. Bestätigte Follower sehen deine gesamte Profilübersicht einschließlich Körper-, Trainings- und Ernährungsdaten.</p>
+    <p className="text-sm text-muted">Fremde sehen Name, Benutzername, Bild und Follower-Zähler. Bestätigte Follower sehen Profil und Training. Körperdaten und Ernährung bleiben nur für dich sichtbar.</p>
     {account.is_private && !isPrivate && <p className="text-sm text-warning">Offene Folgeanfragen werden beim Speichern angenommen.</p>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     <button type="submit" disabled={busy} className={PRIMARY_BUTTON}>{busy ? 'Wird gespeichert …' : 'Sichtbarkeit speichern'}</button>
@@ -61,7 +61,7 @@ export function FollowRequests({ userId, onOpenPerson }: { userId: string; onOpe
       .finally(() => { lock.current = false; setBusy(false) })
   }
   return <div className={CARD}>
-    <p className="mb-3 text-sm text-muted">Mit der Annahme wird deine vollständige Profilübersicht freigegeben.</p>
+    <p className="mb-3 text-sm text-muted">Mit der Annahme werden Profil und Training sichtbar. Körperdaten und Ernährung bleiben privat.</p>
     {error && <div role="alert"><p className="text-sm text-danger">{error}</p><button className={LINK} type="button" onClick={refresh}>Erneut laden</button></div>}
     {!error && (people === null ? <p role="status" className="text-sm text-muted">Wird geladen …</p> : !people.length ? <p className="text-sm text-muted">Keine offenen Folgeanfragen.</p> : <ul className="divide-y divide-line/[0.06]">{people.map(person => <li key={person.user_id} className="space-y-3 py-3">
       <button type="button" disabled={busy} className="flex min-h-11 w-full items-center gap-3 text-left" onClick={() => onOpenPerson(person.user_id)}>
