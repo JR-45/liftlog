@@ -4,11 +4,12 @@ import { copyTemplateDay, replaceTemplateDay } from '../../domain/planWeekdays'
 import type { PlanDayDraft } from '../../domain/trainingPlan'
 import { newExercise } from './api'
 import { ExercisePages } from './ExercisePages'
-import { EXERCISE_CATALOG } from '../../domain/exerciseCatalog'
+import { createExerciseSlots, type PlanExerciseSlot } from '../../domain/planExerciseSlots'
+
+type TemplateDayDraft = Omit<PlanDayDraft, 'exercises'> & { exercises: PlanExerciseSlot[] }
 
 const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
 const ORDER = [1, 2, 3, 4, 5, 6, 0]
-const DAY_NAMES = [...new Set(EXERCISE_CATALOG.map(exercise => exercise.group))]
 const FIELD = 'mt-1 h-11 w-full min-w-0 rounded-xl bg-control px-3 text-base text-foreground outline-none focus:ring-2 focus:ring-neon'
 
 /** Speichert den ganzen Plan. Liefert eine Fehlermeldung oder null bei Erfolg. */
@@ -16,14 +17,14 @@ export type SavePlan = (days: PlanDayDraft[]) => Promise<string | null>
 
 export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSave: SavePlan }) {
   const dialog = useRef<HTMLDialogElement>(null)
-  const [draft, setDraft] = useState<PlanDayDraft | null>(null)
+  const [draft, setDraft] = useState<TemplateDayDraft | null>(null)
+  const [editorSession, setEditorSession] = useState(0)
   const [isExisting, setIsExisting] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [reveal, setReveal] = useState<{ index: number } | undefined>()
   const [original, setOriginal] = useState('')
   const [ask, setAsk] = useState<'rest' | 'discard' | null>(null)
-  const [customName, setCustomName] = useState(false)
 
   useEffect(() => {
     if (draft && !dialog.current?.open) dialog.current?.showModal()
@@ -32,9 +33,10 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
 
   function open(weekday: number) {
     const existing = days.find((day) => day.weekday === weekday)
-    const next = existing ? copyTemplateDay(existing, weekday) : { weekday, name: '', exercises: [newExercise()] }
+    const day = existing ? copyTemplateDay(existing, weekday) : { weekday, name: '', exercises: [newExercise()] }
+    const next = { ...day, exercises: createExerciseSlots(day.exercises, () => crypto.randomUUID()) }
     setDraft(next)
-    setCustomName(Boolean(next.name) && !DAY_NAMES.includes(next.name))
+    setEditorSession(value => value + 1)
     setOriginal(JSON.stringify(next))
     setIsExisting(Boolean(existing))
     setError(null)
@@ -42,7 +44,7 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
     setAsk(null)
   }
 
-  function edit(next: PlanDayDraft) {
+  function edit(next: TemplateDayDraft) {
     setDraft(next)
     setAsk(null)
   }
@@ -54,11 +56,12 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
     else setDraft(null)
   }
 
-  async function save(replacement: PlanDayDraft | null, weekday: number) {
+  async function save(replacement: TemplateDayDraft | null, weekday: number) {
     setBusy(true)
     setError(null)
     setAsk(null)
-    const message = await onSave(replaceTemplateDay(days, weekday, replacement))
+    const savedDay = replacement && { ...replacement, exercises: replacement.exercises.map(({ slotId: _slotId, muscleGroup: _muscleGroup, ...exercise }) => exercise) }
+    const message = await onSave(replaceTemplateDay(days, weekday, savedDay))
     setBusy(false)
     if (message) setError(message)
     else setDraft(null)
@@ -66,7 +69,7 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
 
   function saveDay() {
     if (!draft) return
-    const invalid = validatePlanDraft([draft], true)
+    const invalid = validatePlanDraft([draft])
     if (invalid) {
       setError(invalid.message)
       if (invalid.exercise !== undefined) setReveal({ index: invalid.exercise })
@@ -111,8 +114,8 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
               <select className={FIELD} value="" onChange={(event) => {
                 const source = days.find((day) => day.weekday === Number(event.target.value))
                 if (source) {
-                  edit(copyTemplateDay(source, draft.weekday))
-                  setCustomName(!DAY_NAMES.includes(source.name))
+                  edit({ ...copyTemplateDay(source, draft.weekday), exercises: createExerciseSlots(source.exercises, () => crypto.randomUUID()) })
+                  setEditorSession(value => value + 1)
                 }
               }}>
                 <option value="">Nicht kopieren</option>
@@ -120,23 +123,11 @@ export function TemplateWeekdays({ days, onSave }: { days: PlanDayDraft[]; onSav
               </select>
             </label>
           )}
-          <label className="block text-sm text-muted">Name
-            <select aria-label="Name" className={FIELD} value={customName ? '__custom__' : draft.name} onChange={event => {
-              const custom = event.target.value === '__custom__'
-              setCustomName(custom)
-              edit({ ...draft, name: custom ? '' : event.target.value })
-            }}>
-              <option value="">Übungsgruppe auswählen …</option>
-              {DAY_NAMES.map(name => <option key={name} value={name}>{name}</option>)}
-              <option value="__custom__">Eigener Name …</option>
-            </select>
-          </label>
-          {customName && <label className="mt-3 block text-sm text-muted">Eigener Name
-            <input className={FIELD} maxLength={100} value={draft.name} placeholder="z. B. Oberkörper"
+          <label className="block text-sm text-muted">Trainingstag
+            <input className={FIELD} maxLength={100} value={draft.name} placeholder="z. B. Push, Oberkörper oder Montag"
               onChange={event => edit({ ...draft, name: event.target.value })} />
-          </label>}
-          <ExercisePages exercises={draft.exercises} onChange={(exercises) => edit({ ...draft, exercises })} reveal={reveal}
-            exerciseGroup={DAY_NAMES.includes(draft.name) ? draft.name : undefined} />
+          </label>
+          <ExercisePages key={editorSession} exercises={draft.exercises} onChange={(exercises) => edit({ ...draft, exercises })} reveal={reveal} />
           {isExisting && (ask === 'rest' ? (
             <div className="mt-3 flex gap-2">
               <button className="min-h-11 flex-1 rounded-xl bg-control px-3 py-2 text-sm font-medium text-foreground" type="button" onClick={() => setAsk(null)}>Abbrechen</button>
