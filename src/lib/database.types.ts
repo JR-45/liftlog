@@ -65,6 +65,68 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"food_scan_usage": {
+                  Row: {
+                    "last_scan_at": string,"scan_count": number,"usage_date": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "last_scan_at": string,"scan_count": number,"usage_date": string,"user_id"?: string
+                  }
+                  Update: {
+                    "last_scan_at"?: string,"scan_count"?: number,"usage_date"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"meal_items": {
+                  Row: {
+                    "carbs": number,"estimated": boolean,"fat": number,"fiber": number,"grams": number,"id": string,"kcal": number,"meal_id": string,"name": string,"position": number,"protein": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "carbs": number,"estimated"?: boolean,"fat": number,"fiber": number,"grams": number,"id"?: string,"kcal": number,"meal_id": string,"name": string,"position": number,"protein": number,"user_id"?: string
+                  }
+                  Update: {
+                    "carbs"?: number,"estimated"?: boolean,"fat"?: number,"fiber"?: number,"grams"?: number,"id"?: string,"kcal"?: number,"meal_id"?: string,"name"?: string,"position"?: number,"protein"?: number,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "meal_items_meal_id_user_id_fkey"
+      columns: ["meal_id","user_id"]
+isOneToOne: false
+      referencedRelation: "meals"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"meals": {
+                  Row: {
+                    "consumed_on": string,"created_at": string,"id": string,"title": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "consumed_on": string,"created_at"?: string,"id"?: string,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "consumed_on"?: string,"created_at"?: string,"id"?: string,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"nutrition_settings": {
+                  Row: {
+                    "carbs": number | null,"fat": number | null,"fiber": number | null,"kcal": number | null,"photo_consent_at": string | null,"photo_consent_version": string | null,"protein": number | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"user_id"?: string
+                  }
+                  Update: {
+                    "carbs"?: number | null,"fat"?: number | null,"fiber"?: number | null,"kcal"?: number | null,"photo_consent_at"?: string | null,"photo_consent_version"?: string | null,"protein"?: number | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"plan_days": {
                   Row: {
                     "created_at": string,"id": string,"name": string,"user_id": string,"weekday": number
@@ -218,6 +280,12 @@ isOneToOne: false
 { Args: { "before_date": string }; Returns: {
               "distance_km": number,"duration_seconds": number,"exercise_id": string,"is_assisted": boolean,"next_weight_kg": number,"performed_on": string,"reps": number,"set_number": number,"weight_kg": number
             }[]
+                           },
+"reserve_food_scan":
+{ Args: { "p_user_id": string }; Returns: boolean
+                           },
+"save_meal":
+{ Args: { "p_date": string,"p_id": string,"p_items": Json,"p_title": string }; Returns: string
                            },
 "save_training_plan":
 { Args: { "days": Json }; Returns: undefined

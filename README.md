@@ -140,3 +140,9 @@ online noch nicht gibt.
 - Nichts Geheimes committen. `.env.local` wird von Git ignoriert.
 - Alles mit `VITE_` landet öffentlich im Browser. Dort gehört nur der `sb_publishable_`-Key hin.
 - Der `sb_secret_`- bzw. `service_role`-Key gehört nie in den Code, in eine `VITE_`-Variable oder in einen Chat.
+
+## Gemini-Foodscanner
+
+Der Tab „Ernährung“ bietet Fotoanalyse, korrigierbare Lebensmittel und Portionen, ein privates Ernährungstagebuch sowie Tagesziele für Kalorien, Protein, Kohlenhydrate, Fett und Ballaststoffe. Alle Fotoangaben sind Schätzungen. Gemini-Zugangsdaten liegen ausschließlich in einer Supabase Edge Function.
+
+Einrichtung, Datenmodell und Prüfungen: [Foodscanner-Dokumentation](docs/food-scanner.md).

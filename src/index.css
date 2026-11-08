@@ -113,6 +113,10 @@ button, h1, h2, h3, h4, p { overflow-wrap: anywhere; }
 .login-shell { display: flex; align-items: center; justify-content: center; padding-top: max(2rem, env(safe-area-inset-top)); padding-bottom: max(2rem, env(safe-area-inset-bottom)); }
 .login-panel { width: 100%; max-width: 26rem; }
 .template-day-dialog::backdrop { background: rgb(0 0 0 / .7); }
+.nutrition-progress { appearance: none; overflow: hidden; border: 0; border-radius: 999px; background: var(--color-control); }
+.nutrition-progress::-webkit-progress-bar { background: var(--color-control); border-radius: 999px; }
+.nutrition-progress::-webkit-progress-value { background: var(--color-accent-ink); border-radius: 999px; }
+.nutrition-progress::-moz-progress-bar { background: var(--color-accent-ink); border-radius: 999px; }
 .template-day-layout { display: flex; flex-direction: column; max-height: min(90dvh, 52rem); }
 .template-day-body { overscroll-behavior: contain; scrollbar-gutter: stable; }
 .template-day-actions { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }

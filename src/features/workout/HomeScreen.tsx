@@ -1,7 +1,8 @@
 import type { Session } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { localDateString } from '../../domain/sets'
-import { PlanIcon, StatsIcon, TrainingIcon, UserIcon } from '../../lib/icons'
+import { FoodIcon, PlanIcon, StatsIcon, TrainingIcon, UserIcon } from '../../lib/icons'
+import { NutritionScreen } from '../nutrition/NutritionScreen'
 import { supabase } from '../../lib/supabase'
 import { Wordmark } from '../../lib/Wordmark'
 import { greetingFor, headline } from '../../domain/greeting'
@@ -21,7 +22,7 @@ import { useRestTimer } from './useRestTimer'
 const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 const SHORT_DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
 
-type Tab = 'training' | 'stats' | 'plan' | 'profile'
+type Tab = 'training' | 'stats' | 'plan' | 'profile' | 'nutrition'
 
 /** bottom: untere Leiste auf Handy und Tablet. side: Seitenleiste am Laptop. */
 function TabButton(props: {
@@ -210,6 +211,9 @@ export function HomeScreen({ session }: { session: Session }) {
             <TabButton label="Statistik" variant="side" active={tab === 'stats'} onClick={() => setTab('stats')}>
               <StatsIcon />
             </TabButton>
+            <TabButton label="Ernährung" variant="side" active={tab === 'nutrition'} onClick={() => setTab('nutrition')}>
+              <FoodIcon />
+            </TabButton>
             <TabButton label="Trainingsplan" variant="side" active={planArea} onClick={() => setTab('plan')}>
               <PlanIcon />
             </TabButton>
@@ -359,6 +363,8 @@ export function HomeScreen({ session }: { session: Session }) {
               />
             )}
 
+            {tab === 'nutrition' && <NutritionScreen user={session.user} today={today} onOpenProfile={() => setTab('profile')} />}
+
             {/* Handy und Tablet: Pause und Menü unten. Am Laptop übernimmt das die Seitenleiste. */}
             <div className="mobile-dock fixed inset-x-0 bottom-0 z-20 lg:hidden">
               {showTimer && <RestTimerBar timer={restTimer} variant="bar" />}
@@ -369,6 +375,9 @@ export function HomeScreen({ session }: { session: Session }) {
                   </TabButton>
                   <TabButton label="Statistik" variant="bottom" active={tab === 'stats'} onClick={() => setTab('stats')}>
                     <StatsIcon />
+                  </TabButton>
+                  <TabButton label="Ernährung" variant="bottom" active={tab === 'nutrition'} onClick={() => setTab('nutrition')}>
+                    <FoodIcon />
                   </TabButton>
                   <TabButton label="Trainingsplan" variant="bottom" active={planArea} onClick={() => setTab('plan')}>
                     <PlanIcon />
