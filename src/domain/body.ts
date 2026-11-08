@@ -5,6 +5,14 @@ export type Sex = 'male' | 'female'
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
 export type Goal = 'hypertrophy' | 'strength' | 'cut' | 'fitness'
 
+export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
+  sedentary: 'Kaum Bewegung (Büro)',
+  light: 'Leicht aktiv (1–2× Sport)',
+  moderate: 'Aktiv (3–4× Sport)',
+  active: 'Sehr aktiv (5–6× Sport)',
+  very_active: 'Extrem aktiv (täglich + körperliche Arbeit)',
+}
+
 export const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
   sedentary: 1.2,
   light: 1.375,

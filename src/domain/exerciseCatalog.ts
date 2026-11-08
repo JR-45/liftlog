@@ -55,6 +55,10 @@ const groups: { group: string; tracking_type: TrackingType; names: string[]; gps
     'Plank', 'Side Plank', 'Hollow Hold', 'Handstand halten', 'L-Sit',
     'Wandsitzen', 'Farmer’s Walk', 'Schlitten schieben', 'Mobilität & Dehnen',
   ] },
+  { group: 'Mobilität', tracking_type: 'duration', names: [
+    'Cat-Cow', '90/90 Hüftrotation', 'Weltbeste Dehnung', 'Tiefe Hocke halten', 'Couch Stretch', 'Hüftbeuger-Dehnung',
+    'Hamstring-Dehnung', 'Pigeon Stretch', 'Kindhaltung', 'Thorax-Rotation', 'Wall Slides', 'Schulterdehnung an der Wand',
+  ] },
 ]
 
 export const EXERCISE_CATALOG: CatalogExercise[] = groups.flatMap(({ group, tracking_type, names, gps }) =>

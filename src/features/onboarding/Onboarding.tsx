@@ -2,6 +2,7 @@ import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } 
 import {
   buildOnboardingPlan,
   type Experience,
+  type Focus,
   type Goal,
   type Location,
   type OnboardingAnswers,
@@ -10,21 +11,25 @@ import {
   type SessionMinutes,
   suggestWeekdays,
 } from '../../domain/onboarding'
+import { ACTIVITY_LABELS, type ActivityLevel } from '../../domain/body'
 import { localDateString } from '../../domain/sets'
+import { normalizeUsername } from '../../domain/username'
 import { TimeWheelInput } from '../../components/TimeWheelInput'
 import { Wordmark } from '../../lib/Wordmark'
 import { PlanEditor } from '../plan/PlanEditor'
 import { savePlan } from '../plan/api'
 import { type MeasurementValues, saveMeasurement } from '../profile/api'
+import { enableSocialProfile, saveUsername, usernameTaken } from '../social/api'
 import { completeOnboarding, saveOnboardingProfile } from './api'
 
-const STEPS = ['welcome', 'name', 'goal', 'experience', 'location', 'schedule', 'plan', 'body', 'done'] as const
+const STEPS = ['welcome', 'name', 'focus', 'goal', 'experience', 'location', 'schedule', 'plan', 'body', 'done'] as const
 type Step = (typeof STEPS)[number]
 
 /** Hintergrundbild je Schritt. Fehlt eine Datei, bleibt der dunkle Cyan-Verlauf. */
 const IMAGES: Record<Step, string> = {
   welcome: '/onboarding/01-willkommen.jpg',
   name: '/onboarding/02-name.jpg',
+  focus: '/onboarding/02-name.jpg',
   goal: '/onboarding/03-ziel.jpg',
   experience: '/onboarding/04-erfahrung.jpg',
   location: '/onboarding/05-ort.jpg',
@@ -41,6 +46,9 @@ const WEEKDAY_LONG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag',
 type Draft = {
   step: Step
   name: string
+  username: string
+  /** Schwerpunkt, null = noch nicht beantwortet. */
+  focus: Focus | null
   goal: Goal | null
   experience: Experience | null
   location: Location | null
@@ -48,10 +56,15 @@ type Draft = {
   minutes: SessionMinutes | null
   /** „Eigene“ Dauer gewählt: Das Zeit-Rad ist sichtbar. */
   customMinutes: boolean
+  /** Mobility-Übungen am Ende jedes Trainingstags. */
+  mobility: boolean
+  /** Zusätzlicher Cardio-Tag. */
+  cardioDay: boolean
 }
 
 const EMPTY: Draft = {
-  step: 'welcome', name: '', goal: null, experience: null, location: null, weekdays: [], minutes: null, customMinutes: false,
+  step: 'welcome', name: '', username: '', focus: null, goal: null, experience: null, location: null, weekdays: [], minutes: null,
+  customMinutes: false, mobility: false, cardioDay: false,
 }
 
 function draftKey(userId: string) {
@@ -62,7 +75,9 @@ function draftKey(userId: string) {
 function readDraft(userId: string): Draft {
   try {
     const raw = localStorage.getItem(draftKey(userId))
-    return raw ? { ...EMPTY, ...(JSON.parse(raw) as Partial<Draft>) } : EMPTY
+    const draft = raw ? { ...EMPTY, ...(JSON.parse(raw) as Partial<Draft>) } : EMPTY
+    // Ein Schritt aus einer älteren Version führt zurück zum Namen.
+    return STEPS.includes(draft.step) ? draft : { ...draft, step: 'name' }
   } catch {
     return EMPTY
   }
@@ -110,6 +125,16 @@ function PrimaryButton(props: { children: ReactNode; disabled?: boolean; onClick
   )
 }
 
+function Toggle(props: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" aria-pressed={props.on} onClick={props.onClick}
+      className={`flex min-h-12 w-full items-center gap-3 rounded-2xl border px-4 text-left text-sm font-semibold backdrop-blur-md ${props.on ? 'border-neon bg-neon/15 text-white' : 'border-white/15 bg-black/45 text-white/85'}`}>
+      <span aria-hidden="true" className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 ${props.on ? 'border-neon bg-neon text-black' : 'border-white/40'}`}>{props.on ? '✓' : ''}</span>
+      {props.children}
+    </button>
+  )
+}
+
 const fieldClass =
   'mt-1.5 w-full rounded-xl border border-white/15 bg-black/50 px-3.5 py-3 text-base text-white placeholder-white/40 outline-none backdrop-blur-md focus:border-neon'
 
@@ -124,11 +149,24 @@ export function Onboarding({ userId, onFinish }: Props) {
   const today = localDateString()
 
   const stepIndex = STEPS.indexOf(draft.step)
-  const { goal, experience, location, minutes, weekdays } = draft
+  const { goal, experience, location, minutes, weekdays, mobility, cardioDay } = draft
+  const focus = draft.focus ?? undefined
   const answers = useMemo<OnboardingAnswers | null>(
-    () => (goal && experience && location && minutes && weekdays.length > 0 ? { goal, experience, location, weekdays, minutes } : null),
-    [goal, experience, location, minutes, weekdays],
+    () => (goal && experience && location && minutes && weekdays.length > 0 ? { goal, experience, location, weekdays, minutes, focus, mobility, cardioDay } : null),
+    [goal, experience, location, minutes, weekdays, focus, mobility, cardioDay],
   )
+  // Benutzername: kurz nach dem Tippen prüfen, ob er frei ist.
+  const username = normalizeUsername(draft.username)
+  const [taken, setTaken] = useState<{ name: string; taken: boolean } | null>(null)
+  useEffect(() => {
+    if (!username) return
+    let cancelled = false
+    const timeout = window.setTimeout(() => {
+      usernameTaken(userId, username).then((value) => { if (!cancelled) setTaken({ name: username, taken: value }) }).catch(() => {})
+    }, 400)
+    return () => { cancelled = true; window.clearTimeout(timeout) }
+  }, [userId, username])
+  const usernameState = !draft.username.trim() ? 'empty' : !username ? 'invalid' : taken?.name !== username ? 'checking' : taken.taken ? 'taken' : 'free'
   const plan = useMemo(() => (answers ? buildOnboardingPlan(answers) : null), [answers])
   const firstName = draft.name.trim().split(/\s+/)[0] ?? ''
 
@@ -185,11 +223,25 @@ export function Onboarding({ userId, onFinish }: Props) {
     }
   }
 
-  function handleName(event: FormEvent) {
+  async function handleName(event: FormEvent) {
     event.preventDefault()
     const name = draft.name.trim()
     if (!name) return setError('Wie dürfen wir dich nennen?')
-    void saveStep(() => saveOnboardingProfile({ displayName: name.slice(0, 50) }), next)
+    if (!username) return setError('Benutzername: 3 bis 40 Zeichen, nur a–z, 0–9, Punkt und Unterstrich.')
+    if (usernameState === 'taken') return setError('Dieser Benutzername ist schon vergeben.')
+    setBusy(true)
+    setError(null)
+    try {
+      await saveOnboardingProfile({ displayName: name.slice(0, 50) })
+      // Mit dem Benutzernamen ist man auffindbar, das Profil bleibt privat (Anfragen nötig).
+      await enableSocialProfile()
+      await saveUsername(userId, username)
+      next()
+    } catch (cause) {
+      setError(cause instanceof Error && cause.message.startsWith('Dieser') ? cause.message : 'Das hat nicht geklappt. Prüf deine Verbindung und versuch es noch einmal.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   /** Speichert Plan, Profil-Antworten und die passende Pausenlänge. */
@@ -201,7 +253,7 @@ export function Onboarding({ userId, onFinish }: Props) {
       experience: answers.experience,
       location: answers.location,
       minutes: answers.minutes,
-      weeklyTarget: answers.weekdays.length,
+      weeklyTarget: plan.days.length,
     })
     try {
       localStorage.setItem('liftlog:rest-seconds', String(plan.restSeconds))
@@ -265,21 +317,49 @@ export function Onboarding({ userId, onFinish }: Props) {
       break
     case 'name':
       content = (
-        <form onSubmit={handleName}>
+        <form onSubmit={(event) => void handleName(event)}>
           <h1 ref={headingRef} tabIndex={-1} className="text-5xl text-white outline-none">Wie heißt du?</h1>
-          <p className="mt-2 text-base text-white/80">So begrüßt dich die App vor jedem Training.</p>
           <input
             className={`${fieldClass} mt-6 text-xl`}
             autoComplete="given-name"
+            aria-label="Vorname"
             placeholder="Dein Vorname"
             maxLength={50}
             value={draft.name}
             onChange={(event) => update({ name: event.target.value })}
           />
-          <div className="mt-6">
-            <PrimaryButton type="submit" disabled={busy || !draft.name.trim()}>Weiter</PrimaryButton>
+          <label className="mt-4 block text-xs font-bold uppercase tracking-wider text-white/70">
+            Benutzername
+            <input
+              className={`${fieldClass} text-lg`}
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username"
+              placeholder="dein.name"
+              maxLength={40}
+              value={draft.username}
+              onChange={(event) => update({ username: event.target.value.toLowerCase() })}
+            />
+          </label>
+          <p className="mt-1.5 min-h-5 text-sm font-medium" aria-live="polite">
+            {usernameState === 'invalid' && <span className="text-[#ff9f9a]">Nur a–z, 0–9, Punkt und Unterstrich, 3 bis 40 Zeichen.</span>}
+            {usernameState === 'taken' && <span className="text-[#ff9f9a]">Schon vergeben.</span>}
+            {usernameState === 'free' && <span className="text-success">Frei ✓</span>}
+          </p>
+          <div className="mt-4">
+            <PrimaryButton type="submit" disabled={busy || !draft.name.trim() || usernameState !== 'free'}>{busy ? 'Wird gespeichert …' : 'Weiter'}</PrimaryButton>
           </div>
         </form>
+      )
+      break
+    case 'focus':
+      content = (
+        <>
+          <h1 ref={headingRef} tabIndex={-1} className="text-5xl text-white outline-none">Worauf liegt dein Fokus?</h1>
+          <div className="mt-6 space-y-2.5">
+            <OptionCard title="Ausgewogen" text="Ganzer Körper, klassisch aufgebaut." selected={draft.focus === 'balanced'} onClick={() => choose({ focus: 'balanced' })} />
+            <OptionCard title="Bauch, Beine & Po" text="Unterkörper zuerst und öfter, dazu Bauch." selected={draft.focus === 'lower'} onClick={() => choose({ focus: 'lower' })} />
+            <OptionCard title="Athletisch" text="Kraft, Schnellkraft und Ausdauer, z. B. Swings und Thrusters." selected={draft.focus === 'athletic'} onClick={() => choose({ focus: 'athletic' })} />
+          </div>
+        </>
       )
       break
     case 'goal':
@@ -293,7 +373,7 @@ export function Onboarding({ userId, onFinish }: Props) {
             <OptionCard title="Muskelaufbau" text="Sichtbar mehr Muskeln, 8–12 Wiederholungen." selected={draft.goal === 'hypertrophy'} onClick={() => choose({ goal: 'hypertrophy' })} />
             <OptionCard title="Maximalkraft" text="Schwerer heben, wenige Wiederholungen, lange Pausen." selected={draft.goal === 'strength'} onClick={() => choose({ goal: 'strength' })} />
             <OptionCard title="Fettabbau" text="Definierter werden und Muskeln dabei halten." selected={draft.goal === 'cut'} onClick={() => choose({ goal: 'cut' })} />
-            <OptionCard title="Fitness" text="Fit, gesund und beweglich bleiben." selected={draft.goal === 'fitness'} onClick={() => choose({ goal: 'fitness' })} />
+            <OptionCard title="Fitness & Mobility" text="Fit und beweglich bleiben, mit Mobility-Übungen." selected={draft.goal === 'fitness'} onClick={() => choose({ goal: 'fitness', mobility: true })} />
           </div>
         </>
       )
@@ -318,8 +398,8 @@ export function Onboarding({ userId, onFinish }: Props) {
           <p className="mt-2 text-base text-white/80">Dein Plan enthält nur Übungen, die du dort auch machen kannst.</p>
           <div className="mt-6 space-y-2.5">
             <OptionCard title="Fitnessstudio" text="Langhantel, Maschinen, Kabelzug." selected={draft.location === 'gym'} onClick={() => choose({ location: 'gym' })} />
-            <OptionCard title="Home-Gym" text="Kurzhanteln und eine Hantelbank zu Hause." selected={draft.location === 'home'} onClick={() => choose({ location: 'home' })} />
-            <OptionCard title="Ohne Geräte" text="Nur mit dem eigenen Körpergewicht." selected={draft.location === 'bodyweight'} onClick={() => choose({ location: 'bodyweight' })} />
+            <OptionCard title="Ohne Geräte" text="Mit eigenem Körpergewicht und Gewichtshilfen." selected={draft.location === 'bodyweight'} onClick={() => choose({ location: 'bodyweight' })} />
+            <OptionCard title="Calisthenics-Park" text="Klimmzugstange und Barren, Skills wie L-Sit und Handstand." selected={draft.location === 'calisthenics'} onClick={() => choose({ location: 'calisthenics' })} />
           </div>
         </>
       )
@@ -422,6 +502,11 @@ export function Onboarding({ userId, onFinish }: Props) {
               {plan.days.length} Tage pro Woche · {draft.minutes} Min. · {String(Math.round(plan.restSeconds / 30) / 2).replace('.', ',')} Min. Pause zwischen den Sätzen
             </p>
           )}
+          <div className="mt-4 space-y-2">
+            <Toggle on={draft.mobility} onClick={() => update({ mobility: !draft.mobility })}>Mobility dazu (2 Übungen am Ende)</Toggle>
+            {/* Bei 6 Trainingstagen bleibt sonst kein Ruhetag. */}
+            {draft.weekdays.length < 6 && <Toggle on={draft.cardioDay} onClick={() => update({ cardioDay: !draft.cardioDay })}>Cardio-Tag dazu (30–45 Min.)</Toggle>}
+          </div>
           <ul className="mt-5 space-y-2">
             {plan?.days.map((day) => (
               <li key={day.weekday} className="rounded-2xl border border-white/15 bg-black/55 p-3.5 backdrop-blur-md">
@@ -435,7 +520,9 @@ export function Onboarding({ userId, onFinish }: Props) {
                 <p className="mt-1 text-xs text-white/55">
                   {day.exercises[0]?.reps_min !== null
                     ? `${day.exercises[0].sets_min} × ${day.exercises[0].reps_min}–${day.exercises[0].reps_max} Wiederholungen`
-                    : `${day.exercises.length} Übungen`}
+                    : day.exercises.length === 1 && day.exercises[0].duration_min !== null
+                      ? `${day.exercises[0].duration_min / 60}–${(day.exercises[0].duration_max ?? day.exercises[0].duration_min) / 60} Min.`
+                      : `${day.exercises.length} Übungen`}
                 </p>
               </li>
             ))}
@@ -524,8 +611,10 @@ function BodyStep(props: {
   useEffect(() => headingRef.current?.focus(), [])
   const [weight, setWeight] = useState('')
   const [height, setHeight] = useState('')
+  const [target, setTarget] = useState('')
   const [sex, setSex] = useState<'male' | 'female' | ''>('')
   const [birthYear, setBirthYear] = useState('')
+  const [activity, setActivity] = useState<ActivityLevel | ''>('')
   const [problem, setProblem] = useState<string | null>(null)
 
   function parse(text: string, min: number, max: number): number | null | undefined {
@@ -539,12 +628,16 @@ function BodyStep(props: {
     const weightKg = parse(weight, 20, 350)
     const heightCm = parse(height, 100, 250)
     const year = parse(birthYear, 1900, 2020)
+    const targetKg = parse(target, 20, 350)
     if (weightKg === undefined) return setProblem('Gewicht prüfen: zwischen 20 und 350 kg.')
     if (heightCm === undefined) return setProblem('Größe prüfen: zwischen 100 und 250 cm.')
+    if (targetKg === undefined) return setProblem('Zielgewicht prüfen: zwischen 20 und 350 kg.')
     if (year === undefined || (year !== null && !Number.isInteger(year))) return setProblem('Geburtsjahr prüfen: zwischen 1900 und 2020.')
     setProblem(null)
     void props.onSave(async () => {
-      await saveOnboardingProfile({ heightCm: heightCm === null ? null : Math.round(heightCm), sex: sex || null, birthYear: year })
+      await saveOnboardingProfile({
+        heightCm: heightCm === null ? null : Math.round(heightCm), sex: sex || null, birthYear: year, targetWeightKg: targetKg, activityLevel: activity || null,
+      })
       if (weightKg !== null) {
         const values: MeasurementValues = {
           weightKg, bodyFatPct: null, neckCm: null, chestCm: null, waistCm: null, hipsCm: null, armCm: null, thighCm: null, calfCm: null,
@@ -558,7 +651,7 @@ function BodyStep(props: {
     <form onSubmit={handleSubmit}>
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Optional</p>
       <h1 ref={headingRef} tabIndex={-1} className="mt-1 text-5xl text-white outline-none">Deine Körperdaten</h1>
-      <p className="mt-2 text-base text-white/80">Damit berechnet die App BMI, Grundumsatz und deinen Kalorienbedarf. Du kannst das auch später machen.</p>
+      <p className="mt-2 text-base text-white/80">Damit rechnet die App deine Kalorien und Makros aus.</p>
       <div className="mt-5 grid grid-cols-2 gap-2.5">
         <label className="text-xs font-bold uppercase tracking-wider text-white/70">
           Gewicht (kg)
@@ -569,18 +662,29 @@ function BodyStep(props: {
           <input className={fieldClass} inputMode="numeric" placeholder="z. B. 180" value={height} onChange={(event) => setHeight(event.target.value)} />
         </label>
         <label className="text-xs font-bold uppercase tracking-wider text-white/70">
-          Geschlecht
-          <select className={fieldClass} value={sex} onChange={(event) => setSex(event.target.value as 'male' | 'female' | '')}>
-            <option value="">Keine Angabe</option>
-            <option value="male">Männlich</option>
-            <option value="female">Weiblich</option>
-          </select>
+          Zielgewicht (kg)
+          <input className={fieldClass} inputMode="decimal" placeholder="z. B. 75" value={target} onChange={(event) => setTarget(event.target.value)} />
         </label>
         <label className="text-xs font-bold uppercase tracking-wider text-white/70">
           Geburtsjahr
           <input className={fieldClass} inputMode="numeric" placeholder="z. B. 1998" value={birthYear} onChange={(event) => setBirthYear(event.target.value)} />
         </label>
       </div>
+      <label className="mt-2.5 block text-xs font-bold uppercase tracking-wider text-white/70">
+        Geschlecht
+        <select className={fieldClass} value={sex} onChange={(event) => setSex(event.target.value as 'male' | 'female' | '')}>
+          <option value="">Keine Angabe</option>
+          <option value="male">Männlich</option>
+          <option value="female">Weiblich</option>
+        </select>
+      </label>
+      <label className="mt-2.5 block text-xs font-bold uppercase tracking-wider text-white/70">
+        Aktivität im Alltag
+        <select className={fieldClass} value={activity} onChange={(event) => setActivity(event.target.value as ActivityLevel | '')}>
+          <option value="">Keine Angabe</option>
+          {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((level) => <option key={level} value={level}>{ACTIVITY_LABELS[level]}</option>)}
+        </select>
+      </label>
       {problem && <p role="alert" className="mt-3 text-sm font-medium text-[#ff9f9a]">{problem}</p>}
       <div className="mt-6 space-y-2">
         <PrimaryButton type="submit" disabled={props.busy}>{props.busy ? 'Wird gespeichert …' : 'Speichern & weiter'}</PrimaryButton>
