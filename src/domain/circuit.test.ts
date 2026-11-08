@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { circuitPayload, circuitSteps, formatCircuit, roundReps } from './circuit'
+import { circuitPayload, circuitSteps, formatStepTarget, roundReps } from './circuit'
 
 describe('Zirkel', () => {
   it('nimmt die Vorgabe der Übung, wenn eigene Wiederholungen fehlen', () => {
@@ -10,9 +10,11 @@ describe('Zirkel', () => {
     expect(circuitSteps(null, null, null, 5)).toEqual([])
   })
 
-  it('zeigt die Bewegungen in einer Zeile', () => {
-    expect(formatCircuit([{ name: 'Push-Up', reps: 5, weightKg: null }, { name: 'Swing', reps: 10, weightKg: 16 }, { name: 'Clean', reps: null, weightKg: null }]))
-      .toBe('5 Push-Up · 10 × 16 kg Swing · Clean')
+  it('zeigt Wiederholungen und Gewicht einer Bewegung', () => {
+    expect(formatStepTarget({ name: 'Push-Up', reps: 5, weightKg: null })).toBe('5')
+    expect(formatStepTarget({ name: 'Swing', reps: 10, weightKg: 16 })).toBe('10 × 16 kg')
+    expect(formatStepTarget({ name: 'Swing', reps: 10, weightKg: 12.5 })).toBe('10 × 12,5 kg')
+    expect(formatStepTarget({ name: 'Clean', reps: null, weightKg: null })).toBe('')
   })
 
   it('zählt die Wiederholungen einer Runde', () => {
