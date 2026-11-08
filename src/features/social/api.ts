@@ -73,6 +73,13 @@ export async function saveSharing(userId: string, sharing: Sharing): Promise<voi
   if (error) throw error
 }
 
+/** Ob ein Benutzername schon jemand anderem gehört. Gesucht wird nur im Verzeichnis sichtbarer Profile. */
+export async function usernameTaken(userId: string, username: string): Promise<boolean> {
+  const { data, error } = await supabase.from('social_directory').select('user_id').eq('username', username).neq('user_id', userId).limit(1)
+  if (error) throw error
+  return data.length > 0
+}
+
 export async function saveUsername(userId: string, input: string): Promise<string> {
   const username = normalizeUsername(input)
   if (!username) throw new Error('Benutzername geht so nicht: 3 bis 40 Zeichen, nur Kleinbuchstaben, Zahlen, Punkt und Unterstrich.')

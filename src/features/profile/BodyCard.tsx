@@ -1,5 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react'
-import { type ActivityLevel, ageFromBirthYear, analyzeBody, type Sex } from '../../domain/body'
+import { ACTIVITY_LABELS, type ActivityLevel, ageFromBirthYear, analyzeBody, type Sex } from '../../domain/body'
 import { PlusIcon, TrashIcon } from '../../lib/icons'
 import { enableProfileTargets } from '../nutrition/api'
 import {
@@ -25,14 +25,6 @@ const FIELDS: { key: 'weightKg' | 'bodyFatPct'; label: string; unit: string; min
 ]
 /** Umfänge gibt es in der Datenbank noch, alte Werte bleiben beim Speichern erhalten. */
 const CIRCUMFERENCE_KEYS: Field[] = ['neckCm', 'chestCm', 'waistCm', 'hipsCm', 'armCm', 'thighCm', 'calfCm']
-
-const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
-  sedentary: 'Kaum Bewegung (Büro)',
-  light: 'Leicht aktiv (1–2× Sport)',
-  moderate: 'Aktiv (3–4× Sport)',
-  active: 'Sehr aktiv (5–6× Sport)',
-  very_active: 'Extrem aktiv (täglich + körperliche Arbeit)',
-}
 
 function formatNumber(value: number, digits = 1): string {
   return String(Math.round(value * 10 ** digits) / 10 ** digits).replace('.', ',')

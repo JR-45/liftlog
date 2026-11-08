@@ -69,15 +69,82 @@ describe('buildOnboardingPlan', () => {
 
   it('nutzt nur Übungen aus dem Katalog, für jede Kombination', () => {
     const names = new Set(EXERCISE_CATALOG.map((exercise) => exercise.name))
-    for (const location of ['gym', 'home', 'bodyweight'] as const) {
-      for (let count = 1; count <= 6; count += 1) {
-        const plan = buildOnboardingPlan({ ...base, location, minutes: 90, weekdays: suggestWeekdays(count) })
-        for (const day of plan.days) {
-          expect(day.exercises.length).toBeGreaterThan(0)
-          for (const exercise of day.exercises) expect(names.has(exercise.name)).toBe(true)
+    for (const location of ['gym', 'home', 'bodyweight', 'calisthenics'] as const) {
+      for (const focus of ['balanced', 'lower', 'athletic'] as const) {
+        for (const goal of ['hypertrophy', 'cut'] as const) {
+          for (const experience of ['beginner', 'advanced'] as const) for (let count = 1; count <= 6; count += 1) {
+            const plan = buildOnboardingPlan({ ...base, goal, focus, location, experience, mobility: true, cardioDay: true, minutes: 90, weekdays: suggestWeekdays(count) })
+            for (const day of plan.days) {
+              expect(day.exercises.length).toBeGreaterThan(0)
+              for (const exercise of day.exercises) expect(names.has(exercise.name)).toBe(true)
+              // Keine Übung doppelt am selben Tag.
+              expect(new Set(day.exercises.map((exercise) => exercise.name)).size).toBe(day.exercises.length)
+            }
+          }
         }
       }
     }
+  })
+
+  it('setzt beim Fokus Bauch, Beine & Po den Po an den Anfang und trainiert die Beine öfter', () => {
+    const three = buildOnboardingPlan({ ...base, focus: 'lower' })
+    expect(three.days[0].exercises[0].name).toBe('Hip Thrusts')
+    const four = buildOnboardingPlan({ ...base, focus: 'lower', weekdays: [1, 2, 4, 5] })
+    expect(four.days.map((day) => day.name)).toEqual(['Unterkörper', 'Oberkörper', 'Beine & Po', 'Oberkörper'])
+    // Ausgewogen bleibt der bisherige Plan.
+    expect(buildOnboardingPlan({ ...base, focus: 'balanced' }).days[0].exercises[0].name).toBe('Kniebeugen')
+  })
+
+  it('baut athletisch mit Kreuzheben, Schwung- und Tragübungen', () => {
+    const names = buildOnboardingPlan({ ...base, focus: 'athletic', minutes: 90 }).days[0].exercises.map((exercise) => exercise.name)
+    expect(names[0]).toBe('Kreuzheben')
+    expect(names).toContain('Kettlebell Swings')
+    const walk = buildOnboardingPlan({ ...base, focus: 'athletic', minutes: 90 }).days[0].exercises.find((exercise) => exercise.name === 'Farmer’s Walk')
+    expect(walk).toMatchObject({ duration_min: 30, duration_max: 45 })
+    // Calisthenics ist schon athletisch und bleibt gleich.
+    expect(buildOnboardingPlan({ ...base, focus: 'athletic', location: 'calisthenics' }).days)
+      .toEqual(buildOnboardingPlan({ ...base, location: 'calisthenics' }).days)
+  })
+
+  it('baut für Calisthenics mit Stange und wenigen Wiederholungen bei schweren Übungen', () => {
+    const plan = buildOnboardingPlan({ ...base, location: 'calisthenics' })
+    const pullUps = plan.days[0].exercises.find((exercise) => exercise.name === 'Klimmzüge (Körpergewicht)')
+    expect(pullUps).toMatchObject({ reps_min: 5, reps_max: 10 })
+    const lSit = buildOnboardingPlan({ ...base, location: 'calisthenics', minutes: 90 }).days[0].exercises.find((exercise) => exercise.name === 'L-Sit')
+    expect(lSit).toMatchObject({ duration_min: 10, duration_max: 20, sets_min: 3 })
+  })
+
+  it('gibt Einsteigern leichtere Varianten schwerer Übungen', () => {
+    const park = buildOnboardingPlan({ ...base, location: 'calisthenics', experience: 'beginner', minutes: 90 })
+    const names = park.days.flatMap((day) => day.exercises.map((exercise) => exercise.name))
+    for (const hard of ['Klimmzüge (Körpergewicht)', 'Chin-ups', 'Pistol Squats', 'L-Sit', 'Handstand halten']) expect(names).not.toContain(hard)
+    const gym = buildOnboardingPlan({ ...base, focus: 'athletic', experience: 'beginner', minutes: 90 }).days[0].exercises.map((exercise) => exercise.name)
+    expect(gym.slice(0, 2)).toEqual(['Rumänisches Kreuzheben', 'Klimmzüge mit Gewichtshilfe'])
+  })
+
+  it('hängt beim Fettabbau Cardio an, ohne Studio Joggen', () => {
+    const gym = buildOnboardingPlan({ ...base, goal: 'cut' }).days[0].exercises.at(-1)
+    expect(gym).toMatchObject({ name: 'Crosstrainer', duration_min: 600, duration_max: 900 })
+    expect(buildOnboardingPlan({ ...base, goal: 'cut', location: 'bodyweight' }).days[0].exercises.at(-1)?.name).toBe('Joggen')
+    expect(buildOnboardingPlan(base).days[0].exercises.some((exercise) => exercise.name === 'Crosstrainer')).toBe(false)
+  })
+
+  it('legt den Cardio-Tag auf einen freien Tag, am liebsten Samstag', () => {
+    const plan = buildOnboardingPlan({ ...base, location: 'bodyweight', cardioDay: true })
+    expect(plan.days.map((day) => day.weekday)).toEqual([1, 3, 5, 6])
+    expect(plan.days[3]).toMatchObject({ name: 'Cardio' })
+    expect(plan.days[3].exercises[0]).toMatchObject({ name: 'Joggen', duration_min: 1800, duration_max: 2700 })
+    expect(buildOnboardingPlan({ ...base, cardioDay: true }).days[3].exercises[0].name).toBe('Laufband')
+    expect(buildOnboardingPlan({ ...base, cardioDay: true, weekdays: [1, 2, 3, 4, 5, 6] }).days).toHaveLength(6)
+    expect(buildOnboardingPlan({ ...base, cardioDay: true, weekdays: [1, 2, 4, 5, 6] }).days.map((day) => day.weekday)).toEqual([0, 1, 2, 4, 5, 6])
+  })
+
+  it('hängt mit Mobility-Zusatz zwei passende Übungen ans Ende', () => {
+    const plain = buildOnboardingPlan({ ...base, weekdays: [1, 2, 4, 5] })
+    const plan = buildOnboardingPlan({ ...base, weekdays: [1, 2, 4, 5], mobility: true })
+    expect(plan.days[0].exercises).toHaveLength(plain.days[0].exercises.length + 2)
+    expect(plan.days[0].exercises.slice(-2).map((exercise) => exercise.name)).toEqual(['Thorax-Rotation', 'Wall Slides'])
+    expect(plan.days[1].exercises.slice(-2).map((exercise) => exercise.name)).toEqual(['90/90 Hüftrotation', 'Couch Stretch'])
   })
 })
 

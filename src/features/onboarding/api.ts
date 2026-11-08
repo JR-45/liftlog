@@ -1,3 +1,4 @@
+import type { ActivityLevel } from '../../domain/body'
 import type { Experience, Goal, Location, SessionMinutes } from '../../domain/onboarding'
 import { supabase } from '../../lib/supabase'
 
@@ -22,6 +23,8 @@ export type OnboardingProfile = {
   heightCm?: number | null
   sex?: 'male' | 'female' | null
   birthYear?: number | null
+  targetWeightKg?: number | null
+  activityLevel?: ActivityLevel | null
 }
 
 /** Speichert die bisherigen Antworten ins Profil. Fehlende Felder bleiben unverändert. */
@@ -36,6 +39,8 @@ export async function saveOnboardingProfile(values: OnboardingProfile): Promise<
   if (values.heightCm !== undefined) row.height_cm = values.heightCm
   if (values.sex !== undefined) row.sex = values.sex
   if (values.birthYear !== undefined) row.birth_year = values.birthYear
+  if (values.targetWeightKg !== undefined) row.target_weight_kg = values.targetWeightKg
+  if (values.activityLevel !== undefined) row.activity_level = values.activityLevel
   const { error } = await supabase.from('profiles').upsert(row, { onConflict: 'user_id' })
   if (error) throw error
 }
