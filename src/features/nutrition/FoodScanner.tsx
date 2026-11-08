@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FoodScan } from '../../domain/foodScan'
 import type { Meal, NutritionTargets } from '../../domain/nutrition'
-import { CameraIcon } from '../../lib/icons'
+import { CameraIcon, TrashIcon } from '../../lib/icons'
 import { analyzeFood, setPhotoConsent } from './api'
 import { prepareFoodPhoto } from './image'
 import { MealReview } from './MealReview'
@@ -81,7 +81,15 @@ export function FoodScanner({ consent, date, targets, onConsent, onSaved }: {
       </div>
       <input ref={camera} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-label="Essen fotografieren" onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = '' }} />
       <input ref={upload} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Essensfoto auswählen" onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = '' }} />
-      {photo && <img src={`data:image/jpeg;base64,${photo}`} className="mt-4 max-h-64 w-full rounded-xl bg-surface-inset object-contain" alt="Vorschau deiner Mahlzeit vor der Übertragung" />}
+      {photo && <>
+        <img src={`data:image/jpeg;base64,${photo}`} className="mt-4 max-h-64 w-full rounded-xl bg-surface-inset object-contain" alt="Vorschau deiner Mahlzeit vor der Übertragung" />
+        <button type="button" disabled={busy !== null} className={`${secondaryClass} mt-2 inline-flex items-center justify-center gap-2`} onClick={() => {
+          if (lock.current) return
+          setPhoto(null)
+          setScan(null)
+          setError('')
+        }}><TrashIcon className="h-5 w-5" />Foto entfernen</button>
+      </>}
       <div className="mt-3 text-xs text-muted">
         <p>Das Foto geht zur Analyse an Google Gemini und wird nicht gespeichert. Die Werte sind Schätzungen.</p>
         {!consent ? <label className="mt-2 flex min-h-11 items-start gap-3 text-sm text-foreground"><input className="mt-0.5 h-5 w-5 shrink-0 accent-neon" type="checkbox" checked={agreed} disabled={busy !== null} onChange={(event) => setAgreed(event.target.checked)} />Ich stimme der Übertragung meiner Essensfotos an Google zur Analyse zu. Ich kann diese Einwilligung hier widerrufen.</label>
