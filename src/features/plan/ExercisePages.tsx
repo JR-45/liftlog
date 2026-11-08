@@ -83,7 +83,7 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
     <div className="exercise-book mt-4">
       <div className="flex items-center justify-between gap-2">
         <button className={BUTTON} type="button" aria-label="Vorherige Übung" disabled={index === 0} onClick={() => turn(index - 1)}>‹ Zurück</button>
-        <h4 ref={heading} tabIndex={-1} className="text-center text-sm font-semibold tabular-nums text-accent-ink" aria-live="polite">Übung {index + 1} von {exercises.length}</h4>
+        <h4 ref={heading} tabIndex={-1} className="text-center text-sm font-semibold tabular-nums text-accent-ink" aria-live="polite">Übung {index + 1}{exercises.length > 1 && ` von ${exercises.length}`}</h4>
         <button className={BUTTON} type="button" aria-label="Nächste Übung" disabled={index === exercises.length - 1} onClick={() => turn(index + 1)}>Weiter ›</button>
       </div>
 
@@ -169,17 +169,19 @@ export function ExercisePages({ exercises, onChange, reveal, exerciseGroup }: {
             <input className={`${INPUT} text-center tabular-nums`} type="number" inputMode="numeric" min="1" max="100" step="1" value={exercise.sets_min || ''}
               onChange={(event) => update({ sets_min: Number(event.target.value) })} />
           </label>}
-          <button className="min-h-11 text-sm font-medium text-danger disabled:opacity-40" type="button" disabled={exercises.length === 1} onClick={() => {
-            onChange(exercises.filter((_, i) => i !== index))
-            turn(Math.max(0, index - 1))
-          }}>Diese Übung entfernen</button>
         </div>}
       </div>
 
-      <button className={`${BUTTON} mt-3 w-full`} type="button" onClick={() => {
-        onChange([...exercises, newExercise()])
-        turn(exercises.length)
-      }}>+ Übung hinzufügen</button>
+      <div className={`mt-3 grid gap-2 ${exercises.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {exercises.length > 1 && <button className="min-h-11 rounded-xl bg-control px-3 py-2 text-sm font-medium text-danger" type="button" onClick={() => {
+          onChange(exercises.filter((_, i) => i !== index))
+          turn(Math.max(0, index - 1))
+        }}>Übung löschen</button>}
+        <button className={BUTTON} type="button" onClick={() => {
+          onChange([...exercises, newExercise()])
+          turn(exercises.length)
+        }}>{exercises.length === 1 ? '+ Übung hinzufügen' : 'Übung hinzufügen'}</button>
+      </div>
     </div>
   )
 }
