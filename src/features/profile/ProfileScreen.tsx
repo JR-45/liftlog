@@ -109,7 +109,6 @@ function ProfileView({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Formularfelder für Profil-Bearbeitung
-  const [nameDraft, setNameDraft] = useState(profile.displayName)
   const [usernameDraft, setUsernameDraft] = useState(account?.username ?? '')
   const [bioDraft, setBioDraft] = useState(profile.bio)
   const [goalDraft, setGoalDraft] = useState<TrainingGoal>(profile.goal)
@@ -184,10 +183,8 @@ function ProfileView({
 
   async function handleSaveIdentity(event: React.FormEvent) {
     event.preventDefault()
-    const cleanName = nameDraft.trim() || 'Athlet'
     const next: UserProfile = {
       ...profile,
-      displayName: cleanName,
       bio: bioDraft.trim(),
       goal: goalDraft,
       weeklyTarget: Math.min(7, Math.max(1, weeklyDraft)),
@@ -212,7 +209,6 @@ function ProfileView({
   }
 
   function openSettings() {
-    setNameDraft(profile.displayName)
     setUsernameDraft(account?.username ?? '')
     setBioDraft(profile.bio)
     setGoalDraft(profile.goal)
@@ -246,17 +242,6 @@ function ProfileView({
               <input className={`${fieldClass} mt-1`} value={usernameDraft} maxLength={40} autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 onChange={event => setUsernameDraft(event.target.value)} placeholder="dein.benutzername" />
             </label>}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-foreground/85">
-                Anzeigename
-                <input
-                  className={`${fieldClass} mt-1`}
-                  value={nameDraft}
-                  maxLength={40}
-                  onChange={(event) => setNameDraft(event.target.value)}
-                  placeholder="Dein Name"
-                />
-              </label>
               <label className="block text-sm font-medium text-foreground/85">
                 Trainingsziel
                 <select
@@ -270,7 +255,6 @@ function ProfileView({
                   <option value="fitness">Allgemeine Fitness</option>
                 </select>
               </label>
-            </div>
 
             <div className="grid gap-3 sm:grid-cols-[1fr_11rem]">
               <label className="block text-sm font-medium text-foreground/85">
