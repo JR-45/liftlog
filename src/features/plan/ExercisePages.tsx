@@ -86,13 +86,13 @@ export function ExercisePages({ exercises, onChange, reveal }: {
   }
 
   function addStep() {
-    // Neue Bewegungen übernehmen die Wiederholungen der vorigen, das ist bei Complexen meist gleich.
-    update({ steps: [...steps, { name: '', reps: steps.at(-1)?.reps ?? 5 }] })
+    // Neue Bewegungen übernehmen Wiederholungen und Gewicht der vorigen, das ist bei Complexen meist gleich.
+    update({ steps: [...steps, { name: '', reps: steps.at(-1)?.reps ?? 5, weightKg: steps.at(-1)?.weightKg ?? null }] })
   }
 
   function setCircuit(circuit: boolean) {
     if (circuit === isCircuit) return
-    update({ steps: circuit ? [{ name: '', reps: exercise.reps_max ?? 5 }] : undefined })
+    update({ steps: circuit ? [{ name: '', reps: exercise.reps_max ?? 5, weightKg: null }] : undefined })
   }
 
   function updateSets(value: number) {
@@ -132,6 +132,10 @@ export function ExercisePages({ exercises, onChange, reveal }: {
             {circuit ? 'Zirkel' : 'Übung'}
           </button>)}
         </div>}
+        {isCircuit ? <label className={LABEL}>Name
+          <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Kettlebell Complex"
+            onChange={(event) => update({ name: event.target.value })} />
+        </label> : <>
         <label className={LABEL}>Muskelgruppe
           <select aria-label="Muskelgruppe" className={INPUT} value={exercise.muscleGroup} onChange={event => update({ muscleGroup: event.target.value })}>
             <option value="">Alle Muskelgruppen</option>
@@ -148,6 +152,7 @@ export function ExercisePages({ exercises, onChange, reveal }: {
             <option value={CUSTOM}>Eigene Übung …</option>
           </select>
         </label>
+        </>}
 
         <div className="flex items-end gap-2">
           {!cardio && <label className={`${LABEL} w-20 shrink-0`}>{isCircuit ? 'Runden' : 'Sätze'}
@@ -182,15 +187,19 @@ export function ExercisePages({ exercises, onChange, reveal }: {
 
         {isCircuit && <fieldset>
           <legend className={LABEL}>Bewegungen pro Runde</legend>
-          {steps.length > 0 && <div className="mt-1 flex gap-2 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
-            <span className="w-16 shrink-0">Wdh.</span><span className="flex-1 text-left">Bewegung</span><span className="w-11 shrink-0" />
+          {steps.length > 0 && <div className="mt-1 flex gap-1.5 text-center text-[11px] font-semibold uppercase tracking-wider text-muted" aria-hidden="true">
+            <span className="w-12 shrink-0">Wdh.</span><span className="w-14 shrink-0">kg</span>
+            <span className="min-w-0 flex-1 text-left">Bewegung</span><span className="w-11 shrink-0" />
           </div>}
           <ol className="space-y-2">
-            {steps.map((step, i) => <li key={i} className="flex items-center gap-2">
-              <input className={`${STEP_INPUT} w-16 shrink-0 text-center tabular-nums`} aria-label={`Wiederholungen Bewegung ${i + 1}`}
+            {steps.map((step, i) => <li key={i} className="flex items-center gap-1.5">
+              <input className={`${STEP_INPUT} w-12 shrink-0 px-1 text-center tabular-nums`} aria-label={`Wiederholungen Bewegung ${i + 1}`}
                 type="number" inputMode="numeric" min="1" max="999" step="1" value={step.reps ?? ''}
                 onChange={(event) => updateStep(i, { reps: numberOrNull(event.target.value) })} />
-              <input className={`${STEP_INPUT} min-w-0 flex-1`} aria-label={`Bewegung ${i + 1}`} maxLength={60} value={step.name}
+              <input className={`${STEP_INPUT} w-14 shrink-0 px-1 text-center tabular-nums`} aria-label={`Gewicht Bewegung ${i + 1} in kg`}
+                type="number" inputMode="decimal" min="0" max="1000" step="any" placeholder="–" value={step.weightKg ?? ''}
+                onChange={(event) => updateStep(i, { weightKg: numberOrNull(event.target.value) })} />
+              <input className={`${STEP_INPUT} min-w-0 flex-1 px-2`} aria-label={`Bewegung ${i + 1}`} maxLength={60} value={step.name}
                 placeholder="z. B. Swing" onChange={(event) => updateStep(i, { name: event.target.value })} />
               <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted hover:text-danger" type="button"
                 aria-label={`Bewegung ${i + 1} entfernen`} onClick={() => update({ steps: steps.filter((_, j) => j !== i) })}>
@@ -208,11 +217,11 @@ export function ExercisePages({ exercises, onChange, reveal }: {
         </button>
 
         {showMore && <div className="space-y-3 border-t border-line/[0.06] pt-3">
-          <label className={LABEL}>Eigener Name
+          {!isCircuit && <label className={LABEL}>Eigener Name
             <input className={INPUT} maxLength={100} value={exercise.name} placeholder="z. B. Bankdrücken"
               onChange={(event) => update({ name: event.target.value })} />
-          </label>
-          {!cardio && <label className={LABEL}>Erfassung
+          </label>}
+          {!cardio && !isCircuit && <label className={LABEL}>Erfassung
             <select className={INPUT} value={exercise.tracking_type} onChange={(event) => update(trackingChanges(event.target.value as TrackingType))}>
               <option value="weight_reps">Gewicht + Wiederholungen</option>
               <option value="assisted_reps">Gewichtshilfe + Wiederholungen</option>

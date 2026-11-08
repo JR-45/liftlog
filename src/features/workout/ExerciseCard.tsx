@@ -116,13 +116,14 @@ export function ExerciseCard(props: Props) {
   }, [scrollRequest])
 
   const exercise = exercises[activeId]
-  const weighted = usesWeight(exercise.tracking_type)
+  // Bewegungen gehören zur geplanten Übung, nicht zur Alternative.
+  const steps = activeId === entry.exercise.id ? circuitSteps(entry.steps, entry.step_reps, entry.step_weights, entry.reps_max) : []
+  const isCircuit = steps.length > 0 && exercise.tracking_type !== 'duration'
+  // Beim Zirkel steht das Gewicht an den Bewegungen. Eine Runde wird nur noch abgehakt.
+  const weighted = usesWeight(exercise.tracking_type) && !isCircuit
   const assisted = exercise.tracking_type === 'assisted_reps'
   const cardio = exercise.tracking_type === 'duration' && isCardioExercise(exercise.name)
   const unit: DurationUnit = cardio ? 'minutes' : durationUnitForTarget(entry.duration_min)
-  // Bewegungen gehören zur geplanten Übung, nicht zur Alternative.
-  const steps = activeId === entry.exercise.id ? circuitSteps(entry.steps, entry.step_reps, entry.reps_max) : []
-  const isCircuit = steps.length > 0 && exercise.tracking_type !== 'duration'
   const isRounds = entry.sets_min !== entry.sets_max || isCircuit
   const reps = formatRange(entry.reps_min, entry.reps_max)
   const duration = formatRange(entry.duration_min === null ? null : entry.duration_min / (unit === 'minutes' ? 60 : 1), entry.duration_max === null ? null : entry.duration_max / (unit === 'minutes' ? 60 : 1))
@@ -135,7 +136,7 @@ export function ExerciseCard(props: Props) {
       ? `${cardio ? '' : `${sets} × `}${duration} ${unit === 'minutes' ? 'Min.' : 'Sek.'}`
       : 'Dauer frei'
   const last = lastSets.filter((set) => set.exercise_id === activeId)
-  const hint = progressionHint({
+  const hint = isCircuit ? null : progressionHint({
     tracking: exercise.tracking_type,
     currentWeight: exercise.current_weight_kg,
     setsMin: entry.sets_min,
@@ -430,7 +431,7 @@ export function ExerciseCard(props: Props) {
     <div className="border-t border-line/[0.06] px-4 pb-4 pt-3">
       {showSettings && (
         <div className="mb-3.5 space-y-2.5 rounded-2xl bg-surface-inset p-3.5 ring-1 ring-line/[0.06]">
-          {exercise.tracking_type !== 'duration' && (
+          {exercise.tracking_type !== 'duration' && !isCircuit && (
             <label className="flex items-center justify-between gap-3 text-sm font-medium text-foreground/85">
               Erfassung
               <select
@@ -566,7 +567,7 @@ export function ExerciseCard(props: Props) {
               date={today}
               exerciseId={activeId}
               setNumber={setNumber}
-              tracking={exercise.tracking_type}
+              tracking={isCircuit ? 'reps' : exercise.tracking_type}
               unit={unit}
               workingWeight={exercise.current_weight_kg}
               saved={savedSets[setKey(activeId, setNumber)] ?? null}
