@@ -1,9 +1,8 @@
 import { type FormEvent, useMemo, useState } from 'react'
 import { ACTIVITY_LABELS, type ActivityLevel, ageFromBirthYear, analyzeBody, type Sex } from '../../domain/body'
-import { PlusIcon, TrashIcon } from '../../lib/icons'
+import { PlusIcon } from '../../lib/icons'
 import { enableProfileTargets } from '../nutrition/api'
 import {
-  deleteMeasurement,
   type BodyMeasurement,
   type MeasurementValues,
   saveMeasurement,
@@ -14,7 +13,6 @@ import {
 const fieldClass =
   'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
 const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-muted'
-const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
 
 type Field = keyof MeasurementValues
 
@@ -51,13 +49,6 @@ function latestValues(measurements: BodyMeasurement[]): Record<'weightKg' | 'bod
     }
   }
   return result
-}
-
-function summary(entry: BodyMeasurement): string {
-  return [
-    entry.weightKg !== null && `${formatNumber(entry.weightKg)} kg`,
-    entry.bodyFatPct !== null && `${formatNumber(entry.bodyFatPct)} % KFA`,
-  ].filter(Boolean).join(' · ')
 }
 
 function Tile(props: { label: string; value: string; note?: string; noteClass?: string }) {
@@ -183,19 +174,6 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
     }
   }
 
-  async function handleDelete(date: string) {
-    setBusy(true)
-    setError(null)
-    try {
-      await deleteMeasurement(date)
-      onProfileChange({ ...profile, measurements: profile.measurements.filter((entry) => entry.date !== date) })
-    } catch {
-      setError('Die Messung konnte nicht gelöscht werden.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const missing = [
     profile.heightCm === null && 'Größe',
     profile.sex === null && 'Geschlecht',
@@ -204,8 +182,6 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
   ].filter(Boolean)
 
   const diff = analysis.diffToTargetKg
-  // Messungen nur mit alten Umfängen haben nichts mehr zu zeigen.
-  const lastEntry = profile.measurements.filter((entry) => entry.weightKg !== null || entry.bodyFatPct !== null).at(-1)
   return (
     <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
       <h3 className="text-xl font-bold tracking-tight text-foreground">Körperdaten</h3>
@@ -381,25 +357,6 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
       {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
       {feedback && <p role="status" className="mt-3 text-sm text-success">{feedback}</p>}
 
-      {/* Letzte Messung, zum Korrigieren. Der Verlauf steht in der Statistik. */}
-      {lastEntry && (
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-line/[0.06] pt-3 text-sm">
-          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted">Zuletzt</span>
-          <span className="min-w-0 flex-1 truncate text-right tabular-nums text-foreground">
-            <span className="text-muted">{SHORT_DATE.format(new Date(`${lastEntry.date}T12:00:00`))} · </span>
-            {summary(lastEntry)}
-          </span>
-          <button
-            type="button"
-            aria-label={`Messung vom ${lastEntry.date} löschen`}
-            disabled={busy}
-            onClick={() => void handleDelete(lastEntry.date)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:text-danger"
-          >
-            <TrashIcon className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
     </div>
   )
 }

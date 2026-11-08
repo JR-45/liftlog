@@ -127,11 +127,6 @@ export async function saveMeasurement(date: string, values: MeasurementValues): 
   if (error) throw error
 }
 
-export async function deleteMeasurement(date: string): Promise<void> {
-  const { error } = await supabase.from('body_measurements').delete().eq('measured_on', date)
-  if (error) throw error
-}
-
 /** Name und Bild für Kopfzeile und Begrüßung. Ohne gespeicherten Namen ist displayName null. */
 export async function loadProfileHeader(): Promise<{ displayName: string | null; avatar: string | null }> {
   const { data, error } = await supabase.from('profiles').select('display_name, avatar').maybeSingle()
