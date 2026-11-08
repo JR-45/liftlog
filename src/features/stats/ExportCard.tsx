@@ -71,8 +71,7 @@ export function ExportCard({ today }: { today: string }) {
     <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
       <h3 className="text-xl font-bold tracking-tight text-foreground">Backup & CSV-Export</h3>
       <p className="mt-1 text-xs leading-relaxed text-muted">
-        Alle deine Sätze als CSV-Datei, z. B. für iCloud Drive oder Excel. Einspielen lässt sich die Datei in der App
-        bisher nicht.
+        Alle deine Sätze als CSV-Datei, z. B. für iCloud oder Excel.
       </p>
       {prepared ? (
         <>
