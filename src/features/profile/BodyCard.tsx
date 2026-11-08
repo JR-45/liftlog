@@ -1,5 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react'
-import { type ActivityLevel, ageFromBirthYear, analyzeBody, type Rating, type Sex } from '../../domain/body'
+import { type ActivityLevel, ageFromBirthYear, analyzeBody, type Sex } from '../../domain/body'
 import { PlusIcon, TrashIcon } from '../../lib/icons'
 import { enableProfileTargets } from '../nutrition/api'
 import {
@@ -18,19 +18,13 @@ const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-
 
 type Field = keyof MeasurementValues
 
-/** Reihenfolge, Beschriftung und erlaubter Bereich, gleich wie in der Datenbank. */
-const FIELDS: { key: Field; label: string; unit: string; min: number; max: number }[] = [
+/** Eingetragen werden nur Gewicht und Körperfett. Erlaubter Bereich wie in der Datenbank. */
+const FIELDS: { key: 'weightKg' | 'bodyFatPct'; label: string; unit: string; min: number; max: number }[] = [
   { key: 'weightKg', label: 'Gewicht', unit: 'kg', min: 20, max: 350 },
   { key: 'bodyFatPct', label: 'Körperfett', unit: '%', min: 2, max: 70 },
-  { key: 'neckCm', label: 'Hals', unit: 'cm', min: 10, max: 250 },
-  { key: 'chestCm', label: 'Brust', unit: 'cm', min: 10, max: 250 },
-  { key: 'waistCm', label: 'Taille', unit: 'cm', min: 10, max: 250 },
-  { key: 'hipsCm', label: 'Hüfte', unit: 'cm', min: 10, max: 250 },
-  { key: 'armCm', label: 'Oberarm', unit: 'cm', min: 10, max: 250 },
-  { key: 'thighCm', label: 'Oberschenkel', unit: 'cm', min: 10, max: 250 },
-  { key: 'calfCm', label: 'Wade', unit: 'cm', min: 10, max: 250 },
 ]
-const CIRCUMFERENCES = FIELDS.slice(2)
+/** Umfänge gibt es in der Datenbank noch, alte Werte bleiben beim Speichern erhalten. */
+const CIRCUMFERENCE_KEYS: Field[] = ['neckCm', 'chestCm', 'waistCm', 'hipsCm', 'armCm', 'thighCm', 'calfCm']
 
 const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   sedentary: 'Kaum Bewegung (Büro)',
@@ -39,13 +33,6 @@ const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   active: 'Sehr aktiv (5–6× Sport)',
   very_active: 'Extrem aktiv (täglich + körperliche Arbeit)',
 }
-
-const RATING_STYLE: Record<Rating, string> = {
-  good: 'text-success',
-  elevated: 'text-accent-ink',
-  high: 'text-danger',
-}
-const RATING_LABEL: Record<Rating, string> = { good: 'günstig', elevated: 'erhöht', high: 'hoch' }
 
 function formatNumber(value: number, digits = 1): string {
   return String(Math.round(value * 10 ** digits) / 10 ** digits).replace('.', ',')
@@ -64,8 +51,8 @@ function parseField(text: string, min: number, max: number): number | null | und
 }
 
 /** Neuester eingetragener Wert je Feld, auch wenn er aus einer älteren Messung stammt. */
-function latestValues(measurements: BodyMeasurement[]): MeasurementValues {
-  const result = Object.fromEntries(FIELDS.map(({ key }) => [key, null])) as MeasurementValues
+function latestValues(measurements: BodyMeasurement[]): Record<'weightKg' | 'bodyFatPct', number | null> {
+  const result: Record<'weightKg' | 'bodyFatPct', number | null> = { weightKg: null, bodyFatPct: null }
   for (const entry of measurements) {
     for (const { key } of FIELDS) {
       if (entry[key] !== null) result[key] = entry[key]
@@ -75,13 +62,10 @@ function latestValues(measurements: BodyMeasurement[]): MeasurementValues {
 }
 
 function summary(entry: BodyMeasurement): string {
-  return FIELDS.flatMap(({ key, label, unit }) => {
-    const value = entry[key]
-    if (value === null) return []
-    if (key === 'weightKg') return [`${formatNumber(value)} kg`]
-    if (key === 'bodyFatPct') return [`${formatNumber(value)} % KFA`]
-    return [`${label} ${formatNumber(value)} ${unit}`]
-  }).join(' · ')
+  return [
+    entry.weightKg !== null && `${formatNumber(entry.weightKg)} kg`,
+    entry.bodyFatPct !== null && `${formatNumber(entry.bodyFatPct)} % KFA`,
+  ].filter(Boolean).join(' · ')
 }
 
 function Tile(props: { label: string; value: string; note?: string; noteClass?: string }) {
@@ -102,13 +86,10 @@ type Props = {
 
 export function BodyCard({ profile, today, onProfileChange }: Props) {
   const todayEntry = profile.measurements.find((entry) => entry.date === today)
-  const [inputs, setInputs] = useState<Record<Field, string>>(
-    () => Object.fromEntries(FIELDS.map(({ key }) => [key, toText(todayEntry?.[key] ?? null)])) as Record<Field, string>,
-  )
-  const [showCircumferences, setShowCircumferences] = useState(() =>
-    CIRCUMFERENCES.some(({ key }) => profile.measurements.some((entry) => entry[key] !== null)),
-  )
-  // Zugeklappt. Fehlen Angaben, öffnet „Angaben ergänzen“ unter den Werten den Bereich.
+  const [inputs, setInputs] = useState(() => ({
+    weightKg: toText(todayEntry?.weightKg ?? null), bodyFatPct: toText(todayEntry?.bodyFatPct ?? null),
+  }))
+  // Zugeklappt, direkt unter den Werten.
   const [showDetails, setShowDetails] = useState(false)
   const [height, setHeight] = useState(toText(profile.heightCm))
   const [target, setTarget] = useState(toText(profile.targetWeightKg))
@@ -129,13 +110,12 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
     goal: profile.goal,
     targetWeightKg: profile.targetWeightKg,
     bodyFatPct: latest.bodyFatPct,
-    neckCm: latest.neckCm,
-    waistCm: latest.waistCm,
-    hipsCm: latest.hipsCm,
+    neckCm: null,
+    waistCm: null,
+    hipsCm: null,
   })
 
   const firstWeight = profile.measurements.find((entry) => entry.weightKg !== null)?.weightKg ?? null
-  const firstWaist = profile.measurements.find((entry) => entry.waistCm !== null)?.waistCm ?? null
 
   function flash(message: string) {
     setFeedback(message)
@@ -150,7 +130,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
 
   async function handleSaveMeasurement(event: FormEvent) {
     event.preventDefault()
-    const values = {} as MeasurementValues
+    const values = Object.fromEntries(CIRCUMFERENCE_KEYS.map((key) => [key, todayEntry?.[key] ?? null])) as MeasurementValues
     for (const { key, label, min, max, unit } of FIELDS) {
       const parsed = parseField(inputs[key], min, max)
       if (parsed === undefined) {
@@ -230,11 +210,11 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
     profile.sex === null && 'Geschlecht',
     profile.birthYear === null && 'Geburtsjahr',
     profile.activityLevel === null && 'Aktivität',
-    latest.waistCm === null && 'Taille',
-    latest.neckCm === null && latest.bodyFatPct === null && 'Hals',
   ].filter(Boolean)
 
   const diff = analysis.diffToTargetKg
+  // Messungen nur mit alten Umfängen haben nichts mehr zu zeigen.
+  const history = profile.measurements.filter((entry) => entry.weightKg !== null || entry.bodyFatPct !== null)
   return (
     <div className="rounded-2xl border border-line/[0.08] bg-surface p-4">
       <h3 className="text-xl font-bold tracking-tight text-foreground">Körperdaten</h3>
@@ -257,7 +237,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         <Tile
           label="Körperfett"
           value={analysis.bodyFatPct === null ? '—' : `${formatNumber(analysis.bodyFatPct)} %`}
-          note={analysis.bodyFatSource === 'navy' ? 'geschätzt' : analysis.bodyFatSource === 'measured' ? 'gemessen' : undefined}
+          note={analysis.bodyFatSource === 'measured' ? 'gemessen' : undefined}
         />
         {analysis.leanMassKg !== null && (
           <Tile
@@ -267,121 +247,22 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
           />
         )}
         {analysis.ffmi !== null && <Tile label="FFMI" value={formatNumber(analysis.ffmi)} />}
-        {analysis.waistToHeight !== null && analysis.waistToHeightRating !== null && (
-          <Tile
-            label="Taille / Größe"
-            value={formatNumber(analysis.waistToHeight, 2)}
-            note={`${RATING_LABEL[analysis.waistToHeightRating]} (Ziel unter 0,5)`}
-            noteClass={RATING_STYLE[analysis.waistToHeightRating]}
-          />
-        )}
-        {analysis.waistToHip !== null && (
-          <Tile
-            label="Taille / Hüfte"
-            value={formatNumber(analysis.waistToHip, 2)}
-            note={analysis.waistToHipRating === null ? undefined : RATING_LABEL[analysis.waistToHipRating]}
-            noteClass={analysis.waistToHipRating === null ? undefined : RATING_STYLE[analysis.waistToHipRating]}
-          />
-        )}
         {analysis.tdeeKcal !== null && <Tile label="Tagesbedarf" value={`${analysis.tdeeKcal} kcal`} />}
         {analysis.targetKcal !== null && <Tile label="Kalorienziel" value={`${analysis.targetKcal} kcal`} />}
         {analysis.proteinG !== null && <Tile label="Eiweiß" value={`${analysis.proteinG} g`} />}
       </div>
-      {missing.length > 0 && (
-        <p className="mt-2 text-xs text-muted">
-          Für mehr Werte fehlt: {missing.join(', ')}.{' '}
-          {!showDetails && <button type="button" className="font-medium text-accent-ink" onClick={() => setShowDetails(true)}>Angaben ergänzen</button>}
-        </p>
-      )}
-
-      {/* Heutige Messung */}
-      <form onSubmit={(event) => void handleSaveMeasurement(event)} className="mt-4 space-y-3 border-t border-line/[0.06] pt-4">
-        <p className="text-sm font-semibold text-foreground">Messung heute</p>
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)] gap-2.5">
-          <div>
-            <span className={labelClass}>Gewicht (kg)</span>
-            <div className="mt-1 flex items-center gap-1.5">
-              <button
-                type="button"
-                aria-label="Gewicht um 0,5 kg verringern"
-                onClick={() => stepWeight(-1)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-control text-lg font-medium text-foreground active:scale-95"
-              >
-                −
-              </button>
-              <input
-                className={`${fieldClass} text-center font-medium tabular-nums`}
-                inputMode="decimal"
-                aria-label="Gewicht in kg"
-                placeholder={latest.weightKg === null ? 'z. B. 80,5' : toText(latest.weightKg)}
-                value={inputs.weightKg}
-                onChange={(event) => setInputs({ ...inputs, weightKg: event.target.value })}
-              />
-              <button
-                type="button"
-                aria-label="Gewicht um 0,5 kg erhöhen"
-                onClick={() => stepWeight(1)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-control text-foreground active:scale-95"
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          <label className={labelClass}>
-            Körperfett (%)
-            <input
-              className={`${fieldClass} mt-1 text-center tabular-nums`}
-              inputMode="decimal"
-              placeholder="optional"
-              value={inputs.bodyFatPct}
-              onChange={(event) => setInputs({ ...inputs, bodyFatPct: event.target.value })}
-            />
-          </label>
-        </div>
-
-        <button
-          type="button"
-          className="min-h-11 text-sm font-medium text-accent-ink"
-          aria-expanded={showCircumferences}
-          onClick={() => setShowCircumferences((current) => !current)}
-        >
-          {showCircumferences ? 'Umfänge ausblenden' : 'Umfänge eintragen (Hals, Taille, Hüfte …)'}
-        </button>
-        {showCircumferences && (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {CIRCUMFERENCES.map(({ key, label }) => (
-              <label key={key} className={labelClass}>
-                {label} (cm)
-                <input
-                  className={`${fieldClass} mt-1 text-center tabular-nums`}
-                  inputMode="decimal"
-                  placeholder={latest[key] === null ? '' : toText(latest[key])}
-                  value={inputs[key]}
-                  onChange={(event) => setInputs({ ...inputs, [key]: event.target.value })}
-                />
-              </label>
-            ))}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="min-h-11 w-full rounded-xl bg-neon px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
-        >
-          Messung speichern
-        </button>
-      </form>
-
       {/* Angaben für die Berechnungen */}
-      <div className="mt-4 border-t border-line/[0.06] pt-3">
+      <div className="mt-3">
         <button
           type="button"
           className="flex min-h-11 w-full items-center justify-between text-left text-sm font-semibold text-foreground"
           aria-expanded={showDetails}
           onClick={() => setShowDetails((current) => !current)}
         >
-          Angaben für die Berechnungen
+          <span>
+            {missing.length > 0 ? 'Angaben ergänzen' : 'Angaben für die Berechnungen'}
+            {missing.length > 0 && !showDetails && <span className="block text-xs font-normal text-muted">Fehlt: {missing.join(', ')}</span>}
+          </span>
           <span className="text-xs font-normal text-muted">{showDetails ? 'schließen' : 'bearbeiten'}</span>
         </button>
         {showDetails && (
@@ -452,11 +333,65 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         )}
       </div>
 
+      {/* Heutige Messung */}
+      <form onSubmit={(event) => void handleSaveMeasurement(event)} className="mt-4 space-y-3 border-t border-line/[0.06] pt-4">
+        <p className="text-sm font-semibold text-foreground">Messung heute</p>
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)] gap-2.5">
+          <div>
+            <span className={labelClass}>Gewicht (kg)</span>
+            <div className="mt-1 flex items-center gap-1.5">
+              <button
+                type="button"
+                aria-label="Gewicht um 0,5 kg verringern"
+                onClick={() => stepWeight(-1)}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-control text-lg font-medium text-foreground active:scale-95"
+              >
+                −
+              </button>
+              <input
+                className={`${fieldClass} text-center font-medium tabular-nums`}
+                inputMode="decimal"
+                aria-label="Gewicht in kg"
+                placeholder={latest.weightKg === null ? 'z. B. 80,5' : toText(latest.weightKg)}
+                value={inputs.weightKg}
+                onChange={(event) => setInputs({ ...inputs, weightKg: event.target.value })}
+              />
+              <button
+                type="button"
+                aria-label="Gewicht um 0,5 kg erhöhen"
+                onClick={() => stepWeight(1)}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-control text-foreground active:scale-95"
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <label className={labelClass}>
+            Körperfett (%)
+            <input
+              className={`${fieldClass} mt-1 text-center tabular-nums`}
+              inputMode="decimal"
+              placeholder="optional"
+              value={inputs.bodyFatPct}
+              onChange={(event) => setInputs({ ...inputs, bodyFatPct: event.target.value })}
+            />
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="min-h-11 w-full rounded-xl bg-neon px-4 text-sm font-semibold text-black transition-transform active:scale-[0.99] disabled:opacity-50"
+        >
+          Messung speichern
+        </button>
+      </form>
+
       {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
       {feedback && <p role="status" className="mt-3 text-sm text-success">{feedback}</p>}
 
       {/* Verlauf */}
-      {profile.measurements.length > 0 && (
+      {history.length > 0 && (
         <div className="mt-4 border-t border-line/[0.06] pt-3">
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">Verlauf</p>
@@ -465,16 +400,13 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 firstWeight !== null && latest.weightKg !== null && firstWeight !== latest.weightKg
                   ? `Seit Beginn ${latest.weightKg > firstWeight ? '+' : ''}${formatNumber(latest.weightKg - firstWeight)} kg`
                   : null,
-                firstWaist !== null && latest.waistCm !== null && firstWaist !== latest.waistCm
-                  ? `Taille ${latest.waistCm > firstWaist ? '+' : ''}${formatNumber(latest.waistCm - firstWaist)} cm`
-                  : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
           </div>
           <ul className="mt-2 divide-y divide-line/[0.06]">
-            {[...profile.measurements]
+            {[...history]
               .reverse()
               .slice(0, 10)
               .map((entry) => (
