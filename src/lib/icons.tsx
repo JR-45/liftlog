@@ -144,6 +144,14 @@ export function FlameIcon({ className = 'h-5 w-5' }: IconProps) {
   )
 }
 
+export function SnowflakeIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M12 2v20M4.9 7l14.2 10M4.9 17 19.1 7M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5" />
+    </SvgIcon>
+  )
+}
+
 export function StopwatchIcon({ className }: IconProps) {
   return (
     <SvgIcon className={className}>

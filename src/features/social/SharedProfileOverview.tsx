@@ -1,7 +1,7 @@
 import { weekStreak } from '../../domain/motivation'
 import { formatRange } from '../../domain/sets'
 import { gymWeeks } from '../../domain/social'
-import { CheckIcon } from '../../lib/icons'
+import { CheckIcon, FlameIcon, SnowflakeIcon } from '../../lib/icons'
 import { CARD, SECTION_TITLE } from '../../lib/ui'
 import type { SharedOverview } from './api'
 
@@ -15,11 +15,18 @@ export function SharedProfileOverview({ overview, today }: { overview: SharedOve
   const streak = weekStreak(overview.gymDays, today)
   return <>
     <section className={CARD} aria-labelledby="gym-days-heading">
-      <div className="flex items-center justify-between gap-3">
-        <h3 id="gym-days-heading" className={SECTION_TITLE}>Gym-Tage</h3>
-        {streak > 0 && <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">{streak} {streak === 1 ? 'Woche' : 'Wochen'} Serie</span>}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 id="gym-days-heading" className={SECTION_TITLE}>Diese Woche</h3>
+          <p className="mt-1 text-sm tabular-nums text-muted">{thisWeek} / {overview.profile.weeklyTarget} Tage</p>
+        </div>
+        {/* Ohne Serie Eis, mit Serie Feuer. */}
+        <div className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 ${streak > 0 ? 'bg-warning/15 text-warning' : 'bg-neon/10 text-accent-ink'}`}
+          aria-label={`Wochen-Streak: ${streak}`}>
+          {streak > 0 ? <FlameIcon className="h-6 w-6" /> : <SnowflakeIcon className="h-6 w-6" />}
+          <span className="text-left leading-tight"><span className="block text-xl font-extrabold tabular-nums">{streak}</span><span className="block text-[11px] font-medium">Wochen-Streak</span></span>
+        </div>
       </div>
-      <p className="mt-1 text-sm tabular-nums text-muted">{thisWeek} / {overview.profile.weeklyTarget} diese Woche</p>
       <div className="mt-3 grid grid-cols-7 gap-1.5 text-center text-xs text-muted" aria-hidden="true">{DAYS.map((day) => <span key={day}>{day}</span>)}</div>
       <ul className="mt-1.5 grid grid-cols-7 gap-1.5" aria-label="Trainingstage dieser Woche">
           {week.map((day) => <li key={day.date} aria-label={`${day.date.split('-').reverse().join('.')}: ${day.trained ? 'trainiert' : 'kein Training'}`}
