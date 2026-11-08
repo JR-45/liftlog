@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { LINK } from '../../lib/ui'
 import { loadSocialSummary, type SocialSummary, type SocialTab } from './api'
 
-export function ConnectionsSummary({ userId, onOpen }: { userId: string; onOpen: (tab: SocialTab) => void }) {
+export function ConnectionsSummary({ userId, onOpen, label = 'Deine Verbindungen' }: { userId: string; onOpen: (tab: SocialTab) => void; label?: string }) {
   const [summary, setSummary] = useState<SocialSummary | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -14,7 +14,7 @@ export function ConnectionsSummary({ userId, onOpen }: { userId: string; onOpen:
   }, [userId, attempt])
 
   return <div>
-    <div className="grid grid-cols-2 gap-2" aria-label="Deine Verbindungen">
+    <div className="grid grid-cols-2 gap-2" aria-label={label}>
       {(['followers', 'following'] as const).map(tab => <button key={tab} id={`profile-${tab}`} type="button" onClick={() => onOpen(tab)}
         className="min-h-14 w-full rounded-xl bg-surface-inset px-3 py-2 text-center transition-colors hover:bg-control">
         <span className="block text-xl font-bold tabular-nums">{summary ? summary[tab] : failed ? '–' : '…'}</span>

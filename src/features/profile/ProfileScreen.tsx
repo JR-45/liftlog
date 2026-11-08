@@ -3,13 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportRow } from '../../domain/export'
 import { computeAthleteStats } from '../../domain/profile'
 import { formatWeight } from '../../domain/sets'
-import { CameraIcon, CheckIcon, TrophyIcon } from '../../lib/icons'
-import { SECONDARY_BUTTON } from '../../lib/ui'
+import { CameraIcon, CheckIcon, SettingsIcon, TrophyIcon } from '../../lib/icons'
+import { NAV_BUTTON, SECONDARY_BUTTON } from '../../lib/ui'
 import { loadExportRows } from '../stats/api'
 import { ExportCard } from '../stats/ExportCard'
-import { ConnectionsPage } from '../social/ConnectionsPage'
 import { ConnectionsSummary } from '../social/ConnectionsSummary'
-import { enableSocialProfile, type SocialTab } from '../social/api'
+import { SocialNavigator, type SocialRoute } from '../social/SocialNavigator'
+import { loadAccount, saveProfileIdentity, type Person, type SocialTab } from '../social/api'
 import { DeleteAccountCard } from './DeleteAccountCard'
 import { BodyCard } from './BodyCard'
 import {
@@ -17,7 +17,6 @@ import {
   loadAvatar,
   loadProfile,
   saveAvatar,
-  saveProfile,
   type TrainingGoal,
   type UserProfile,
 } from './api'
@@ -46,15 +45,15 @@ type Props = {
 /** Lädt Profil und Profilbild aus der Datenbank und zeigt danach die Ansicht. */
 export function ProfileScreen(props: Props) {
   const { user, defaultWeeklyTarget } = props
-  const [loaded, setLoaded] = useState<{ profile: UserProfile; avatar: string | null } | null>(null)
+  const [loaded, setLoaded] = useState<{ profile: UserProfile; avatar: string | null; account: Person } | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([loadProfile(user, defaultWeeklyTarget), loadAvatar()])
-      .then(([profile, avatar]) => {
-        if (!cancelled) setLoaded({ profile, avatar })
+    Promise.all([loadProfile(user, defaultWeeklyTarget), loadAvatar(), loadAccount(user.id, user.id)])
+      .then(([profile, avatar, account]) => {
+        if (!cancelled) setLoaded({ profile, avatar, account })
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -82,7 +81,7 @@ export function ProfileScreen(props: Props) {
     )
   }
   if (loaded === null) return <p className="mt-6 text-sm text-muted">Profil wird geladen …</p>
-  return <ProfileView {...props} initialProfile={loaded.profile} initialAvatar={loaded.avatar} />
+  return <ProfileView {...props} initialProfile={loaded.profile} initialAvatar={loaded.avatar} initialAccount={loaded.account} />
 }
 
 function ProfileView({
@@ -92,12 +91,14 @@ function ProfileView({
   onNameChange,
   initialProfile,
   initialAvatar,
-}: Props & { initialProfile: UserProfile; initialAvatar: string | null }) {
+  initialAccount,
+}: Props & { initialProfile: UserProfile; initialAvatar: string | null; initialAccount: Person }) {
   const [profile, setProfile] = useState<UserProfile>(initialProfile)
   const [avatar, setAvatar] = useState<string | null>(initialAvatar)
   const [rows, setRows] = useState<ExportRow[]>([])
   const [editingProfile, setEditingProfile] = useState(false)
-  const [connections, setConnections] = useState<SocialTab | null>(null)
+  const [account, setAccount] = useState(initialAccount)
+  const [socialRoute, setSocialRoute] = useState<SocialRoute | null>(null)
   const connectionEntry = useRef<{ tab: SocialTab; scroll: number } | null>(null)
   const [showAllPrs, setShowAllPrs] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -107,6 +108,7 @@ function ProfileView({
 
   // Formularfelder für Profil-Bearbeitung
   const [nameDraft, setNameDraft] = useState(profile.displayName)
+  const [usernameDraft, setUsernameDraft] = useState(account.username)
   const [bioDraft, setBioDraft] = useState(profile.bio)
   const [goalDraft, setGoalDraft] = useState<TrainingGoal>(profile.goal)
   const [weeklyDraft, setWeeklyDraft] = useState(profile.weeklyTarget)
@@ -191,13 +193,14 @@ function ProfileView({
     setBusy(true)
     setError(null)
     try {
-      await saveProfile(next)
+      const username = await saveProfileIdentity(next, usernameDraft)
       setProfile(next)
+      setAccount(current => ({ ...current, username, display_name: next.displayName }))
       onNameChange(next.displayName)
       setEditingProfile(false)
       showSuccess('Profil gespeichert')
-    } catch {
-      setError('Profil konnte nicht gespeichert werden.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Profil konnte nicht gespeichert werden.')
     } finally {
       setBusy(false)
     }
@@ -205,12 +208,11 @@ function ProfileView({
 
   const visiblePrs = showAllPrs ? stats.personalRecords : stats.personalRecords.slice(0, 5)
 
-  if (connections) return <ConnectionsPage userId={user.id} displayName={profile.displayName} initialTab={connections}
-    onEnable={async () => { await saveProfile(profile); await enableSocialProfile() }}
+  if (socialRoute) return <SocialNavigator userId={user.id} today={today} account={account} initialRoute={socialRoute} onAccountChange={setAccount}
     onBack={() => {
-      setConnections(null)
+      setSocialRoute(null)
       requestAnimationFrame(() => {
-        if (!connectionEntry.current) return
+        if (!connectionEntry.current) { document.getElementById('profile-settings')?.focus(); return }
         document.getElementById(`profile-${connectionEntry.current.tab}`)?.focus({ preventScroll: true })
         window.scrollTo(0, connectionEntry.current.scroll)
       })
@@ -219,7 +221,9 @@ function ProfileView({
   return (
     <section className="mt-5 space-y-5">
       {/* 1. Athleten-Header mit Profilbild-Upload */}
-      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
+      <div className="relative rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
+        <button id="profile-settings" type="button" className={`${NAV_BUTTON} absolute right-4 top-4`} aria-label="Profileinstellungen öffnen"
+          onClick={() => { connectionEntry.current = null; setSocialRoute({ kind: 'settings' }) }}><SettingsIcon /></button>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
@@ -256,13 +260,14 @@ function ProfileView({
               </button>
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 pr-11">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-xl font-bold tracking-tight text-foreground">{profile.displayName}</h2>
                 <span className="rounded-full bg-neon/15 px-2.5 py-0.5 text-xs font-semibold text-accent-ink ring-1 ring-neon/30">
                   {GOAL_LABELS[profile.goal]}
                 </span>
               </div>
+              <p className="mt-1 break-all text-sm text-muted">@{account.username}</p>
               {profile.bio ? (
                 <p className="mt-1 text-sm text-foreground/85">{profile.bio}</p>
               ) : (
@@ -281,12 +286,13 @@ function ProfileView({
 
           <ConnectionsSummary userId={user.id} onOpen={tab => {
             connectionEntry.current = { tab, scroll: window.scrollY }
-            setConnections(tab)
+            setSocialRoute({ kind: 'connections', id: user.id, tab, name: profile.displayName })
           }} />
           <button
             type="button"
             onClick={() => {
               setNameDraft(profile.displayName)
+              setUsernameDraft(account.username)
               setBioDraft(profile.bio)
               setGoalDraft(profile.goal)
               setWeeklyDraft(profile.weeklyTarget)
@@ -312,6 +318,11 @@ function ProfileView({
 
         {editingProfile && (
           <form onSubmit={(event) => void handleSaveIdentity(event)} className="mt-4 space-y-3 border-t border-line/[0.08] pt-4">
+            <label className="block text-sm font-medium text-foreground/85">Benutzername
+              <input className={`${fieldClass} mt-1`} value={usernameDraft} minLength={3} maxLength={40} required autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                onChange={event => setUsernameDraft(event.target.value)} placeholder="dein.benutzername" />
+              <span className="mt-1 block text-xs text-muted">Eindeutig · 3–40 Zeichen: a–z, Zahlen, Punkt und Unterstrich</span>
+            </label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium text-foreground/85">
                 Anzeigename

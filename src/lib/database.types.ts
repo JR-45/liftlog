@@ -67,21 +67,33 @@ export type Database = {
                   ]
                 },"follows": {
                   Row: {
-                    "created_at": string,"followed_user_id": string,"user_id": string
+                    "created_at": string,"followed_user_id": string,"status": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"followed_user_id": string,"user_id"?: string
+                    "created_at"?: string,"followed_user_id": string,"status"?: string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"followed_user_id"?: string,"user_id"?: string
+                    "created_at"?: string,"followed_user_id"?: string,"status"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
       foreignKeyName: "follows_followed_user_id_fkey"
       columns: ["followed_user_id"]
 isOneToOne: false
+      referencedRelation: "social_directory"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "follows_followed_user_id_fkey"
+      columns: ["followed_user_id"]
+isOneToOne: false
       referencedRelation: "social_profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "follows_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "social_directory"
       referencedColumns: ["user_id"]
     },{
       foreignKeyName: "follows_user_id_fkey"
@@ -241,14 +253,14 @@ isOneToOne: false
                   ]
                 },"social_profiles": {
                   Row: {
-                    "avatar": string | null,"created_at": string,"display_name": string,"user_id": string
+                    "avatar": string | null,"created_at": string,"display_name": string,"is_private": boolean,"user_id": string,"username": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar"?: string | null,"created_at"?: string,"display_name": string,"user_id"?: string
+                    "avatar"?: string | null,"created_at"?: string,"display_name": string,"is_private"?: boolean,"user_id"?: string,"username"?: string
                   }
                   Update: {
-                    "avatar"?: string | null,"created_at"?: string,"display_name"?: string,"user_id"?: string
+                    "avatar"?: string | null,"created_at"?: string,"display_name"?: string,"is_private"?: boolean,"user_id"?: string,"username"?: string
                   }
                   Relationships: [
                     
@@ -344,7 +356,73 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "shared_profile_overviews": {
+                  Row: {
+                    "overview": Json | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "overview"?: never,"user_id"?: string | null
+                         }
+                        Update: {
+                           "overview"?: never,"user_id"?: string | null
+                         }
+                        Relationships: [
+                    
+                  ]
+                },"social_directory": {
+                  Row: {
+                    "avatar": string | null,"display_name": string,"followers_count": number | null,"is_private": boolean,"user_id": string,"username": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "avatar"?: string | null,"display_name"?: string | null,"followers_count"?: never,"is_private"?: boolean | null,"user_id"?: string | null,"username"?: string | null
+                         }
+                        Update: {
+                           "avatar"?: string | null,"display_name"?: string | null,"followers_count"?: never,"is_private"?: boolean | null,"user_id"?: string | null,"username"?: string | null
+                         }
+                        Relationships: [
+                    
+                  ]
+                },"visible_follows": {
+                  Row: {
+                    "followed_user_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "followed_user_id"?: string | null,"user_id"?: string | null
+                         }
+                        Update: {
+                           "followed_user_id"?: string | null,"user_id"?: string | null
+                         }
+                        Relationships: [
+                    {
+      foreignKeyName: "follows_followed_user_id_fkey"
+      columns: ["followed_user_id"]
+isOneToOne: false
+      referencedRelation: "social_directory"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "follows_followed_user_id_fkey"
+      columns: ["followed_user_id"]
+isOneToOne: false
+      referencedRelation: "social_profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "follows_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "social_directory"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "follows_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "social_profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                }
           }
           Functions: {
             "delete_own_account":
@@ -364,6 +442,9 @@ isOneToOne: false
 "save_meal":
 { Args: { "p_date": string,"p_id": string,"p_items": Json,"p_title": string }; Returns: string
                            },
+"save_profile_identity":
+{ Args: { "p_bio": string,"p_goal": string,"p_name": string,"p_username": string,"p_weekly_target": number }; Returns: undefined
+                           },
 "save_training_plan":
 { Args: { "days": Json }; Returns: undefined
                            },
@@ -373,6 +454,21 @@ isOneToOne: false
 "save_training_week":
 { Args: { "days": Json,"week_start": string }; Returns: undefined
                            },
+"search_social_accounts":
+{ Args: { "p_offset"?: number,"p_query": string }; Returns: {
+              "avatar": string | null,
+"display_name": string,
+"followers_count": number | null,
+"is_private": boolean,
+"user_id": string,
+"username": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "social_directory"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
 "seed_default_plan":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            }
