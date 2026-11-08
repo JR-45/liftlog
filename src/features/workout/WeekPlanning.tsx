@@ -79,7 +79,12 @@ export function WeekPlanning({ today, planDays, active, onSaved }: {
         } : day) })
       }}
       onSave={() => void save()} onDiscard={() => { setLoaded({ ...data, days: data.original }); setMessage(null) }}
-      onTemplate={() => { setLoaded({ ...data, days: buildWeek(start, planDays, []) }); setMessage(null) }} />
+      onTemplate={() => {
+        // Nur heute und kommende Tage zurücksetzen, vergangene bleiben, wie sie waren.
+        const template = buildWeek(start, planDays, [])
+        setLoaded({ ...data, days: data.days.map((day, i) => day.day_date < today ? day : template[i]) })
+        setMessage(null)
+      }} />
     {message && <p role="status" className="mt-2 text-sm text-muted">{message}</p>}
   </>
 }
