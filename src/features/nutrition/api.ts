@@ -102,6 +102,12 @@ export async function loadSupplements(date: string): Promise<{ list: Supplement[
   return { list: list.data, taken: new Set(intakes.data.map((row) => row.supplement_id)) }
 }
 
+/** Menge ändern. Leer heißt keine Menge. */
+export async function updateSupplementDose(id: string, dose: string | null): Promise<void> {
+  const { error } = await supabase.from('supplements').update({ dose }).eq('id', id)
+  if (error) throw error
+}
+
 export async function addSupplement(name: string, dose: string | null): Promise<Supplement> {
   const { data, error } = await supabase.from('supplements').insert({ name, dose }).select('id, name, dose').single()
   if (error) throw error
