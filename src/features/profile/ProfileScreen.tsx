@@ -13,6 +13,7 @@ import { disableSocialProfile, enableSocialProfile, loadAccount, saveProfileIden
 import { SocialSettings } from '../social/AccountSettings'
 import { DeleteAccountCard } from './DeleteAccountCard'
 import { BodyCard } from './BodyCard'
+import { enableProfileTargets } from '../nutrition/api'
 import {
   cropSquareAvatar,
   loadAvatar,
@@ -197,6 +198,8 @@ function ProfileView({
         const username = await saveProfileIdentity(next, usernameDraft)
         setAccount(current => current && ({ ...current, username, display_name: next.displayName }))
       } else await saveProfile(next)
+      // Neues Ziel (z. B. Abnehmen): Ernährung rechnet die Tagesziele wieder aus dem Profil.
+      if (next.goal !== profile.goal) await enableProfileTargets()
       setProfile(next)
       onNameChange(next.displayName)
       setEditingProfile(false)
