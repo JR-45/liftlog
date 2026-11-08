@@ -8,9 +8,7 @@ const SINGULAR: Partial<Record<DoseUnit, string>> = { Tabletten: 'Tablette', Kap
 
 /** Typische Einheit für die Vorschläge, damit man nur noch die Zahl tippt. */
 export const QUICK_SUPPLEMENTS: { name: string; unit: DoseUnit }[] = [
-  { name: 'Kreatin', unit: 'g' }, { name: 'Vitamin D3', unit: 'IE' }, { name: 'Vitamin K2', unit: 'µg' },
-  { name: 'Omega-3', unit: 'Kapseln' }, { name: 'Magnesium', unit: 'mg' }, { name: 'Zink', unit: 'mg' },
-  { name: 'Multivitamin', unit: 'Tabletten' },
+  { name: 'Kreatin', unit: 'g' }, { name: 'Omega-3', unit: 'Kapseln' }, { name: 'Eisen', unit: 'mg' },
 ]
 
 /** „5“ und „g“ werden zu „5 g“, „1“ und „Tabletten“ zu „1 Tablette“. Leer oder ungültig ergibt null. */
