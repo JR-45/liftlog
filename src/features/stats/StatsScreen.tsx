@@ -8,6 +8,7 @@ import { loadScheduledDays, loadTrainedDates, type PlanDay } from '../workout/ap
 import { deleteDayMark, loadDayMarks, loadExportRows, saveDayMark } from './api'
 import { ExerciseProgressCard } from './ExerciseProgressCard'
 import { AttendanceChart } from './AttendanceChart'
+import { WeightCard } from './WeightCard'
 import { NAV_BUTTON } from '../../lib/ui'
 
 const WEEKDAY_HEADERS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -366,6 +367,7 @@ export function StatsScreen({ today, startDate, planDays }: Props) {
         )}
       </div>
 
+      <WeightCard />
       <ExerciseProgressCard rows={historyRows} />
     </section>
   )

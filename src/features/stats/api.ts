@@ -64,3 +64,17 @@ export async function loadExportRows(): Promise<ExportRow[]> {
     if (page.length < PAGE_SIZE) return rows
   }
 }
+
+/** Gewichte aus den Körperdaten und das Zielgewicht, für den Gewichtsverlauf. */
+export async function loadWeightHistory(): Promise<{ entries: { date: string; weightKg: number }[]; targetKg: number | null }> {
+  const [weights, profile] = await Promise.all([
+    supabase.from('body_measurements').select('measured_on, weight_kg').not('weight_kg', 'is', null).order('measured_on'),
+    supabase.from('profiles').select('target_weight_kg').maybeSingle(),
+  ])
+  if (weights.error) throw weights.error
+  if (profile.error) throw profile.error
+  return {
+    entries: weights.data.map((row) => ({ date: row.measured_on, weightKg: Number(row.weight_kg) })),
+    targetKg: profile.data?.target_weight_kg ?? null,
+  }
+}
