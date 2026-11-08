@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ExportRow } from '../../domain/export'
 import { computeAthleteStats } from '../../domain/profile'
 import { formatWeight } from '../../domain/sets'
@@ -38,6 +39,7 @@ const fieldClass =
   'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
 
 type Props = {
+  headerActionsTarget: HTMLDivElement | null
   user: User
   today: string
   defaultWeeklyTarget: number
@@ -92,6 +94,7 @@ export function ProfileScreen(props: Props) {
 }
 
 function ProfileView({
+  headerActionsTarget,
   user,
   today,
   onAvatarChange,
@@ -321,17 +324,19 @@ function ProfileView({
     </section>
   </section>
 
+  const headerActions = <>
+    <button id="profile-search" type="button" className={NAV_BUTTON} aria-label="Mitgliedersuche öffnen" onClick={() => {
+      connectionEntry.current = null
+      socialReturn.current = 'profile-search'
+      setSocialRoute({ kind: 'search' })
+    }}><SearchIcon /></button>
+    <button id="profile-settings" type="button" className={`${NAV_BUTTON} relative`} aria-label={requestCount > 0 ? `Profileinstellungen öffnen, ${requestCount} offene Anfragen` : 'Profileinstellungen öffnen'}
+      onClick={openSettings}><SettingsIcon /><CountBadge count={requestCount} /></button>
+  </>
+
   return (
     <section className="mt-5 space-y-5">
-      <div className="flex justify-end gap-2">
-        <button id="profile-search" type="button" className={NAV_BUTTON} aria-label="Mitgliedersuche öffnen" onClick={() => {
-          connectionEntry.current = null
-          socialReturn.current = 'profile-search'
-          setSocialRoute({ kind: 'search' })
-        }}><SearchIcon /></button>
-        <button id="profile-settings" type="button" className={`${NAV_BUTTON} relative`} aria-label={requestCount > 0 ? `Profileinstellungen öffnen, ${requestCount} offene Anfragen` : 'Profileinstellungen öffnen'}
-          onClick={openSettings}><SettingsIcon /><CountBadge count={requestCount} /></button>
-      </div>
+      {headerActionsTarget && createPortal(headerActions, headerActionsTarget)}
       {/* 1. Athleten-Header mit Profilbild-Upload */}
       <div className="rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
         <div className="flex flex-col gap-4">
