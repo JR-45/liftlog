@@ -19,6 +19,7 @@ import {
   saveAvatar,
   type TrainingGoal,
   type UserProfile,
+  saveProfile,
 } from './api'
 
 const GOAL_LABELS: Record<TrainingGoal, string> = {
@@ -45,7 +46,7 @@ type Props = {
 /** Lädt Profil und Profilbild aus der Datenbank und zeigt danach die Ansicht. */
 export function ProfileScreen(props: Props) {
   const { user, defaultWeeklyTarget } = props
-  const [loaded, setLoaded] = useState<{ profile: UserProfile; avatar: string | null; account: Person } | null>(null)
+  const [loaded, setLoaded] = useState<{ profile: UserProfile; avatar: string | null; account: Person | null } | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
 
@@ -92,7 +93,7 @@ function ProfileView({
   initialProfile,
   initialAvatar,
   initialAccount,
-}: Props & { initialProfile: UserProfile; initialAvatar: string | null; initialAccount: Person }) {
+}: Props & { initialProfile: UserProfile; initialAvatar: string | null; initialAccount: Person | null }) {
   const [profile, setProfile] = useState<UserProfile>(initialProfile)
   const [avatar, setAvatar] = useState<string | null>(initialAvatar)
   const [rows, setRows] = useState<ExportRow[]>([])
@@ -108,7 +109,7 @@ function ProfileView({
 
   // Formularfelder für Profil-Bearbeitung
   const [nameDraft, setNameDraft] = useState(profile.displayName)
-  const [usernameDraft, setUsernameDraft] = useState(account.username)
+  const [usernameDraft, setUsernameDraft] = useState(account?.username ?? '')
   const [bioDraft, setBioDraft] = useState(profile.bio)
   const [goalDraft, setGoalDraft] = useState<TrainingGoal>(profile.goal)
   const [weeklyDraft, setWeeklyDraft] = useState(profile.weeklyTarget)
@@ -193,9 +194,12 @@ function ProfileView({
     setBusy(true)
     setError(null)
     try {
-      const username = await saveProfileIdentity(next, usernameDraft)
+      // Benutzernamen gibt es nur mit sichtbarem Profil.
+      if (account) {
+        const username = await saveProfileIdentity(next, usernameDraft)
+        setAccount(current => current && ({ ...current, username, display_name: next.displayName }))
+      } else await saveProfile(next)
       setProfile(next)
-      setAccount(current => ({ ...current, username, display_name: next.displayName }))
       onNameChange(next.displayName)
       setEditingProfile(false)
       showSuccess('Profil gespeichert')
@@ -208,7 +212,7 @@ function ProfileView({
 
   const visiblePrs = showAllPrs ? stats.personalRecords : stats.personalRecords.slice(0, 5)
 
-  if (socialRoute) return <SocialNavigator userId={user.id} today={today} account={account} initialRoute={socialRoute} onAccountChange={setAccount}
+  if (socialRoute) return <SocialNavigator userId={user.id} today={today} account={account} initialRoute={socialRoute} onAccountChange={setAccount} onEnable={() => saveProfile(profile)}
     onBack={() => {
       setSocialRoute(null)
       requestAnimationFrame(() => {
@@ -267,7 +271,7 @@ function ProfileView({
                   {GOAL_LABELS[profile.goal]}
                 </span>
               </div>
-              <p className="mt-1 break-all text-sm text-muted">@{account.username}</p>
+              {account && <p className="mt-1 break-all text-sm text-muted">@{account.username}</p>}
               {profile.bio ? (
                 <p className="mt-1 text-sm text-foreground/85">{profile.bio}</p>
               ) : (
@@ -292,7 +296,7 @@ function ProfileView({
             type="button"
             onClick={() => {
               setNameDraft(profile.displayName)
-              setUsernameDraft(account.username)
+              setUsernameDraft(account?.username ?? '')
               setBioDraft(profile.bio)
               setGoalDraft(profile.goal)
               setWeeklyDraft(profile.weeklyTarget)
@@ -318,11 +322,11 @@ function ProfileView({
 
         {editingProfile && (
           <form onSubmit={(event) => void handleSaveIdentity(event)} className="mt-4 space-y-3 border-t border-line/[0.08] pt-4">
-            <label className="block text-sm font-medium text-foreground/85">Benutzername
+            {account && <label className="block text-sm font-medium text-foreground/85">Benutzername
               <input className={`${fieldClass} mt-1`} value={usernameDraft} minLength={3} maxLength={40} required autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 onChange={event => setUsernameDraft(event.target.value)} placeholder="dein.benutzername" />
               <span className="mt-1 block text-xs text-muted">Eindeutig · 3–40 Zeichen: a–z, Zahlen, Punkt und Unterstrich</span>
-            </label>
+            </label>}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium text-foreground/85">
                 Anzeigename

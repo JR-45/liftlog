@@ -14,6 +14,8 @@ insert into body_measurements (measured_on, weight_kg) values ('2026-11-08', 70)
 insert into meals(id, consumed_on, title) values ('a3333333-0000-0000-0000-000000000001', '2026-11-08', 'Private Mahlzeit');
 select is((select count(*)::int from body_measurements where user_id = auth.uid()), 1, 'Eigentümer sieht seine Körperdaten weiterhin');
 select is((select count(*)::int from meals where user_id = auth.uid()), 1, 'Eigentümer sieht seine Ernährung weiterhin');
+select is((select count(*)::int from social_profiles where user_id = auth.uid()), 0, 'Ohne eigene Freigabe ist niemand auffindbar');
+select public.enable_social_profile();
 select is((select is_private from social_profiles where user_id = auth.uid()), true, 'Neue Konten sind privat');
 update social_profiles set username = 'anna' where user_id = auth.uid();
 select is((select display_name from social_profiles where user_id = auth.uid()), 'Anna', 'Der Basisname bleibt synchron');
@@ -21,8 +23,9 @@ select throws_ok($$update social_profiles set username = 'Anna' where user_id = 
 select is((select count(*)::int from shared_profile_overviews where user_id = auth.uid()), 1, 'Eigentümer sieht seine Übersicht');
 select set_config('request.jwt.claims', '{"sub":"b1111111-0000-0000-0000-000000000002","role":"authenticated"}', true);
 insert into profiles (display_name) values ('Ben');
+select public.enable_social_profile();
 select throws_ok($$update social_profiles set username = 'anna' where user_id = auth.uid()$$, '23505', null, 'Benutzername ist global eindeutig');
-select is((select count(*)::int from social_profiles where username = 'anna'), 1, 'Bestehende Konten sind nach Benutzername auffindbar');
+select is((select count(*)::int from social_profiles where username = 'anna'), 1, 'Sichtbare Konten sind nach Benutzername auffindbar');
 select is((select count(*)::int from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 0, 'Fremde sehen keine geschützte Übersicht');
 select is((select count(*)::int from profiles where user_id = 'a1111111-0000-0000-0000-000000000001'), 0, 'Quellprofile behalten Owner-RLS');
 insert into follows (followed_user_id) values ('a1111111-0000-0000-0000-000000000001');
@@ -53,6 +56,8 @@ insert into follows (followed_user_id) values ('a1111111-0000-0000-0000-00000000
 select is((select status from follows where user_id = auth.uid()), 'accepted', 'Öffentlich folgen wird sofort angenommen');
 select is((select count(*)::int from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 1, 'Öffentlich folgen schaltet Übersicht frei');
 select set_config('request.jwt.claims', '{"sub":"c1111111-0000-0000-0000-000000000003","role":"authenticated"}', true);
+insert into profiles (display_name) values ('Cem');
+select public.enable_social_profile();
 select is((select count(*)::int from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 0, 'Unbeteiligte erhalten keinen Zugriff durch fremde Annahme');
 select throws_ok('select bio from social_directory', '42703', null, 'Kontoverzeichnis enthält keine Bio');
 select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-000000000001","role":"authenticated"}', true);
