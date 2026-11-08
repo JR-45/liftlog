@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportRow } from '../../domain/export'
 import { computeAthleteStats } from '../../domain/profile'
 import { formatWeight } from '../../domain/sets'
-import { CameraIcon, CheckIcon, TrashIcon, TrophyIcon } from '../../lib/icons'
+import { CameraIcon, CheckIcon, TrophyIcon } from '../../lib/icons'
+import { SECONDARY_BUTTON } from '../../lib/ui'
 import { loadExportRows } from '../stats/api'
 import { ExportCard } from '../stats/ExportCard'
 import { ConnectionsPage } from '../social/ConnectionsPage'
@@ -144,7 +145,11 @@ function ProfileView({
     setTimeout(() => setFeedback((current) => (current === msg ? null : current)), 2500)
   }
 
+  // Mit Bild öffnet die Kamera ein kleines Menü (neues Foto oder entfernen), ohne Bild direkt die Auswahl.
+  const [photoMenu, setPhotoMenu] = useState(false)
+
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    setPhotoMenu(false)
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
@@ -161,6 +166,7 @@ function ProfileView({
   }
 
   async function handleRemoveAvatar() {
+    setPhotoMenu(false)
     setError(null)
     try {
       await saveAvatar(null)
@@ -214,7 +220,7 @@ function ProfileView({
     <section className="mt-5 space-y-5">
       {/* 1. Athleten-Header mit Profilbild-Upload */}
       <div className="rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
               {avatar ? (
@@ -242,7 +248,8 @@ function ProfileView({
               <button
                 type="button"
                 aria-label="Profilbild ändern"
-                onClick={() => fileInputRef.current?.click()}
+                aria-expanded={avatar ? photoMenu : undefined}
+                onClick={() => (avatar ? setPhotoMenu((open) => !open) : fileInputRef.current?.click())}
                 className="absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-surface bg-control text-accent-ink shadow-md transition-transform hover:bg-control-hover active:scale-95"
               >
                 <CameraIcon className="h-5 w-5" />
@@ -265,35 +272,30 @@ function ProfileView({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <ConnectionsSummary userId={user.id} onOpen={tab => {
-              connectionEntry.current = { tab, scroll: window.scrollY }
-              setConnections(tab)
-            }} />
-            <button
-              type="button"
-              onClick={() => {
-                setNameDraft(profile.displayName)
-                setBioDraft(profile.bio)
-                setGoalDraft(profile.goal)
-                setWeeklyDraft(profile.weeklyTarget)
-                setEditingProfile((current) => !current)
-              }}
-              className="min-h-11 rounded-xl bg-control px-4 text-sm font-semibold text-foreground transition-colors hover:bg-control-hover active:scale-95"
-            >
-              {editingProfile ? 'Schließen' : 'Profil bearbeiten'}
-            </button>
-            {avatar && (
-              <button
-                type="button"
-                aria-label="Profilbild entfernen"
-                onClick={() => void handleRemoveAvatar()}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-control text-danger transition-colors hover:bg-danger/15 active:scale-95"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+          {photoMenu && (
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Profilbild">
+              <button type="button" className={SECONDARY_BUTTON} onClick={() => fileInputRef.current?.click()}>Neues Foto</button>
+              <button type="button" className={`${SECONDARY_BUTTON} text-danger`} onClick={() => void handleRemoveAvatar()}>Foto entfernen</button>
+            </div>
+          )}
+
+          <ConnectionsSummary userId={user.id} onOpen={tab => {
+            connectionEntry.current = { tab, scroll: window.scrollY }
+            setConnections(tab)
+          }} />
+          <button
+            type="button"
+            onClick={() => {
+              setNameDraft(profile.displayName)
+              setBioDraft(profile.bio)
+              setGoalDraft(profile.goal)
+              setWeeklyDraft(profile.weeklyTarget)
+              setEditingProfile((current) => !current)
+            }}
+            className={`${SECONDARY_BUTTON} w-full`}
+          >
+            {editingProfile ? 'Schließen' : 'Profil bearbeiten'}
+          </button>
         </div>
 
         {feedback && (
