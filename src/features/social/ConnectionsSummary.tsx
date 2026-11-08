@@ -14,9 +14,9 @@ export function ConnectionsSummary({ userId, onOpen }: { userId: string; onOpen:
   }, [userId, attempt])
 
   return <div>
-    <div className="flex gap-1" aria-label="Deine Verbindungen">
+    <div className="grid grid-cols-2 gap-2" aria-label="Deine Verbindungen">
       {(['followers', 'following'] as const).map(tab => <button key={tab} id={`profile-${tab}`} type="button" onClick={() => onOpen(tab)}
-        className="min-h-14 min-w-20 rounded-xl px-3 py-2 text-center transition-colors hover:bg-control">
+        className="min-h-14 w-full rounded-xl bg-surface-inset px-3 py-2 text-center transition-colors hover:bg-control">
         <span className="block text-xl font-bold tabular-nums">{summary ? summary[tab] : failed ? '–' : '…'}</span>
         <span className="text-xs text-muted">{tab === 'followers' ? 'Follower' : 'Gefolgt'}</span>
       </button>)}
