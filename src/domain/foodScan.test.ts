@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseFoodScan, validateScanImage } from './foodScan'
+import { FOOD_SCAN_SCHEMA, parseFoodScan, validateScanImage } from './foodScan'
 
 const food = {
   name: 'Reis, gekocht', grams: 150, portion_uncertain: false, question: null,
@@ -30,5 +30,12 @@ describe('Gemini-Ausgabevalidierung', () => {
     expect(validateScanImage('image/svg+xml', 'PHN2Zz4=')).toBe(false)
     expect(validateScanImage('image/jpeg', 'kein bild')).toBe(false)
     expect(validateScanImage('image/jpeg', '/9j/' + 'A'.repeat(2_800_000))).toBe(false)
+  })
+})
+
+describe('Antwortformat für Gemini', () => {
+  it('enthält nur Angaben, die die API akzeptiert', () => {
+    // Mit maxLength, minimum oder additionalProperties antwortet Gemini mit 400 „invalid argument“.
+    expect(JSON.stringify(FOOD_SCAN_SCHEMA)).not.toMatch(/maxLength|maxItems|minimum|maximum|additionalProperties/)
   })
 })

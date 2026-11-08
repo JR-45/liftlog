@@ -39,27 +39,30 @@ export function validateScanImage(mime: unknown, base64: unknown): base64 is str
   return base64.startsWith('/9j/')
 }
 
+// Antwortformat für Gemini. Nur Typen und Pflichtfelder: Grenzen wie maxLength, minimum oder
+// additionalProperties lehnt die API für Flash-Modelle mit „invalid argument“ ab. Die Grenzen prüft
+// parseFoodScan danach selbst, sie gehen also nicht verloren.
 const nutrientSchema = {
-  type: 'object', additionalProperties: false,
-  properties: Object.fromEntries(['kcal', 'protein', 'carbs', 'fat', 'fiber'].map((key) => [key, { type: 'number', minimum: 0, maximum: key === 'kcal' ? 1000 : 100 }])),
+  type: 'object',
+  properties: Object.fromEntries(['kcal', 'protein', 'carbs', 'fat', 'fiber'].map((key) => [key, { type: 'number' }])),
   required: ['kcal', 'protein', 'carbs', 'fat', 'fiber'],
 }
 
 export const FOOD_SCAN_SCHEMA = {
-  type: 'object', additionalProperties: false,
+  type: 'object',
   properties: {
-    foods: { type: 'array', maxItems: 20, items: {
-      type: 'object', additionalProperties: false,
+    foods: { type: 'array', items: {
+      type: 'object',
       properties: {
-        name: { type: 'string', maxLength: 120 },
-        grams: { type: ['number', 'null'], minimum: 0.1, maximum: 5000 },
+        name: { type: 'string' },
+        grams: { type: ['number', 'null'] },
         portion_uncertain: { type: 'boolean' },
-        question: { type: ['string', 'null'], maxLength: 300 },
+        question: { type: ['string', 'null'] },
         per100g: nutrientSchema,
       },
       required: ['name', 'grams', 'portion_uncertain', 'question', 'per100g'],
     } },
-    note: { type: 'string', maxLength: 1000 },
+    note: { type: 'string' },
   },
   required: ['foods', 'note'],
 }

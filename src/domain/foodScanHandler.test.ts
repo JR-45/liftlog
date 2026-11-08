@@ -54,4 +54,10 @@ describe('Geschützter Foodscanner', () => {
     expect((await setup({ fetcher: async () => Response.json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{}' }] } }] }) }).handler(request())).status).toBe(502)
     expect((await setup({ apiKey: '' }).handler(request())).status).toBe(503)
   })
+  it('meldet ein überlastetes Modell verständlich', async () => {
+    const overloaded = setup({ fetcher: async () => Response.json({ error: { code: 503, status: 'UNAVAILABLE' } }, { status: 503 }) })
+    const response = await overloaded.handler(request())
+    expect(response.status).toBe(503)
+    expect(await response.text()).toContain('überlastet')
+  })
 })

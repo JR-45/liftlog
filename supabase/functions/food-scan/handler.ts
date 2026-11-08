@@ -87,7 +87,16 @@ export function createFoodScanHandler(deps: Dependencies) {
         headers['Retry-After'] = '60'
         return reply(429, 'Gemini ist ausgelastet oder das Anbieterkontingent ist verbraucht. Bitte später erneut versuchen.')
       }
-      if (!response.ok) return reply(502, 'Die Fotoanalyse ist gerade nicht verfügbar. Bitte später erneut versuchen.')
+      if (!response.ok) {
+        // Grund von Google in die Function-Logs, ohne Schlüssel und ohne Foto.
+        const detail = await response.text().then((text) => text.slice(0, 300)).catch(() => '')
+        console.error(`Gemini ${response.status} (${deps.model}): ${detail}`)
+        if (response.status === 503) {
+          headers['Retry-After'] = '30'
+          return reply(503, 'Gemini ist gerade überlastet. Bitte in einer Minute erneut versuchen.')
+        }
+        return reply(502, 'Die Fotoanalyse ist gerade nicht verfügbar. Bitte später erneut versuchen.')
+      }
       try {
         const data = await boundedJson(response.body, 100_000) as { candidates?: { finishReason?: string; content?: { parts?: { text?: string; thought?: boolean }[] } }[] }
         const candidate = data?.candidates?.[0]
