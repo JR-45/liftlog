@@ -4,13 +4,16 @@ create extension if not exists pgtap with schema extensions;
 select set_config('search_path', 'public, extensions', true);
 select no_plan();
 insert into auth.users (id, email) values
-  ('a1111111-0000-0000-0000-000000000001', 'privacy-a@test.local'),
-  ('b1111111-0000-0000-0000-000000000002', 'privacy-b@test.local'),
-  ('c1111111-0000-0000-0000-000000000003', 'privacy-c@test.local');
+  ('a1111111-0000-0000-0000-000000000001', 'privacy-sql-a@test.local'),
+  ('b1111111-0000-0000-0000-000000000002', 'privacy-sql-b@test.local'),
+  ('c1111111-0000-0000-0000-000000000003', 'privacy-sql-c@test.local');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-000000000001","role":"authenticated"}', true);
 insert into profiles (display_name, bio, height_cm) values ('Anna', 'Geschützte Bio', 175);
 insert into body_measurements (measured_on, weight_kg) values ('2026-11-08', 70);
+insert into meals(id, consumed_on, title) values ('a3333333-0000-0000-0000-000000000001', '2026-11-08', 'Private Mahlzeit');
+select is((select count(*)::int from body_measurements where user_id = auth.uid()), 1, 'Eigentümer sieht seine Körperdaten weiterhin');
+select is((select count(*)::int from meals where user_id = auth.uid()), 1, 'Eigentümer sieht seine Ernährung weiterhin');
 select is((select is_private from social_profiles where user_id = auth.uid()), true, 'Neue Konten sind privat');
 update social_profiles set username = 'anna' where user_id = auth.uid();
 select is((select display_name from social_profiles where user_id = auth.uid()), 'Anna', 'Der Basisname bleibt synchron');
@@ -30,9 +33,12 @@ select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-0000000
 update follows set status = 'accepted' where followed_user_id = auth.uid();
 select is((select status from follows where followed_user_id = auth.uid()), 'accepted', 'Nur Empfänger nimmt Anfrage an');
 select set_config('request.jwt.claims', '{"sub":"b1111111-0000-0000-0000-000000000002","role":"authenticated"}', true);
-select is((select overview->'profile'->>'bio' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 'Geschützte Bio', 'Angenommener Follower sieht die vollständige Profilübersicht');
-select is((select overview->'measurements'->0->>'weightKg' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), '70.0', 'Körperdaten sind erst nach Annahme sichtbar');
+select is((select overview->'profile'->>'bio' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 'Geschützte Bio', 'Angenommener Follower sieht die soziale Profilübersicht');
+select is((select overview ? 'measurements' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), false, 'Auch angenommene Follower erhalten keinen Messungsbereich');
+select is((select overview ? 'meals' from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), false, 'Auch angenommene Follower erhalten keinen Ernährungsbereich');
+select is((select (overview->'profile') ?| array['heightCm', 'targetWeightKg', 'sex', 'birthYear', 'activityLevel'] from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), false, 'Die soziale Profilprojektion enthält keine Körper- oder Berechnungsgrundlagen');
 select is((select count(*)::int from body_measurements where user_id = 'a1111111-0000-0000-0000-000000000001'), 0, 'Auch nach Annahme bleibt die Quelltabelle owner-only');
+select is((select count(*)::int from meals where user_id = 'a1111111-0000-0000-0000-000000000001'), 0, 'Ernährungsquellen bleiben nach Annahme owner-only');
 delete from follows where user_id = auth.uid();
 select is((select count(*)::int from shared_profile_overviews where user_id = 'a1111111-0000-0000-0000-000000000001'), 0, 'Entfolgen entzieht Zugriff sofort');
 insert into follows (followed_user_id, status) values ('a1111111-0000-0000-0000-000000000001', 'accepted');

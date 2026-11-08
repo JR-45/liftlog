@@ -1,6 +1,6 @@
 # Umsetzung: Kontoprivatsphäre
 
-Spezifikation: [docs/account-privacy.md](../docs/account-privacy.md). Bestätigte Grenze: Fremde sehen Name, Benutzername, Bild und Follower-Anzahl; nach Annahme ist die gesamte Profilübersicht lesbar. Kontoverwaltung und Schreibrechte bleiben beim Eigentümer.
+Spezifikation: [docs/account-privacy.md](../docs/account-privacy.md). Aktuelle Grenze: Fremde sehen Name, Benutzername, Bild und Follower-Anzahl. Nach Annahme werden Profil und Training lesbar. Körperdaten und Ernährung bleiben immer ausschließlich beim Eigentümer. Fremde Profile verwenden anklickbare Follower-/Gefolgt-Zähler statt zusätzlicher „anzeigen“-Knöpfe.
 
 1. Benutzernamenvalidierung und private/öffentliche Folgeanfragen mit Tests absichern.
 2. Neue additive Migration: Verzeichnis aller Konten, eindeutige Benutzernamen, Anfragezustände, geschützte Leseansichten. Quelltabellen behalten Owner-RLS. Bestehende Beziehungen werden wegen erweiterter Datenfreigabe erneut angefragt.
@@ -8,7 +8,7 @@ Spezifikation: [docs/account-privacy.md](../docs/account-privacy.md). Bestätigt
 4. Zahnrad, Einstellungsplatzhalter, Kontoprivatsphäre und Anfrageverwaltung ergänzen. Eigene Benutzernamen editierbar machen.
 5. Mehrnutzerablauf lokal testen: Zugriff vor/nach Annahme, Ablehnung, Rücknahme, öffentlich folgen, Entfolgen, Eindeutigkeit. Lint, Unit-Tests, Build, pgTAP und responsive UI prüfen.
 
-Keine Online-Migration, keine Commits oder Pushes ohne neuen Auftrag. Rückbau: Oberfläche kann entfernt werden; zusätzliche Spalten/Ansichten bleiben zunächst erhalten. Keine private Quelltabelle wird für Fremdzugriff geöffnet.
+Übergabesperre: PR #48 nicht mergen, keine Online-Migration, keine Commits oder Pushes bis zu den angekündigten Befehlen. Die neue additive Migration `20261108164300_follower_profile_privacy.sql` entfernt Körper- und Ernährungsdaten aus der Follower-Projektion. Ein Rückbau darf diese Datensperre nicht aufheben.
 
 <!-- Der vorherige, abgeschlossene Plan bleibt in der Git-Historie erhalten. -->
 

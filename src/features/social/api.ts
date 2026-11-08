@@ -1,9 +1,8 @@
 import type { ExportRow } from '../../domain/export'
-import type { Meal } from '../../domain/nutrition'
 import { socialSearchPattern } from '../../domain/social'
 import { normalizeUsername } from '../../domain/username'
 import { supabase } from '../../lib/supabase'
-import type { BodyMeasurement, UserProfile } from '../profile/api'
+import type { UserProfile } from '../profile/api'
 
 export type SocialTab = 'followers' | 'following'
 export type Relationship = 'none' | 'pending' | 'accepted'
@@ -13,7 +12,7 @@ export type Person = {
   followers_count: number; relationship: Relationship; following: boolean
 }
 export type PeoplePage = { people: Person[]; hasMore: boolean }
-export type SharedOverview = { profile: Omit<UserProfile, 'measurements'>; measurements: BodyMeasurement[]; sets: ExportRow[]; meals: Meal[] }
+export type SharedOverview = { profile: Pick<UserProfile, 'displayName' | 'bio' | 'goal' | 'weeklyTarget'>; sets: ExportRow[] }
 export const PEOPLE_PAGE_SIZE = 20
 const DIRECTORY_COLUMNS = 'user_id, display_name, username, avatar, is_private, followers_count'
 type DirectoryPerson = Omit<Person, 'relationship' | 'following'>

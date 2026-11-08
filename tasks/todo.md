@@ -1,10 +1,13 @@
 # Kontoprivatsphäre
 
-- [x] Datenmodell und Tests: eindeutige Benutzernamen, Anfragen, Annahme und sichere Leseansichten; 243 pgTAP-Tests bestehen.
+- [x] Datenmodell und Tests: neue Schutzmigration schließt Körper- und Ernährungsfelder auch für bestätigte Follower vollständig aus. Alle 248 pgTAP-Tests bestehen.
 - [x] Navigation und API: Suche findet bestehende Konten; Namen/Bilder öffnen zuerst deren Profile. Zurück erhält Suchbegriff, Reiter und Listenseite.
 - [x] Einstellungen: Zahnrad, deaktivierte Platzhalter, Öffentlich/Privat und Anfrageverwaltung.
-- [x] Profil: Benutzername und Profil werden atomar gespeichert. Geschützte Übersicht mit Körper-, Trainings- und Ernährungsdaten erst nach Annahme; keine fremden Schreibrechte oder Kontoverwaltung.
-- [x] Prüfung: drei lokale Konten, Anfrage/Rücknahme/Ablehnung/Annahme, Entfolgen, öffentlich folgen, Namenskollisionen, Tastatur, 320/390/1280 px, Hell-/Dunkelmodus. 290 Unit-Tests, Lint und Build bestehen.
+- [x] Profil: Benutzername und Profil werden atomar gespeichert. Profil/Training erst nach Annahme; Körperdaten und Ernährung nur für den Besitzer. Private Bereiche werden vollständig ausgeblendet, keine leeren Karten.
+- [x] Drei-Konten-Prüfung: drei getrennte Browser-Sitzungen prüfen Anfrage/Rücknahme/Ablehnung/Annahme, öffentliche Freigabe, direkten API-Zugriff und unveränderte eigene Körper-/Ernährungsansichten. 290 Unit-Tests bestehen.
+- [x] Letzter UI-Schritt: anklickbare Follower-/Gefolgt-Zähler öffnen den passenden Reiter. Erneuter Drei-Konten-Browserdurchlauf, Build und Lint bestanden; Doku aktualisiert.
+
+Kein Commit, Push, Online-Migration oder Merge bis zu den angekündigten Befehlen. PR #48 bleibt unverändert.
 
 ## Vorheriger abgeschlossener Stand
 
