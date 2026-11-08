@@ -4,8 +4,8 @@ import { formatDose, normalizeWeekdays, parseDose, scheduleLabel, supplementDue 
 describe('formatDose', () => {
   it('setzt Zahl und Einheit zusammen', () => {
     expect(formatDose('5', 'g')).toBe('5 g')
-    expect(formatDose('2', 'Kapseln')).toBe('2 Kapseln')
-    expect(formatDose('1', 'Tabletten')).toBe('1 Tablette')
+    expect(formatDose('2', 'Stück')).toBe('2 Stück')
+    expect(formatDose('1', 'Stück')).toBe('1 Stück')
     expect(formatDose('2,5', 'mg')).toBe('2,5 mg')
   })
 
@@ -19,7 +19,10 @@ describe('formatDose', () => {
 describe('parseDose', () => {
   it('liest gespeicherte Mengen zurück', () => {
     expect(parseDose('5 g')).toEqual({ amount: '5', unit: 'g' })
-    expect(parseDose('1 Tablette')).toEqual({ amount: '1', unit: 'Tabletten' })
+    expect(parseDose('2 Stück')).toEqual({ amount: '2', unit: 'Stück' })
+    // Alte Einträge mit Tabletten oder Kapseln werden zu Stück.
+    expect(parseDose('1 Tablette')).toEqual({ amount: '1', unit: 'Stück' })
+    expect(parseDose('2 Kapseln')).toEqual({ amount: '2', unit: 'Stück' })
     expect(parseDose('200 µg')).toEqual({ amount: '200', unit: 'µg' })
   })
 

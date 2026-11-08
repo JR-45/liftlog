@@ -1,22 +1,23 @@
 // Supplemente: Menge mit Einheit und an welchen Wochentagen sie dran sind.
 
-export const DOSE_UNITS = ['g', 'mg', 'µg', 'IE', 'Tabletten', 'Kapseln', 'ml'] as const
+/** Tabletten und Kapseln zählen gleich, beides ist „Stück“. */
+export const DOSE_UNITS = ['g', 'mg', 'µg', 'IE', 'Stück', 'ml'] as const
 export type DoseUnit = (typeof DOSE_UNITS)[number]
 
-/** Bei Stückzahlen heißt eins „Tablette“ bzw. „Kapsel“. */
-const SINGULAR: Partial<Record<DoseUnit, string>> = { Tabletten: 'Tablette', Kapseln: 'Kapsel' }
+/** Ältere Einträge mit Tabletten oder Kapseln werden als Stück gelesen. */
+const PIECES = new Set(['stück', 'tablette', 'tabletten', 'kapsel', 'kapseln'])
 
 /** Typische Einheit für die Vorschläge, damit man nur noch die Zahl tippt. */
 export const QUICK_SUPPLEMENTS: { name: string; unit: DoseUnit }[] = [
-  { name: 'Kreatin', unit: 'g' }, { name: 'Omega-3', unit: 'Kapseln' }, { name: 'Eisen', unit: 'mg' },
+  { name: 'Kreatin', unit: 'g' }, { name: 'Omega-3', unit: 'Stück' }, { name: 'Eisen', unit: 'mg' },
 ]
 
-/** „5“ und „g“ werden zu „5 g“, „1“ und „Tabletten“ zu „1 Tablette“. Leer oder ungültig ergibt null. */
+/** „5“ und „g“ werden zu „5 g“, „2“ und „Stück“ zu „2 Stück“. Leer oder ungültig ergibt null. */
 export function formatDose(amount: string, unit: DoseUnit): string | null {
   const value = Number(amount.trim().replace(',', '.'))
   if (!amount.trim() || !Number.isFinite(value) || value <= 0 || value > 100000) return null
   const number = String(Math.round(value * 100) / 100).replace('.', ',')
-  return `${number} ${value === 1 ? SINGULAR[unit] ?? unit : unit}`
+  return `${number} ${unit}`
 }
 
 /** Gespeicherte Menge zurück in Zahl und Einheit. Freitext von früher bleibt als Zahl leer. */
@@ -24,7 +25,7 @@ export function parseDose(dose: string | null): { amount: string; unit: DoseUnit
   const match = dose?.trim().match(/^(\d+(?:[.,]\d+)?)\s*(.+)$/)
   if (!match) return { amount: '', unit: null }
   const word = match[2].trim().toLowerCase()
-  const unit = DOSE_UNITS.find((entry) => entry.toLowerCase() === word || SINGULAR[entry]?.toLowerCase() === word) ?? null
+  const unit = PIECES.has(word) ? 'Stück' : DOSE_UNITS.find((entry) => entry.toLowerCase() === word) ?? null
   return { amount: unit ? match[1] : '', unit }
 }
 
