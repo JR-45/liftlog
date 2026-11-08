@@ -6,9 +6,9 @@ import { decideRequest, loadRequests, loadSharing, saveSharing, type Person, typ
  * Sichtbarkeit im Einstellungs-Bereich: Profil sichtbar machen, wer folgen darf, Plan veröffentlichen,
  * offene Folgeanfragen und Verbergen. Ohne sichtbares Profil nur der Knopf zum Sichtbarmachen.
  */
-export function SocialSettings({ account, onEnable, onHide, onSaved, onOpenPerson }: {
+export function SocialSettings({ account, onEnable, onHide, onSaved, onOpenPerson, onRequestsChanged }: {
   account: Person | null; onEnable: () => Promise<void>; onHide: () => Promise<void>
-  onSaved: (isPrivate: boolean) => void; onOpenPerson: (id: string) => void
+  onSaved: (isPrivate: boolean) => void; onOpenPerson: (id: string) => void; onRequestsChanged?: () => void
 }) {
   const [sharing, setSharing] = useState<Sharing | null>(null)
   const [busy, setBusy] = useState(false)
@@ -46,7 +46,7 @@ export function SocialSettings({ account, onEnable, onHide, onSaved, onOpenPerso
     <form className={`${CARD} space-y-4`} aria-labelledby="visibility-heading" onSubmit={event => {
       event.preventDefault()
       if (!sharing) return
-      run(async () => { await saveSharing(account.user_id, sharing); onSaved(sharing.is_private); setSaved(true) }, 'Einstellungen konnten nicht gespeichert werden.')
+      run(async () => { await saveSharing(account.user_id, sharing); onSaved(sharing.is_private); onRequestsChanged?.(); setSaved(true) }, 'Einstellungen konnten nicht gespeichert werden.')
     }}>
       <h2 id="visibility-heading" className={SECTION_TITLE}>Sichtbarkeit</h2>
       {!sharing ? <p role="status" className="text-sm text-muted">Wird geladen …</p> : <fieldset disabled={busy} className="space-y-2">
@@ -64,7 +64,7 @@ export function SocialSettings({ account, onEnable, onHide, onSaved, onOpenPerso
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       <button type="submit" disabled={busy || !sharing} className={`${PRIMARY_BUTTON} w-full`}>{busy ? 'Wird gespeichert …' : 'Speichern'}</button>
     </form>
-    <FollowRequests userId={account.user_id} onOpenPerson={onOpenPerson} />
+    <FollowRequests userId={account.user_id} onOpenPerson={onOpenPerson} onChanged={onRequestsChanged} />
     <div>
       <button type="button" disabled={busy} className={`${SECONDARY_BUTTON} w-full ${confirmHide ? 'bg-danger/15 text-danger' : 'text-danger'}`}
         onClick={() => { if (!confirmHide) { setConfirmHide(true); return } setConfirmHide(false); run(onHide, 'Profil konnte nicht verborgen werden.') }}>
@@ -74,7 +74,7 @@ export function SocialSettings({ account, onEnable, onHide, onSaved, onOpenPerso
   </>
 }
 
-export function FollowRequests({ userId, onOpenPerson }: { userId: string; onOpenPerson: (id: string) => void }) {
+export function FollowRequests({ userId, onOpenPerson, onChanged }: { userId: string; onOpenPerson: (id: string) => void; onChanged?: () => void }) {
   const [people, setPeople] = useState<Person[] | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -92,7 +92,7 @@ export function FollowRequests({ userId, onOpenPerson }: { userId: string; onOpe
     lock.current = true
     setBusy(true)
     setError('')
-    void decideRequest(userId, id, accept).then(refresh)
+    void decideRequest(userId, id, accept).then(() => { refresh(); onChanged?.() })
       .catch(() => setError('Anfrage konnte nicht geändert werden.'))
       .finally(() => { lock.current = false; setBusy(false) })
   }
