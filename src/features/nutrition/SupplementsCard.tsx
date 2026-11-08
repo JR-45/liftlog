@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { DoneStamp } from '../../components/DoneStamp'
 import { CheckIcon, PlusIcon, TrashIcon } from '../../lib/icons'
-import { addSupplement, loadSupplements, removeSupplement, setSupplementTaken, type Supplement } from './api'
+import { addSupplement, loadSupplements, removeSupplement, setSupplementTaken, updateSupplementDose, type Supplement } from './api'
 
 // Ohne w-full, sonst nimmt das Mengenfeld die ganze Breite und schiebt den Knopf aus dem Bild.
 const INPUT = 'h-11 rounded-xl border border-line/15 bg-control px-3 text-base text-foreground outline-none focus:border-neon'
@@ -17,6 +17,7 @@ export function SupplementsCard({ date }: { date: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const doseInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -64,6 +65,17 @@ export function SupplementsCard({ date }: { date: string }) {
     finally { setBusy(false) }
   }
 
+  async function changeDose(item: Supplement, value: string) {
+    const next = value.trim() || null
+    if (next === item.dose) return
+    setList((current) => current?.map((entry) => entry.id === item.id ? { ...entry, dose: next } : entry) ?? current)
+    try { await updateSupplementDose(item.id, next) }
+    catch {
+      setList((current) => current?.map((entry) => entry.id === item.id ? { ...entry, dose: item.dose } : entry) ?? current)
+      setError('Menge konnte nicht gespeichert werden.')
+    }
+  }
+
   async function remove(item: Supplement) {
     setBusy(true)
     try {
@@ -98,7 +110,12 @@ export function SupplementsCard({ date }: { date: string }) {
               <CheckIcon className="h-5 w-5 stroke-[3]" />
             </button>}
           <span className={`min-w-0 flex-1 truncate ${done && !editing ? 'text-muted line-through' : 'text-foreground'}`}>{item.name}</span>
-          {item.dose && <span className="shrink-0 text-sm tabular-nums text-muted">{item.dose}</span>}
+          {editing
+            ? <input key={item.dose ?? ''} className={`${INPUT} w-24 shrink-0 text-sm`} placeholder="Menge" maxLength={40} defaultValue={item.dose ?? ''}
+              aria-label={`Menge von ${item.name}`} enterKeyHint="done"
+              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
+              onBlur={(event) => void changeDose(item, event.target.value)} />
+            : item.dose && <span className="shrink-0 text-sm tabular-nums text-muted">{item.dose}</span>}
         </li>
       })}
     </ul>}
@@ -106,11 +123,11 @@ export function SupplementsCard({ date }: { date: string }) {
     {showAdd && <div className="mt-3">
       {list?.length === 0 && <p className="text-sm text-muted">Was nimmst du täglich? Tippe an oder trag es selbst ein.</p>}
       {quick.length > 0 && <div className="mt-2 flex flex-wrap gap-2">
-        {quick.map((entry) => <button key={entry} type="button" disabled={busy} className="min-h-9 rounded-full bg-control px-3 text-sm text-foreground disabled:opacity-50" onClick={() => void add(entry, '')}>+ {entry}</button>)}
+        {quick.map((entry) => <button key={entry} type="button" disabled={busy} className="min-h-9 rounded-full bg-control px-3 text-sm text-foreground disabled:opacity-50" onClick={() => { setName(entry); setError(''); doseInput.current?.focus() }}>+ {entry}</button>)}
       </div>}
       <form className="mt-3 flex gap-2" onSubmit={(event: FormEvent) => { event.preventDefault(); void add(name, dose) }}>
         <input className={`${INPUT} min-w-0 flex-1`} placeholder="Eigenes, z. B. Eisen" maxLength={60} value={name} aria-label="Name des Supplements" onChange={(event) => setName(event.target.value)} />
-        <input className={`${INPUT} w-24 shrink-0`} placeholder="Menge" maxLength={40} value={dose} aria-label="Menge, optional" onChange={(event) => setDose(event.target.value)} />
+        <input ref={doseInput} className={`${INPUT} w-24 shrink-0`} placeholder="Menge" maxLength={40} value={dose} aria-label="Menge, optional" onChange={(event) => setDose(event.target.value)} />
         <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neon text-black disabled:opacity-50" type="submit" aria-label="Supplement hinzufügen" disabled={busy || !name.trim()}>
           <PlusIcon className="h-5 w-5" />
         </button>
