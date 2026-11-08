@@ -287,14 +287,14 @@ isOneToOne: false
                   ]
                 },"supplements": {
                   Row: {
-                    "created_at": string,"dose": string | null,"id": string,"name": string,"user_id": string
+                    "created_at": string,"dose": string | null,"id": string,"name": string,"user_id": string,"weekdays": (number)[] | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"dose"?: string | null,"id"?: string,"name": string,"user_id"?: string
+                    "created_at"?: string,"dose"?: string | null,"id"?: string,"name": string,"user_id"?: string,"weekdays"?: (number)[] | null
                   }
                   Update: {
-                    "created_at"?: string,"dose"?: string | null,"id"?: string,"name"?: string,"user_id"?: string
+                    "created_at"?: string,"dose"?: string | null,"id"?: string,"name"?: string,"user_id"?: string,"weekdays"?: (number)[] | null
                   }
                   Relationships: [
                     

@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', 'public, extensions', true);
-select plan(10);
+select plan(13);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test.local'),
@@ -19,6 +19,9 @@ insert into supplements (id, name, dose) values ('a1000000-0000-0000-0000-000000
 select is((select user_id from supplements), 'aaaaaaaa-0000-0000-0000-000000000001'::uuid, 'Eigentümer kommt aus der Anmeldung');
 select throws_ok($$insert into supplements (name) values ('Kreatin')$$, '23505', null, 'Name gibt es pro Konto nur einmal');
 select throws_ok($$insert into supplements (name) values ('  ')$$, '23514', null, 'Leerer Name ist verboten');
+select lives_ok($$insert into supplements (name, dose, weekdays) values ('Vitamin K2', '200 µg', '{1}')$$, 'Supplement nur montags ist möglich');
+select throws_ok($$update supplements set weekdays = '{7}' where name = 'Vitamin K2'$$, '23514', null, 'Unbekannter Wochentag ist verboten');
+select throws_ok($$update supplements set weekdays = '{0,1,2,3,4,5,6}' where name = 'Vitamin K2'$$, '23514', null, 'Alle sieben Tage heißt täglich, also null');
 insert into supplement_intakes (supplement_id, taken_on) values ('a1000000-0000-0000-0000-000000000001', '2026-11-08');
 select throws_ok($$insert into supplement_intakes (supplement_id, taken_on) values ('a1000000-0000-0000-0000-000000000001', '2026-11-08')$$, '23505', null, 'Pro Tag nur ein Haken');
 
