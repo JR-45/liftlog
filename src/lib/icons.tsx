@@ -4,6 +4,12 @@ type IconProps = {
   className?: string
 }
 
+export function FoodIcon({ className }: IconProps) {
+  return <SvgIcon className={className}>
+    <path d="M4 3v5a3 3 0 0 0 6 0V3M7 3v18M20 21V3c-4 2-5 7-5 10h5" />
+  </SvgIcon>
+}
+
 function SvgIcon({ className = 'h-5 w-5', children }: IconProps & { children: ReactNode }) {
   return (
     <svg
