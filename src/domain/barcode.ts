@@ -9,7 +9,7 @@ export function isBarcode(text: string): boolean {
 }
 
 const FIELDS: Record<Nutrient, string> = {
-  kcal: 'energy-kcal_100g', protein: 'proteins_100g', carbs: 'carbohydrates_100g', fat: 'fat_100g', fiber: 'fiber_100g',
+  kcal: 'energy-kcal_100g', protein: 'proteins_100g', carbs: 'carbohydrates_100g', fat: 'fat_100g', fiber: 'fiber_100g', sugar: 'sugars_100g',
 }
 
 function number(value: unknown): number | null {

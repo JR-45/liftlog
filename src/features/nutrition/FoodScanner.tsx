@@ -85,7 +85,7 @@ export function FoodScanner({ consent, date, targets, onConsent, onSaved }: {
         <button type="button" disabled={busy !== null} className={`${secondaryClass} px-2`} onClick={() => {
           setError('')
           setPhoto(null)
-          setEntry({ source: 'manual', title: 'Meine Mahlzeit', foods: [{ name: '', grams: null, per100g: { kcal: null, protein: null, carbs: null, fat: null, fiber: null }, question: null, uncertain: false }] })
+          setEntry({ source: 'manual', title: 'Meine Mahlzeit', foods: [{ name: '', grams: null, per100g: { kcal: null, protein: null, carbs: null, fat: null, fiber: null, sugar: null }, question: null, uncertain: false }] })
         }}>Manuell</button>
       </div>
       <input ref={upload} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Essensfoto auswählen" onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = '' }} />

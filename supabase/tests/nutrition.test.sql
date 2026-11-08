@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', 'public, extensions', true);
-select plan(27);
+select plan(29);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test.local'),
@@ -18,11 +18,13 @@ reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated"}', true);
-insert into nutrition_settings (kcal, protein) values (2200, 140);
+insert into nutrition_settings (kcal, protein, sugar) values (2200, 140, 55);
 select is((select user_id from nutrition_settings), 'aaaaaaaa-0000-0000-0000-000000000001'::uuid, 'Eigentümer kommt aus Anmeldung');
 select throws_ok('update nutrition_settings set kcal = -1', '23514', null, 'Negative Ziele sind verboten');
+select throws_ok('update nutrition_settings set sugar = 501', '23514', null, 'Zucker-Obergrenze über 500 g ist verboten');
 select throws_ok($$update nutrition_settings set photo_consent_version = 'google-food-v1'$$, '23514', null, 'Einwilligung braucht Zeitstempel');
-select lives_ok($$select save_meal('a0000000-0000-0000-0000-000000000001', '2026-11-08', 'Mittagessen', '[{"name":"Reis","grams":150,"per100g":{"kcal":130,"protein":3,"carbs":28,"fat":1,"fiber":1},"estimated":true}]')$$, 'Mahlzeit lässt sich atomar speichern');
+select lives_ok($$select save_meal('a0000000-0000-0000-0000-000000000001', '2026-11-08', 'Mittagessen', '[{"name":"Reis","grams":150,"per100g":{"kcal":130,"protein":3,"carbs":28,"fat":1,"fiber":1,"sugar":0.5},"estimated":true}]')$$, 'Mahlzeit lässt sich atomar speichern');
+select is((select sugar from meal_items), 0.5::numeric, 'Zucker pro 100 g wird gespeichert');
 select lives_ok($$select save_meal('a0000000-0000-0000-0000-000000000001', '2026-11-08', 'Mittagessen', '[{"name":"Reis","grams":150,"per100g":{"kcal":130,"protein":3,"carbs":28,"fat":1,"fiber":1},"estimated":true}]')$$, 'Wiederholung nach Netzfehler gelingt');
 select is((select count(*)::int from meals), 1, 'Wiederholung erzeugt keine zweite Mahlzeit');
 select is((select count(*)::int from meal_items), 1, 'Wiederholung erzeugt keine zweiten Lebensmittel');

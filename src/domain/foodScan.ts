@@ -44,8 +44,8 @@ export function validateScanImage(mime: unknown, base64: unknown): base64 is str
 // parseFoodScan danach selbst, sie gehen also nicht verloren.
 const nutrientSchema = {
   type: 'object',
-  properties: Object.fromEntries(['kcal', 'protein', 'carbs', 'fat', 'fiber'].map((key) => [key, { type: 'number' }])),
-  required: ['kcal', 'protein', 'carbs', 'fat', 'fiber'],
+  properties: Object.fromEntries(['kcal', 'protein', 'carbs', 'fat', 'fiber', 'sugar'].map((key) => [key, { type: 'number' }])),
+  required: ['kcal', 'protein', 'carbs', 'fat', 'fiber', 'sugar'],
 }
 
 export const FOOD_SCAN_SCHEMA = {
