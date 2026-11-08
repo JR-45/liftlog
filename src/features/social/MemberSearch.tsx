@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Avatar } from '../../components/Avatar'
 import { socialSearchPattern } from '../../domain/social'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../lib/icons'
 import { CARD, INPUT, LINK, NAV_BUTTON, PRIMARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
@@ -64,7 +65,7 @@ export function MemberSearch({ userId, visible, onBack, onOpenPerson, onEnable }
       {!people.people.length ? <p className="text-sm text-muted">{page > 0 ? 'Keine weiteren Mitglieder.' : 'Niemand mit diesem Benutzernamen.'}</p>
         : <ul className="divide-y divide-line/[0.06]">{people.people.map(person => <li key={person.user_id} className="flex items-center gap-2 py-2">
           <button type="button" className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onOpenPerson(person.user_id)}>
-            {person.avatar ? <img src={person.avatar} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+            {person.avatar ? <Avatar src={person.avatar} className="h-11 w-11 shrink-0 rounded-full" />
               : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-control font-semibold">{person.display_name.charAt(0).toUpperCase()}</span>}
             <span className="min-w-0"><span className="block break-words text-sm font-semibold">{person.display_name}</span><span className="block break-all text-xs text-muted">@{person.username}</span></span>
           </button>

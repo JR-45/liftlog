@@ -14,6 +14,7 @@ import { loadPlanDays, loadScheduledDays, loadTrainedDates, type PlanDay } from 
 import { planForDate, shiftDate, type ScheduledDay } from '../../domain/week'
 import { weekStreak } from '../../domain/motivation'
 import { FlameIcon } from '../../lib/icons'
+import { Avatar } from '../../components/Avatar'
 import { CountBadge } from '../../components/CountBadge'
 import { countRequests } from '../social/api'
 import { WeekPlanning } from './WeekPlanning'
@@ -206,7 +207,7 @@ export function HomeScreen({ session }: { session: Session }) {
 
   const streak = weekStreak(trainedDates, today)
   const profileIcon = <span className="relative">
-    {avatarUrl ? <img src={avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover ring-1 ring-line/20" /> : <UserIcon />}
+    {avatarUrl ? <Avatar src={avatarUrl} className="h-5 w-5 rounded-full ring-1 ring-line/20" /> : <UserIcon />}
     <CountBadge count={requestCount} />
     {requestCount > 0 && <span className="sr-only">{requestCount} offene Anfragen,</span>}
   </span>

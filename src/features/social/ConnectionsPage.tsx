@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Avatar } from '../../components/Avatar'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../lib/icons'
 import { CARD, LINK, NAV_BUTTON, PRIMARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
 import { FollowButton } from './FollowButton'
@@ -60,7 +61,7 @@ export function ConnectionsPage({ userId, ownerId = userId, displayName, initial
         {!result.people.length && <p className="text-sm text-muted">{page > 0 ? 'Keine weiteren Personen.' : tab === 'followers' ? 'Dir folgt noch niemand.' : 'Du folgst noch niemandem.'}</p>}
         <ul className="divide-y divide-line/[0.06]">{result.people.map(person => <li key={person.user_id} className="flex items-center gap-2 py-2">
           <button type="button" className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onOpenPerson(person.user_id)}>
-            {person.avatar ? <img src={person.avatar} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" /> : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-control font-semibold">{person.display_name.charAt(0).toUpperCase()}</span>}
+            {person.avatar ? <Avatar src={person.avatar} className="h-11 w-11 shrink-0 rounded-full" /> : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-control font-semibold">{person.display_name.charAt(0).toUpperCase()}</span>}
             <span className="min-w-0"><span className="block break-words text-sm font-semibold">{person.display_name}</span><span className="block break-all text-xs text-muted">@{person.username}</span></span>
           </button>
           <FollowButton person={person} viewerId={userId} onChanged={refresh} onError={setError} />
