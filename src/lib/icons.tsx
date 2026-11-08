@@ -59,6 +59,10 @@ export function ChevronLeftIcon({ className }: IconProps) {
   )
 }
 
+export function SearchIcon({ className }: IconProps) {
+  return <SvgIcon className={className}><circle cx="10.5" cy="10.5" r="7.5" /><path d="m16 16 5 5" /></SvgIcon>
+}
+
 export function SettingsIcon({ className }: IconProps) {
   return (
     <SvgIcon className={className}>

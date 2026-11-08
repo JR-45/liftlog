@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportRow } from '../../domain/export'
 import { computeAthleteStats } from '../../domain/profile'
 import { formatWeight } from '../../domain/sets'
-import { CameraIcon, CheckIcon, ChevronLeftIcon, SettingsIcon, TrophyIcon } from '../../lib/icons'
+import { CameraIcon, CheckIcon, ChevronLeftIcon, SearchIcon, SettingsIcon, TrophyIcon } from '../../lib/icons'
 import { CARD, NAV_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
 import { loadExportRows } from '../stats/api'
 import { ExportCard } from '../stats/ExportCard'
@@ -12,7 +12,6 @@ import { SocialNavigator, type SocialRoute } from '../social/SocialNavigator'
 import { disableSocialProfile, enableSocialProfile, loadAccount, saveProfileIdentity, type Person, type SocialTab } from '../social/api'
 import { SocialSettings } from '../social/AccountSettings'
 import { CountBadge } from '../../components/CountBadge'
-import { DeleteAccountCard } from './DeleteAccountCard'
 import { BodyCard } from './BodyCard'
 import { enableProfileTargets } from '../nutrition/api'
 import {
@@ -44,6 +43,7 @@ type Props = {
   defaultWeeklyTarget: number
   onAvatarChange: (avatarUrl: string | null) => void
   onNameChange: (displayName: string) => void
+  onSignOut: () => Promise<void>
   /** Offene Folgeanfragen, als rote Zahl am Zahnrad. */
   requestCount?: number
   onRequestsChanged?: () => void
@@ -96,6 +96,7 @@ function ProfileView({
   today,
   onAvatarChange,
   onNameChange,
+  onSignOut,
   requestCount = 0,
   onRequestsChanged,
   initialProfile,
@@ -106,9 +107,11 @@ function ProfileView({
   const [avatar, setAvatar] = useState<string | null>(initialAvatar)
   const [rows, setRows] = useState<ExportRow[]>([])
   const [editingProfile, setEditingProfile] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [account, setAccount] = useState(initialAccount)
   const [socialRoute, setSocialRoute] = useState<SocialRoute | null>(null)
   const connectionEntry = useRef<{ tab: SocialTab; scroll: number } | null>(null)
+  const socialReturn = useRef('profile-search')
   const [showAllPrs, setShowAllPrs] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -217,7 +220,7 @@ function ProfileView({
     }
   }
 
-  function openSettings() {
+  function openEditor() {
     setUsernameDraft(account?.username ?? '')
     setBioDraft(profile.bio)
     setGoalDraft(profile.goal)
@@ -226,23 +229,43 @@ function ProfileView({
     setEditingProfile(true)
   }
 
+  function openSettings() {
+    setError(null)
+    setSettingsOpen(true)
+  }
+
   const visiblePrs = showAllPrs ? stats.personalRecords : stats.personalRecords.slice(0, 5)
 
   if (socialRoute) return <SocialNavigator userId={user.id} today={today} account={account} initialRoute={socialRoute} onAccountChange={setAccount} onEnable={() => saveProfile(profile)}
     onBack={() => {
       setSocialRoute(null)
       requestAnimationFrame(() => {
-        if (!connectionEntry.current) { document.getElementById('profile-settings')?.focus(); return }
+        if (!connectionEntry.current) { document.getElementById(socialReturn.current)?.focus(); return }
         document.getElementById(`profile-${connectionEntry.current.tab}`)?.focus({ preventScroll: true })
         window.scrollTo(0, connectionEntry.current.scroll)
       })
     }} />
 
-  // Eine Einstellungsseite für Profil und Sichtbarkeit, geöffnet über das Zahnrad.
-  if (editingProfile) return <section className="mt-5 space-y-4" aria-label="Einstellungen">
+  // Profilbearbeitung und Kontoeinstellungen haben getrennte Einstiege.
+  if (settingsOpen) return <section className="mt-5 space-y-4" aria-label="Einstellungen">
     <div className="flex items-center gap-3">
-      <button type="button" className={NAV_BUTTON} aria-label="Zurück zum Profil" onClick={() => { setEditingProfile(false); setError(null) }}><ChevronLeftIcon className="h-5 w-5" /></button>
+      <button id="settings-back" type="button" className={NAV_BUTTON} aria-label="Zurück zum Profil" onClick={() => {
+        setSettingsOpen(false)
+        requestAnimationFrame(() => document.getElementById('profile-settings')?.focus())
+      }}><ChevronLeftIcon /></button>
       <h1 className={`min-w-0 flex-1 text-center ${SECTION_TITLE}`}>Einstellungen</h1><span className="w-11" aria-hidden="true" />
+    </div>
+    <SocialSettings key={account ? 'visible' : 'hidden'} account={account} email={user.email} onSignOut={onSignOut}
+      onEnable={async () => { await saveProfile(profile); await enableSocialProfile(); setAccount(await loadAccount(user.id, user.id)) }}
+      onHide={async () => { await disableSocialProfile(user.id); setAccount(null) }}
+      onSaved={isPrivate => setAccount(current => current && ({ ...current, is_private: isPrivate }))}
+      onOpenPerson={id => { socialReturn.current = 'settings-back'; connectionEntry.current = null; setSocialRoute({ kind: 'profile', id }) }} onRequestsChanged={onRequestsChanged} />
+  </section>
+
+  if (editingProfile) return <section className="mt-5 space-y-4" aria-label="Profil bearbeiten">
+    <div className="flex items-center gap-3">
+      <button type="button" className={NAV_BUTTON} aria-label="Zurück zum Profil" onClick={() => { setEditingProfile(false); setError(null); requestAnimationFrame(() => document.getElementById('profile-edit')?.focus()) }}><ChevronLeftIcon className="h-5 w-5" /></button>
+      <h1 className={`min-w-0 flex-1 text-center ${SECTION_TITLE}`}>Profil bearbeiten</h1><span className="w-11" aria-hidden="true" />
     </div>
     <section className={CARD} aria-labelledby="profile-settings-heading">
       <h2 id="profile-settings-heading" className={SECTION_TITLE}>Profil</h2>
@@ -296,19 +319,21 @@ function ProfileView({
             <button type="submit" disabled={busy} className={`${PRIMARY_BUTTON} w-full`}>{busy ? 'Wird gespeichert …' : 'Speichern'}</button>
           </form>
     </section>
-    <SocialSettings key={account ? 'visible' : 'hidden'} account={account}
-      onEnable={async () => { await saveProfile(profile); await enableSocialProfile(); setAccount(await loadAccount(user.id, user.id)) }}
-      onHide={async () => { await disableSocialProfile(user.id); setAccount(null) }}
-      onSaved={isPrivate => setAccount(current => current && ({ ...current, is_private: isPrivate }))}
-      onOpenPerson={id => { setEditingProfile(false); setSocialRoute({ kind: 'profile', id }) }} onRequestsChanged={onRequestsChanged} />
   </section>
 
   return (
     <section className="mt-5 space-y-5">
-      {/* 1. Athleten-Header mit Profilbild-Upload */}
-      <div className="relative rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
-        <button id="profile-settings" type="button" className={`${NAV_BUTTON} absolute right-4 top-4`} aria-label={requestCount > 0 ? `Profileinstellungen öffnen, ${requestCount} offene Anfragen` : 'Profileinstellungen öffnen'}
+      <div className="flex justify-end gap-2">
+        <button id="profile-search" type="button" className={NAV_BUTTON} aria-label="Mitgliedersuche öffnen" onClick={() => {
+          connectionEntry.current = null
+          socialReturn.current = 'profile-search'
+          setSocialRoute({ kind: 'search' })
+        }}><SearchIcon /></button>
+        <button id="profile-settings" type="button" className={`${NAV_BUTTON} relative`} aria-label={requestCount > 0 ? `Profileinstellungen öffnen, ${requestCount} offene Anfragen` : 'Profileinstellungen öffnen'}
           onClick={openSettings}><SettingsIcon /><CountBadge count={requestCount} /></button>
+      </div>
+      {/* 1. Athleten-Header mit Profilbild-Upload */}
+      <div className="rounded-2xl border border-line/[0.08] bg-surface p-4 shadow-lg">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
@@ -345,7 +370,7 @@ function ProfileView({
               </button>
             </div>
 
-            <div className="min-w-0 flex-1 pr-11">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-xl font-bold tracking-tight text-foreground">{profile.displayName}</h2>
                 <span className="rounded-full bg-neon/15 px-2.5 py-0.5 text-xs font-semibold text-accent-ink ring-1 ring-neon/30">
@@ -354,9 +379,9 @@ function ProfileView({
               </div>
               {account && <p className="mt-1 break-all text-sm text-muted">@{account.username}</p>}
               {profile.bio ? (
-                <p className="mt-1 text-sm text-foreground/85">{profile.bio}</p>
+                <p className="mt-1 break-words text-sm text-foreground/85">{profile.bio}</p>
               ) : (
-                <p className="mt-1 text-sm text-muted">{user.email}</p>
+                <p className="mt-1 break-words text-sm text-muted">{user.email}</p>
               )}
               <p className="mt-1 text-xs text-muted">Mitglied seit {memberSince}</p>
             </div>
@@ -373,8 +398,8 @@ function ProfileView({
             connectionEntry.current = { tab, scroll: window.scrollY }
             setSocialRoute({ kind: 'connections', id: user.id, tab, name: profile.displayName })
           }} />
-          <button type="button" className={`${SECONDARY_BUTTON} w-full`} onClick={() => { connectionEntry.current = null; setSocialRoute({ kind: 'search' }) }}>
-            Mitglieder suchen
+          <button id="profile-edit" type="button" className={`${SECONDARY_BUTTON} w-full`} onClick={openEditor}>
+            Profil bearbeiten
           </button>
         </div>
 
@@ -481,7 +506,6 @@ function ProfileView({
       {/* 5. Datenexport. Die Pausenlänge wählst du direkt in der Pausenleiste. */}
       <ExportCard today={today} />
 
-      {user.email && <DeleteAccountCard email={user.email} />}
     </section>
   )
 }

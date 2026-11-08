@@ -68,7 +68,7 @@ export async function loadSharing(userId: string): Promise<Sharing> {
   return data
 }
 
-export async function saveSharing(userId: string, sharing: Sharing): Promise<void> {
+export async function saveSharing(userId: string, sharing: Partial<Sharing>): Promise<void> {
   const { error } = await supabase.from('social_profiles').update(sharing).eq('user_id', userId)
   if (error) throw error
 }
