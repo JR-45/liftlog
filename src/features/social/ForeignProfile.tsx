@@ -35,8 +35,7 @@ export function ForeignProfile({ personId, viewerId, today, onConnections }: {
       <div className="mt-4"><FollowButton person={person} viewerId={viewerId} onChanged={refresh} onError={setError} /></div>
       {person.relationship === 'accepted' && <div className="mt-3"><ConnectionsSummary userId={personId} onOpen={onConnections} label={`${person.display_name}: Verbindungen`} /></div>}
     </div>
-    {person.relationship !== 'accepted' ? <div className={CARD}><h3 className={SECTION_TITLE}>{person.is_private ? 'Dieses Konto ist privat' : 'Profilübersicht'}</h3>
-      <p className="mt-2 text-sm text-muted">{person.relationship === 'pending' ? 'Deine Anfrage wartet auf Bestätigung. Tippe auf „Angefragt“, um sie zurückzuziehen.' : person.is_private ? 'Stelle eine Folgeanfrage, um die Profilübersicht zu sehen.' : 'Folge diesem Konto, um die Profilübersicht zu sehen.'}</p></div>
+    {person.relationship !== 'accepted' ? null
       : overview ? <SharedProfileOverview overview={overview} today={today} /> : <p className="text-sm text-muted">Noch keine Profilangaben.</p>}
   </>
 }
