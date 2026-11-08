@@ -253,14 +253,14 @@ isOneToOne: false
                   ]
                 },"social_profiles": {
                   Row: {
-                    "avatar": string | null,"created_at": string,"display_name": string,"is_private": boolean,"user_id": string,"username": string
+                    "avatar": string | null,"created_at": string,"display_name": string,"is_private": boolean,"share_plan": boolean,"user_id": string,"username": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar"?: string | null,"created_at"?: string,"display_name": string,"is_private"?: boolean,"user_id"?: string,"username"?: string
+                    "avatar"?: string | null,"created_at"?: string,"display_name": string,"is_private"?: boolean,"share_plan"?: boolean,"user_id"?: string,"username"?: string
                   }
                   Update: {
-                    "avatar"?: string | null,"created_at"?: string,"display_name"?: string,"is_private"?: boolean,"user_id"?: string,"username"?: string
+                    "avatar"?: string | null,"created_at"?: string,"display_name"?: string,"is_private"?: boolean,"share_plan"?: boolean,"user_id"?: string,"username"?: string
                   }
                   Relationships: [
                     
@@ -361,13 +361,7 @@ isOneToOne: false
                     "overview": Json | null,"user_id": string
                   }
                   ComputedFields: never
-                  Insert: {
-                           "overview"?: never,"user_id"?: string | null
-                         }
-                        Update: {
-                           "overview"?: never,"user_id"?: string | null
-                         }
-                        Relationships: [
+                  Relationships: [
                     
                   ]
                 },"social_directory": {
