@@ -79,6 +79,6 @@ Grundlagen: [Gemini-Bildanalyse](https://ai.google.dev/gemini-api/docs/image-und
 Neben dem Foto gibt es **Barcode** und **Manuell**:
 
 - **Barcode:** Die Kamera erkennt EAN-8, EAN-13, UPC-A und UPC-E mit `barcode-detector` (zxing-wasm). Die WASM-Datei wird mit der App ausgeliefert, nicht von einem CDN geladen. Die Nummer lässt sich auch eintippen. Nährwerte und Portion kommen von [Open Food Facts](https://world.openfoodfacts.org) (offene Datenbank, ohne Schlüssel, übertragen wird nur die Nummer). Fehlende Werte füllt man im Formular selbst aus. Logik: `src/domain/barcode.ts`.
-- **Manuell:** leeres Formular mit Name, Menge und Nährwerten pro 100 g.
+- **Manuell:** Namenssuche mit Vorschlägen aus Open Food Facts, sechs bearbeitbaren Nährwertfeldern pro 100 g und sofortiger Portionsberechnung. Ohne Treffer bleibt freies Eintragen möglich. Einrichtung und Prüfung: [Lebensmittelsuche](manual-food-search.md).
 
 Einträge aus Barcode und Manuell sind keine Schätzungen (`estimated = false`) und brauchen keine Bestätigung.
