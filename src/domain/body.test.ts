@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ageFromBirthYear, analyzeBody, type BodyInput, mifflinBmr, navyBodyFat } from './body'
+import { ageFromBirthYear, analyzeBody, type BodyInput, mifflinBmr, navyBodyFat, weightPace, dateInMonths, daysUntil, describePace } from './body'
 
 const base: BodyInput = {
   weightKg: 80,
@@ -112,5 +112,55 @@ describe('ageFromBirthYear', () => {
   it('rechnet das Alter zum aktuellen Jahr', () => {
     expect(ageFromBirthYear(1996, '2026-11-07')).toBe(30)
     expect(ageFromBirthYear(null, '2026-11-07')).toBeNull()
+  })
+})
+
+describe('Zielgewicht mit Termin', () => {
+  // 80 kg, 1,80 m, 30 Jahre, Mann, aktiv: Grundumsatz 1780, Bedarf 2759 kcal.
+  it('rechnet das Kalorienziel aus Zielgewicht und Zeitraum', () => {
+    const in3Months = analyzeBody({ ...base, targetWeightKg: 77, daysToTarget: 90 })
+    expect(in3Months.pace).toEqual({ kgPerWeek: -0.23, status: 'ok', recommendedWeeks: 5, floored: false })
+    expect(in3Months.targetKcal).toBe(2510)
+    const in1Month = analyzeBody({ ...base, targetWeightKg: 77, daysToTarget: 30 })
+    expect(in1Month.pace?.kgPerWeek).toBe(-0.7)
+    expect(in1Month.targetKcal).toBe(1990)
+  })
+
+  it('warnt bei mehr als 1 % pro Woche und hebt auf die Untergrenze', () => {
+    const crash = analyzeBody({ ...base, targetWeightKg: 72, daysToTarget: 30 })
+    expect(crash.pace?.status).toBe('too_fast')
+    expect(crash.pace?.floored).toBe(true)
+    expect(crash.targetKcal).toBe(1780)
+  })
+
+  it('warnt beim Zunehmen schon ab 0,5 % pro Woche', () => {
+    expect(weightPace(80, 84, 30).status).toBe('too_fast')
+    expect(weightPace(80, 82, 120).status).toBe('ok')
+  })
+
+  it('bleibt ohne Termin oder bei weniger als 1 kg beim festen Ziel', () => {
+    expect(analyzeBody({ ...base, targetWeightKg: 77 }).pace).toBeNull()
+    expect(analyzeBody({ ...base, targetWeightKg: 79.5, daysToTarget: 30 }).pace).toBeNull()
+    expect(analyzeBody({ ...base, targetWeightKg: 77, daysToTarget: 0 }).pace).toBeNull()
+  })
+})
+
+describe('Wunschtermin', () => {
+  it('rechnet Monate und Tage', () => {
+    expect(dateInMonths('2026-11-09', 3)).toBe('2027-02-09')
+    expect(dateInMonths('2027-01-31', 1)).toBe('2027-02-28')
+    expect(daysUntil('2026-11-09', '2026-12-09')).toBe(30)
+    expect(daysUntil('2026-11-09', '2026-11-01')).toBe(-8)
+  })
+})
+
+describe('describePace', () => {
+  it('beschreibt Tempo und warnt mit gesundem Termin', () => {
+    expect(describePace({ kgPerWeek: -0.7, status: 'ok', recommendedWeeks: 5, floored: false }, '2026-11-09'))
+      .toEqual({ rate: '−0,7 kg pro Woche', warning: null, healthyDate: '2026-12-14' })
+    const tooFast = describePace({ kgPerWeek: -1.87, status: 'too_fast', recommendedWeeks: 14, floored: true }, '2026-11-09')
+    expect(tooFast.warning).toBe('Zu schnell und ungesund. Gesund wäre bis 15. Feb. 2027.')
+    expect(describePace({ kgPerWeek: 0.2, status: 'ok', recommendedWeeks: 10, floored: true }, '2026-11-09').warning)
+      .toBe('Kalorienziel auf die gesunde Untergrenze angehoben.')
   })
 })

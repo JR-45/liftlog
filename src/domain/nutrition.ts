@@ -1,4 +1,4 @@
-import { ageFromBirthYear, analyzeBody, type ActivityLevel, type Goal, type Sex } from './body.ts'
+import { ageFromBirthYear, analyzeBody, daysUntil, type ActivityLevel, type Goal, type Sex } from './body.ts'
 
 export const NUTRIENTS = ['kcal', 'protein', 'carbs', 'fat', 'fiber', 'sugar'] as const
 export type Nutrient = typeof NUTRIENTS[number]
@@ -71,6 +71,7 @@ export function formatNutrition(value: number, key: Nutrient): string {
 export function profileNutritionSuggestion(profile: {
   heightCm: number | null; sex: Sex | null; birthYear: number | null; activityLevel: ActivityLevel | null; goal: Goal
   targetWeightKg?: number | null
+  targetDate?: string | null
   measurements: { date: string; weightKg: number | null }[]
 }, today: string): { kcal: number | null; protein: number | null; missing: string[] } {
   const weightKg = profile.measurements.filter((item) => item.date <= today && item.weightKg !== null).sort((a, b) => a.date.localeCompare(b.date)).at(-1)?.weightKg ?? null
@@ -81,6 +82,7 @@ export function profileNutritionSuggestion(profile: {
   const analysis = analyzeBody({
     weightKg, heightCm: profile.heightCm, sex: profile.sex, age: ageFromBirthYear(profile.birthYear, today),
     activity: profile.activityLevel, goal: profile.goal, targetWeightKg: profile.targetWeightKg ?? null, bodyFatPct: null, neckCm: null, waistCm: null, hipsCm: null,
+    daysToTarget: profile.targetDate ? daysUntil(today, profile.targetDate) : null,
   })
   return { kcal: analysis.targetKcal, protein: analysis.proteinG, missing }
 }
