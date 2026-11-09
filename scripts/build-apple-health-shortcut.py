@@ -200,18 +200,26 @@ def build(url: str, key: str, with_health: bool = True) -> dict:
         ]),
     }))
 
-    # Der Server antwortet bei Erfolg leer, bei einem Fehler mit einer Meldung.
+    # Bei Erfolg antwortet der Server leer (204), bei einem Fehler mit JSON samt "message".
+    # Nicht auf „leer“ prüfen: iOS liefert auch bei 204 einen Inhalt (getestet), dann galt
+    # jeder Erfolg als Fehler und der Schlüssel wurde gelöscht.
+    response = condition_input(output_ref(request_uuid, "Contents of URL"))
+    error_group, key_group = group, new_uuid()
     actions += [
-        conditional(group, 0, WFCondition=101, WFInput=condition_input(output_ref(request_uuid, "Contents of URL"))),
-        notification("Apple-Watch-Werte übertragen."),
-        conditional(group, 1),
+        conditional(error_group, 0, WFCondition=99, WFConditionalActionString="message", WFInput=response),
+        conditional(key_group, 0, WFCondition=99, WFConditionalActionString="Ungültiger Schlüssel", WFInput=response),
         get_key_file(again_uuid),
         action("file.delete", {
             "WFInput": attachment(output_ref(again_uuid, "File")),
             "WFDeleteFileConfirmDeletion": False,
         }),
-        notification("Übertragung fehlgeschlagen. Beim nächsten Start den Schlüssel neu einfügen."),
-        conditional(group, 2),
+        notification("Schlüssel ungültig. Beim nächsten Start den neuen Schlüssel aus LiftLog einfügen."),
+        conditional(key_group, 1),
+        notification("Übertragung fehlgeschlagen. Bitte später nochmal versuchen."),
+        conditional(key_group, 2),
+        conditional(error_group, 1),
+        notification("Apple-Watch-Werte übertragen."),
+        conditional(error_group, 2),
     ]
 
     return {
