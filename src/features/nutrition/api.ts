@@ -6,6 +6,19 @@ import { EMPTY_TARGETS, NUTRIENTS, validateMealItems, validateTargets, type Meal
 import type { Json } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import { loadProfile } from '../profile/api'
+import { createFoodSearch } from './foodSearchApi'
+
+export const searchFoods = createFoodSearch(async (query, signal) => {
+  const { data, error } = await supabase.auth.getSession()
+  if (error || !data.session) throw new Error('Bitte erneut anmelden.')
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/food-search`, {
+    method: 'POST', signal,
+    headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${data.session.access_token}` },
+    body: JSON.stringify({ query }),
+  })
+  if (!response.ok) throw new Error('Suche nicht verfügbar. Du kannst selbst eintragen.')
+  return response.json()
+})
 
 /** fromProfile: Ziele werden live aus dem Profil berechnet, gespeicherte eigene Ziele gelten dann nicht. */
 export type NutritionSettings = { targets: NutritionTargets; consent: boolean; fromProfile: boolean }

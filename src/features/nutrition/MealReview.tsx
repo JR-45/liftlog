@@ -4,8 +4,11 @@ import { TrashIcon } from '../../lib/icons'
 import { saveMeal } from './api'
 import { INPUT as fieldClass, PRIMARY_BUTTON as primaryClass, SECONDARY_BUTTON as secondaryClass } from '../../lib/ui'
 import { NutritionProgress, NutritionValues } from './NutritionValues'
+import { FoodNameSearch } from './FoodNameSearch'
+import { ManualNutritionFields } from './ManualNutritionFields'
+import { selectFood } from '../../domain/foodSearch'
 
-type Draft = { id: string; name: string; grams: string; values: Record<typeof NUTRIENTS[number], string>; question: string | null; confirmed: boolean }
+type Draft = { id: string; name: string; grams: string; values: Record<typeof NUTRIENTS[number], string>; question: string | null; confirmed: boolean; sourceUrl?: string }
 
 /** Ein Lebensmittel zum Prüfen, egal ob aus Foto, Barcode oder leer zum Selbst-Eintragen. Fehlende Werte bleiben leer. */
 export type ReviewFood = { name: string; grams: number | null; per100g: Record<Nutrient, number | null>; question: string | null; uncertain: boolean }
@@ -71,8 +74,10 @@ export function MealReview({ foods, note, source, defaultTitle, date, targets, o
       </div>
       {drafts.map((draft, index) => <fieldset key={draft.id} className="min-w-0 rounded-xl border border-line/15 p-3">
         <legend className="px-1 text-sm font-semibold">Lebensmittel {index + 1}{isPhoto ? ' · geschätzt' : ''}</legend>
-        <div className="grid gap-3 sm:grid-cols-[1fr_8rem_auto]">
-          <label className="block text-sm"><span className="mb-1 block text-muted">Lebensmittel</span><input className={fieldClass} maxLength={120} required value={draft.name} onChange={(event) => update(index, { name: event.target.value })} /></label>
+        <div className={source === 'manual' ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-3 sm:grid-cols-[1fr_8rem_auto]' : 'grid gap-3 sm:grid-cols-[1fr_8rem_auto]'}>
+          {source === 'manual' ? <div className="col-span-2 min-w-0 sm:col-span-1"><FoodNameSearch value={draft.name} onChange={name => update(index, { name, sourceUrl: undefined })} onSelect={food => {
+            update(index, { ...selectFood(draft, food), sourceUrl: food.url })
+          }} /></div> : <label className="block text-sm"><span className="mb-1 block text-muted">Lebensmittel</span><input className={fieldClass} maxLength={120} required value={draft.name} onChange={(event) => update(index, { name: event.target.value })} /></label>}
           <label className="block text-sm"><span className="mb-1 block text-muted">Menge in g</span><input className={fieldClass} inputMode="decimal" placeholder="Gramm angeben" required value={draft.grams} maxLength={8} onChange={(event) => update(index, { grams: event.target.value, confirmed: draft.question ? false : draft.confirmed })} /></label>
           <button type="button" className={`${secondaryClass} self-end`} aria-label={`Lebensmittel ${index + 1} entfernen`} onClick={() => { setDrafts((current) => current.filter((_, i) => i !== index)); if (isPhoto) setReviewed(false) }}><TrashIcon /></button>
         </div>
@@ -80,7 +85,10 @@ export function MealReview({ foods, note, source, defaultTitle, date, targets, o
           <p>{draft.question}</p>
           <label className="mt-2 flex min-h-11 items-center gap-3"><input className="h-5 w-5 shrink-0 accent-neon" type="checkbox" checked={draft.confirmed} onChange={(event) => update(index, { confirmed: event.target.checked })} />Ich habe die Rückfrage geprüft und die Menge in Gramm angegeben.</label>
         </div>}
-        <details className="mt-3" open={!isPhoto && NUTRIENTS.some((key) => draft.values[key] === '') ? true : undefined}>
+        {source === 'manual' ? <>
+          {draft.sourceUrl && <a href={draft.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-accent-ink">Open Food Facts</a>}
+          <ManualNutritionFields values={draft.values} grams={draft.grams} onChange={(key, value) => update(index, { values: { ...draft.values, [key]: value } })} />
+        </> : <details className="mt-3" open={!isPhoto && NUTRIENTS.some((key) => draft.values[key] === '') ? true : undefined}>
           <summary className="min-h-11 cursor-pointer py-2 text-sm text-accent-ink">Nährwerte pro 100 g korrigieren</summary>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {NUTRIENTS.map((key) => <label key={key} className="block text-xs text-muted">
@@ -88,16 +96,16 @@ export function MealReview({ foods, note, source, defaultTitle, date, targets, o
               <input className={fieldClass} inputMode="decimal" value={draft.values[key]} maxLength={8} required onChange={(event) => update(index, { values: { ...draft.values, [key]: event.target.value } })} />
             </label>)}
           </div>
-        </details>
-        {items[index] ? <div className="mt-2"><p className="mb-2 text-xs text-muted">Für diese Portion{isPhoto ? ' · geschätzt' : ''}</p><NutritionValues values={sumNutrition([items[index]!])} /></div>
-          : <p className="mt-2 text-sm text-warning">Name, Menge (0,1–5000 g) und Nährwerte prüfen. Pro 100 g: 0–1000 kcal, übrige Werte 0–100 g.</p>}
+        </details>}
+        {source !== 'manual' && (items[index] ? <div className="mt-2"><p className="mb-2 text-xs text-muted">Für diese Portion{isPhoto ? ' · geschätzt' : ''}</p><NutritionValues values={sumNutrition([items[index]!])} /></div>
+          : <p className="mt-2 text-sm text-warning">Name, Menge (0,1–5000 g) und Nährwerte prüfen. Pro 100 g: 0–1000 kcal, übrige Werte 0–100 g.</p>)}
       </fieldset>)}
       <button type="button" disabled={drafts.length >= 20} className={secondaryClass} onClick={() => {
         if (isPhoto) setReviewed(false)
         setDrafts((current) => [...current, { id: crypto.randomUUID(), name: '', grams: '', values: { kcal: '', protein: '', carbs: '', fat: '', fiber: '', sugar: '' }, question: null, confirmed: true }])
       }}>Fehlendes Lebensmittel ergänzen</button>
       {/* Anteil am Tagesziel nur, wenn Ziele gesetzt sind. */}
-      {NUTRIENTS.some((key) => targets[key] !== null) && <div className="rounded-xl bg-surface-inset p-4">
+      {NUTRIENTS.some((key) => targets[key] !== null) && (source !== 'manual' || valid) && <div className="rounded-xl bg-surface-inset p-4">
         <h4 className="mb-3 text-xl">{isPhoto ? 'Mahlzeit · geschätzt' : 'Mahlzeit'}</h4>
         {!valid && <p className="mb-3 text-sm text-warning">Vorschau enthält nur gültige Portionen. Offene Rückfragen und Eingaben zuerst prüfen.</p>}
         <NutritionProgress values={totals} targets={targets} label="Anteil dieser Mahlzeit am Tagesziel" />
