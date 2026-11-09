@@ -106,10 +106,20 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
   const pace = analysis.pace && describePace(analysis.pace, today)
   // Vorschau beim Bearbeiten: rechnet mit Zielgewicht und Termin aus dem Formular.
   const draftTarget = parseField(target, 20, 350)
+  // Alle Felder aus dem Formular, damit die Vorschau genau das zeigt, was nach dem Speichern in der Kachel steht.
+  const draftHeight = parseField(height, 100, 250)
+  const draftYear = birthYear.trim() === '' ? null : Number(birthYear)
   const draftAnalysis = analyzeBody({
-    weightKg: latest.weightKg, heightCm: profile.heightCm, sex: profile.sex, age: ageFromBirthYear(profile.birthYear, today),
-    activity: profile.activityLevel, goal: profile.goal, targetWeightKg: draftTarget ?? null, bodyFatPct: latest.bodyFatPct,
-    neckCm: null, waistCm: null, hipsCm: null, daysToTarget: targetDate ? daysUntil(today, targetDate) : null,
+    weightKg: latest.weightKg,
+    heightCm: draftHeight === undefined || draftHeight === null ? null : Math.round(draftHeight),
+    sex: sex === '' ? null : sex,
+    age: draftYear !== null && Number.isInteger(draftYear) ? ageFromBirthYear(draftYear, today) : null,
+    activity: activity === '' ? null : activity,
+    goal: profile.goal,
+    targetWeightKg: draftTarget ?? null,
+    bodyFatPct: latest.bodyFatPct,
+    neckCm: null, waistCm: null, hipsCm: null,
+    daysToTarget: draftTarget != null && targetDate ? daysUntil(today, targetDate) : null,
   })
   const draftPace = draftAnalysis.pace && describePace(draftAnalysis.pace, today)
 
