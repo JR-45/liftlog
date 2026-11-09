@@ -3,6 +3,7 @@ import { Avatar } from '../../components/Avatar'
 import { ChevronRightIcon } from '../../lib/icons'
 import { CARD, LINK, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from '../../lib/ui'
 import { AccountVisibilityDialog } from './AccountVisibilityDialog'
+import { AppleWatchSettingsCard } from '../profile/AppleWatchSettingsCard'
 import { DeleteAccountCard } from '../profile/DeleteAccountCard'
 import { decideRequest, loadRequests, loadSharing, saveSharing, type Person, type Sharing } from './api'
 
@@ -10,8 +11,9 @@ import { decideRequest, loadRequests, loadSharing, saveSharing, type Person, typ
  * Kontoeinstellungen mit vorhandener Sichtbarkeit, Planfreigabe, Anfragen und Hilfe.
  * Ohne sichtbares Profil bleibt die Freigabe ausdrücklich freiwillig.
  */
-export function SocialSettings({ account, email, onEnable, onHide, onSaved, onOpenPerson, onRequestsChanged, onSignOut }: {
+export function SocialSettings({ account, email, today, onEnable, onHide, onSaved, onOpenPerson, onRequestsChanged, onSignOut }: {
   email?: string
+  today: string
   account: Person | null; onEnable: () => Promise<void>; onHide: () => Promise<void>
   onSaved: (isPrivate: boolean) => void; onOpenPerson: (id: string) => void; onRequestsChanged?: () => void
   onSignOut: () => Promise<void>
@@ -58,6 +60,7 @@ export function SocialSettings({ account, email, onEnable, onHide, onSaved, onOp
       </button> : <button type="button" disabled={busy} className={`${PRIMARY_BUTTON} mt-3 w-full`}
         onClick={() => run(onEnable, 'Profil konnte nicht sichtbar gemacht werden.')}>Profil sichtbar machen</button>}
     </section>
+    <AppleWatchSettingsCard today={today} />
     {account && <>
       <section className={CARD} aria-labelledby="privacy-heading"><h2 id="privacy-heading" className={SECTION_TITLE}>Privatsphäre</h2>
         {sharing && <label className="mt-2 flex min-h-11 items-center gap-3 py-2 text-sm font-medium"><span className="flex-1">Trainingsplan teilen</span>

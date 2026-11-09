@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DoneStamp } from '../../components/DoneStamp'
+import type { AppleHealthDay } from '../../domain/appleHealth'
 import { goalStatus, NUTRIENTS, NUTRIENT_LABELS, type Nutrition, type NutritionTargets } from '../../domain/nutrition'
 import { LINK } from '../../lib/ui'
 import { NutritionTargetsForm } from './NutritionTargetsForm'
@@ -11,9 +12,10 @@ const BAR = { open: 'bg-neon', done: 'bg-success', over: 'bg-danger' }
  * Tagesziele ganz oben: pro Wert nur, was noch offen ist. Erreichte Ziele bekommen den DONE-Stempel.
  * source: Ziele aus dem Profil (ändern sich mit dem Profil) oder eigene Werte.
  */
-export function NutritionGoals({ totals, targets, source, profileAvailable, missing, onSaved, onUseProfile, onOpenProfile }: {
+export function NutritionGoals({ totals, targets, appleHealth, source, profileAvailable, missing, onSaved, onUseProfile, onOpenProfile }: {
   totals: Nutrition
   targets: NutritionTargets
+  appleHealth?: AppleHealthDay | null
   source: 'profile' | 'own'
   profileAvailable: boolean
   missing: string[]
@@ -76,5 +78,15 @@ export function NutritionGoals({ totals, targets, source, profileAvailable, miss
           </li>
         })}
       </ul>}
+    {appleHealth && (appleHealth.activeKcal > 0 || appleHealth.workoutMinutes > 0 || appleHealth.steps > 0) && (
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line/[0.06] pt-2.5 text-xs text-muted">
+        <span className="font-medium text-foreground">Apple Watch</span>
+        <span className="tabular-nums">
+          {appleHealth.activeKcal > 0 && `${new Intl.NumberFormat('de-DE').format(appleHealth.activeKcal)} kcal aktiv`}
+          {appleHealth.workoutMinutes > 0 && ` · ${appleHealth.workoutMinutes} Min. Training`}
+          {appleHealth.steps > 0 && ` · ${new Intl.NumberFormat('de-DE').format(appleHealth.steps)} Schritte`}
+        </span>
+      </div>
+    )}
   </section>
 }

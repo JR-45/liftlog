@@ -259,7 +259,7 @@ function ProfileView({
       }}><ChevronLeftIcon /></button>
       <h1 className={`min-w-0 flex-1 text-center ${SECTION_TITLE}`}>Einstellungen</h1><span className="w-11" aria-hidden="true" />
     </div>
-    <SocialSettings key={account ? 'visible' : 'hidden'} account={account} email={user.email} onSignOut={onSignOut}
+    <SocialSettings key={account ? 'visible' : 'hidden'} account={account} email={user.email} today={today} onSignOut={onSignOut}
       onEnable={async () => { await saveProfile(profile); await enableSocialProfile(); setAccount(await loadAccount(user.id, user.id)) }}
       onHide={async () => { await disableSocialProfile(user.id); setAccount(null) }}
       onSaved={isPrivate => setAccount(current => current && ({ ...current, is_private: isPrivate }))}

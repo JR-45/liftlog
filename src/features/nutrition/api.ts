@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js'
+import type { AppleHealthDay } from '../../domain/appleHealth'
 import { parseOpenFoodFacts, type BarcodeProduct } from '../../domain/barcode'
 import { FOOD_CONSENT_VERSION, parseFoodScan, type FoodScan } from '../../domain/foodScan'
 import { EMPTY_TARGETS, NUTRIENTS, validateMealItems, validateTargets, type Meal, type Nutrition, type NutritionTargets } from '../../domain/nutrition'
@@ -9,19 +10,30 @@ import { loadProfile } from '../profile/api'
 /** fromProfile: Ziele werden live aus dem Profil berechnet, gespeicherte eigene Ziele gelten dann nicht. */
 export type NutritionSettings = { targets: NutritionTargets; consent: boolean; fromProfile: boolean }
 
-export async function loadNutrition(date: string): Promise<{ settings: NutritionSettings; meals: Meal[] }> {
-  const [settings, meals] = await Promise.all([
+export async function loadNutrition(date: string): Promise<{ settings: NutritionSettings; meals: Meal[]; appleHealth: AppleHealthDay | null }> {
+  const [settings, meals, health] = await Promise.all([
     supabase.from('nutrition_settings').select('*').maybeSingle(),
     supabase.from('meals').select('id, consumed_on, title, meal_items(name, grams, kcal, protein, carbs, fat, fiber, sugar, estimated, position)').eq('consumed_on', date).order('created_at'),
+    supabase.from('apple_health_daily').select('synced_on, active_kcal, workout_minutes, steps, updated_at').eq('synced_on', date).maybeSingle(),
   ])
   if (settings.error) throw settings.error
   if (meals.error) throw meals.error
+  if (health.error) throw health.error
   const targets = { ...EMPTY_TARGETS }
   for (const key of NUTRIENTS) targets[key] = settings.data?.[key] ?? null
   const rows = meals.data as unknown as {
     id: string; consumed_on: string; title: string
     meal_items: (Nutrition & { name: string; grams: number; estimated: boolean; position: number })[]
   }[]
+  const appleHealth = health.data
+    ? {
+        date: health.data.synced_on,
+        activeKcal: health.data.active_kcal,
+        workoutMinutes: health.data.workout_minutes,
+        steps: health.data.steps,
+        updatedAt: health.data.updated_at,
+      }
+    : null
   return {
     settings: { targets, consent: settings.data?.photo_consent_version === FOOD_CONSENT_VERSION, fromProfile: settings.data?.targets_from_profile ?? true },
     meals: rows.map((row) => ({
@@ -31,6 +43,7 @@ export async function loadNutrition(date: string): Promise<{ settings: Nutrition
         per100g: { kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat, fiber: item.fiber, sugar: item.sugar },
       })),
     })),
+    appleHealth,
   }
 }
 

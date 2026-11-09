@@ -107,7 +107,7 @@ export function NutritionScreen({ user, today, onOpenProfile }: { user: User; to
     </div>
       : !data || !targets || suggestion === undefined ? <p role="status" className="text-sm text-muted">Wird geladen …</p>
         : <>
-          <NutritionGoals totals={totals} targets={targets} source={useProfile ? 'profile' : 'own'} profileAvailable={fromProfile !== null}
+          <NutritionGoals totals={totals} targets={targets} appleHealth={data.appleHealth} source={useProfile ? 'profile' : 'own'} profileAvailable={fromProfile !== null}
             missing={suggestion?.missing ?? []} onOpenProfile={onOpenProfile} onUseProfile={() => void switchToProfile()}
             onSaved={(saved) => setData((current) => current ? { ...current, settings: { ...current.settings, targets: saved, fromProfile: false } } : current)} />
           <SupplementsCard key={date} date={date} />
