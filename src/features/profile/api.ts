@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js'
+import type { AppleHealthDay } from '../../domain/appleHealth'
 import type { ActivityLevel, Sex } from '../../domain/body'
 import { supabase } from '../../lib/supabase'
 
@@ -176,4 +177,76 @@ export function cropSquareAvatar(file: File): Promise<string> {
     }
     reader.readAsDataURL(file)
   })
+}
+
+/** Lädt, ob ein Import-Schlüssel existiert (= verbunden), und die heutigen Apple-Health-Werte. */
+export async function loadAppleHealthStatus(date: string): Promise<{ connected: boolean; day: AppleHealthDay | null }> {
+  const [token, entry] = await Promise.all([
+    supabase.from('apple_health_tokens').select('created_at').maybeSingle(),
+    supabase
+      .from('apple_health_daily')
+      .select('synced_on, active_kcal, workout_minutes, steps, updated_at')
+      .eq('synced_on', date)
+      .maybeSingle(),
+  ])
+  if (token.error) throw token.error
+  if (entry.error) throw entry.error
+  const day = entry.data
+    ? {
+        date: entry.data.synced_on,
+        activeKcal: entry.data.active_kcal,
+        workoutMinutes: entry.data.workout_minutes,
+        steps: entry.data.steps,
+        updatedAt: entry.data.updated_at,
+      }
+    : null
+  return {
+    connected: Boolean(token.data),
+    day,
+  }
+}
+
+/** Speichert die Apple-Watch-Tageswerte und markiert die Verbindung als aktiv. */
+export async function saveAppleHealthDay(day: Omit<AppleHealthDay, 'updatedAt'>): Promise<AppleHealthDay> {
+  const updatedAt = new Date().toISOString()
+  const [health, profile] = await Promise.all([
+    supabase
+      .from('apple_health_daily')
+      .upsert(
+        {
+          synced_on: day.date,
+          active_kcal: day.activeKcal,
+          workout_minutes: day.workoutMinutes,
+          steps: day.steps,
+          updated_at: updatedAt,
+        },
+        { onConflict: 'user_id,synced_on' },
+      ),
+    supabase.from('profiles').upsert({ apple_watch_connected: true, updated_at: updatedAt }, { onConflict: 'user_id' }),
+  ])
+  if (health.error) throw health.error
+  if (profile.error) throw profile.error
+  return { ...day, updatedAt }
+}
+
+/**
+ * Erzeugt einen neuen Import-Schlüssel für den Kurzbefehl (ein alter wird ungültig).
+ * Der Schlüssel wird nur dieses eine Mal zurückgegeben, gespeichert ist nur sein Hash.
+ */
+export async function createAppleHealthToken(): Promise<string> {
+  const { data, error } = await supabase.rpc('create_apple_health_token')
+  if (error) throw error
+  return data
+}
+
+/** Trennt die Apple Watch: Schlüssel löschen, damit der Kurzbefehl nichts mehr schreiben kann. */
+export async function disconnectAppleWatch(): Promise<void> {
+  const [token, profile] = await Promise.all([
+    supabase.from('apple_health_tokens').delete().not('user_id', 'is', null),
+    supabase
+      .from('profiles')
+      .upsert({ apple_watch_connected: false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }),
+  ])
+  if (token.error) throw token.error
+  if (profile.error) throw profile.error
 }

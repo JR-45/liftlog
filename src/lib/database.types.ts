@@ -23,7 +23,35 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "body_measurements": {
+            "apple_health_daily": {
+                  Row: {
+                    "active_kcal": number,"steps": number,"synced_on": string,"updated_at": string,"user_id": string,"workout_minutes": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active_kcal"?: number,"steps"?: number,"synced_on": string,"updated_at"?: string,"user_id"?: string,"workout_minutes"?: number
+                  }
+                  Update: {
+                    "active_kcal"?: number,"steps"?: number,"synced_on"?: string,"updated_at"?: string,"user_id"?: string,"workout_minutes"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"apple_health_tokens": {
+                  Row: {
+                    "created_at": string,"token_hash": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"token_hash": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"token_hash"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"body_measurements": {
                   Row: {
                     "arm_cm": number | null,"body_fat_pct": number | null,"calf_cm": number | null,"chest_cm": number | null,"created_at": string,"hips_cm": number | null,"measured_on": string,"neck_cm": number | null,"thigh_cm": number | null,"user_id": string,"waist_cm": number | null,"weight_kg": number | null
                   }
@@ -213,14 +241,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "activity_level": string | null,"avatar": string | null,"bio": string,"birth_year": number | null,"display_name": string | null,"experience_level": string | null,"goal": string,"height_cm": number | null,"onboarding_completed_at": string | null,"session_minutes": number | null,"sex": string | null,"target_weight_kg": number | null,"training_location": string | null,"updated_at": string,"user_id": string,"weekly_target": number | null
+                    "activity_level": string | null,"apple_watch_connected": boolean,"avatar": string | null,"bio": string,"birth_year": number | null,"display_name": string | null,"experience_level": string | null,"goal": string,"height_cm": number | null,"onboarding_completed_at": string | null,"session_minutes": number | null,"sex": string | null,"target_weight_kg": number | null,"training_location": string | null,"updated_at": string,"user_id": string,"weekly_target": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"experience_level"?: string | null,"goal"?: string,"height_cm"?: number | null,"onboarding_completed_at"?: string | null,"session_minutes"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"training_location"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
+                    "activity_level"?: string | null,"apple_watch_connected"?: boolean,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"experience_level"?: string | null,"goal"?: string,"height_cm"?: number | null,"onboarding_completed_at"?: string | null,"session_minutes"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"training_location"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
                   }
                   Update: {
-                    "activity_level"?: string | null,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"experience_level"?: string | null,"goal"?: string,"height_cm"?: number | null,"onboarding_completed_at"?: string | null,"session_minutes"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"training_location"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
+                    "activity_level"?: string | null,"apple_watch_connected"?: boolean,"avatar"?: string | null,"bio"?: string,"birth_year"?: number | null,"display_name"?: string | null,"experience_level"?: string | null,"goal"?: string,"height_cm"?: number | null,"onboarding_completed_at"?: string | null,"session_minutes"?: number | null,"sex"?: string | null,"target_weight_kg"?: number | null,"training_location"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_target"?: number | null
                   }
                   Relationships: [
                     
@@ -419,11 +447,20 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "delete_own_account":
+            "create_apple_health_token":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"delete_own_account":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "enable_social_profile":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"health_number":
+{ Args: { "raw": string }; Returns: number
+                           },
+"import_apple_health":
+{ Args: { "p_active_kcal"?: string,"p_date"?: string,"p_steps"?: string,"p_token": string,"p_workout_minutes"?: string }; Returns: undefined
                            },
 "last_performance":
 { Args: { "before_date": string }; Returns: {
