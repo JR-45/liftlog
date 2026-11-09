@@ -39,6 +39,8 @@ export type UserProfile = {
   weeklyTarget: number
   heightCm: number | null
   targetWeightKg: number | null
+  /** Wunschtermin fürs Zielgewicht (YYYY-MM-DD), null = ohne Termin. */
+  targetDate: string | null
   sex: Sex | null
   birthYear: number | null
   activityLevel: ActivityLevel | null
@@ -59,7 +61,7 @@ export async function loadProfile(user: User, defaultWeeklyTarget: number): Prom
   const [profile, weights] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name, bio, goal, weekly_target, height_cm, target_weight_kg, sex, birth_year, activity_level')
+      .select('display_name, bio, goal, weekly_target, height_cm, target_weight_kg, target_date, sex, birth_year, activity_level')
       .maybeSingle(),
     supabase
       .from('body_measurements')
@@ -78,6 +80,7 @@ export async function loadProfile(user: User, defaultWeeklyTarget: number): Prom
     weeklyTarget: row?.weekly_target ?? Math.min(7, Math.max(1, defaultWeeklyTarget)),
     heightCm: row?.height_cm ?? null,
     targetWeightKg: row?.target_weight_kg ?? null,
+    targetDate: row?.target_date ?? null,
     // Die Datenbank erlaubt nur die bekannten Werte, der generierte Typ kennt sie aber nicht.
     sex: (row?.sex as Sex | null | undefined) ?? null,
     birthYear: row?.birth_year ?? null,
@@ -107,6 +110,7 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
       weekly_target: profile.weeklyTarget,
       height_cm: profile.heightCm,
       target_weight_kg: profile.targetWeightKg,
+      target_date: profile.targetDate,
       sex: profile.sex,
       birth_year: profile.birthYear,
       activity_level: profile.activityLevel,

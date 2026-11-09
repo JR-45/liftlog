@@ -1,5 +1,7 @@
 import { type FormEvent, useMemo, useState } from 'react'
-import { ACTIVITY_LABELS, type ActivityLevel, ageFromBirthYear, analyzeBody, type Sex } from '../../domain/body'
+import {
+  ACTIVITY_LABELS, type ActivityLevel, ageFromBirthYear, analyzeBody, dateInMonths, daysUntil, describePace, type Sex,
+} from '../../domain/body'
 import { PlusIcon } from '../../lib/icons'
 import { enableProfileTargets } from '../nutrition/api'
 import {
@@ -13,6 +15,8 @@ import {
 const fieldClass =
   'h-11 w-full rounded-xl border border-transparent bg-control px-3.5 text-base text-foreground placeholder-muted/60 outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
 const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-muted'
+const TARGET_MONTHS = [1, 2, 3, 6, 12]
+const TARGET_DATE = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 
 type Field = keyof MeasurementValues
 
@@ -76,6 +80,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
   const [showDetails, setShowDetails] = useState(false)
   const [height, setHeight] = useState(toText(profile.heightCm))
   const [target, setTarget] = useState(toText(profile.targetWeightKg))
+  const [targetDate, setTargetDate] = useState(profile.targetDate)
   const [sex, setSex] = useState<Sex | ''>(profile.sex ?? '')
   const [birthYear, setBirthYear] = useState(profile.birthYear === null ? '' : String(profile.birthYear))
   const [activity, setActivity] = useState<ActivityLevel | ''>(profile.activityLevel ?? '')
@@ -96,7 +101,17 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
     neckCm: null,
     waistCm: null,
     hipsCm: null,
+    daysToTarget: profile.targetDate ? daysUntil(today, profile.targetDate) : null,
   })
+  const pace = analysis.pace && describePace(analysis.pace, today)
+  // Vorschau beim Bearbeiten: rechnet mit Zielgewicht und Termin aus dem Formular.
+  const draftTarget = parseField(target, 20, 350)
+  const draftAnalysis = analyzeBody({
+    weightKg: latest.weightKg, heightCm: profile.heightCm, sex: profile.sex, age: ageFromBirthYear(profile.birthYear, today),
+    activity: profile.activityLevel, goal: profile.goal, targetWeightKg: draftTarget ?? null, bodyFatPct: latest.bodyFatPct,
+    neckCm: null, waistCm: null, hipsCm: null, daysToTarget: targetDate ? daysUntil(today, targetDate) : null,
+  })
+  const draftPace = draftAnalysis.pace && describePace(draftAnalysis.pace, today)
 
 
   function flash(message: string) {
@@ -154,6 +169,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
       ...profile,
       heightCm: parsedHeight === null ? null : Math.round(parsedHeight),
       targetWeightKg: parsedTarget,
+      targetDate: parsedTarget === null ? null : targetDate,
       sex: sex === '' ? null : sex,
       birthYear: parsedYear,
       activityLevel: activity === '' ? null : activity,
@@ -163,7 +179,7 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
     try {
       await saveProfile(next)
       // Neues Zielgewicht: Ernährung rechnet die Tagesziele wieder aus dem Profil.
-      if (next.targetWeightKg !== profile.targetWeightKg) await enableProfileTargets()
+      if (next.targetWeightKg !== profile.targetWeightKg || next.targetDate !== profile.targetDate) await enableProfileTargets()
       onProfileChange(next)
       setShowDetails(false)
       flash('Angaben gespeichert')
@@ -215,9 +231,10 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
         )}
         {analysis.ffmi !== null && <Tile label="FFMI" value={formatNumber(analysis.ffmi)} />}
         {analysis.tdeeKcal !== null && <Tile label="Tagesbedarf" value={`${analysis.tdeeKcal} kcal`} />}
-        {analysis.targetKcal !== null && <Tile label="Kalorienziel" value={`${analysis.targetKcal} kcal`} />}
+        {analysis.targetKcal !== null && <Tile label="Kalorienziel" value={`${analysis.targetKcal} kcal`} note={pace?.rate} />}
         {analysis.proteinG !== null && <Tile label="Eiweiß" value={`${analysis.proteinG} g`} />}
       </div>
+      {pace?.warning && <p className="mt-2 text-sm text-warning" role="status">{pace.warning}</p>}
       {/* Angaben für die Berechnungen */}
       <div className="mt-3">
         <button
@@ -274,6 +291,40 @@ export function BodyCard({ profile, today, onProfileChange }: Props) {
                 />
               </label>
             </div>
+            <label className={labelClass}>
+              Zielgewicht erreichen
+              <select
+                className={`${fieldClass} mt-1`}
+                value={targetDate ?? ''}
+                disabled={target.trim() === ''}
+                onChange={(event) => setTargetDate(event.target.value === '' ? null : event.target.value)}
+              >
+                <option value="">Ohne Termin</option>
+                {targetDate && !TARGET_MONTHS.some((months) => dateInMonths(today, months) === targetDate) && (
+                  <option value={targetDate}>Bis {TARGET_DATE.format(new Date(`${targetDate}T00:00:00Z`))}</option>
+                )}
+                {TARGET_MONTHS.map((months) => (
+                  <option key={months} value={dateInMonths(today, months)}>In {months} {months === 1 ? 'Monat' : 'Monaten'}</option>
+                ))}
+              </select>
+            </label>
+            {draftPace && (
+              <div className="text-sm" role="status">
+                <p className="tabular-nums text-muted">
+                  {draftPace.rate}{draftAnalysis.targetKcal !== null && ` · ${draftAnalysis.targetKcal} kcal am Tag`}
+                </p>
+                {draftPace.warning && (
+                  <p className="mt-1 text-warning">
+                    {draftPace.warning}{' '}
+                    {draftAnalysis.pace?.status === 'too_fast' && (
+                      <button type="button" className="inline-flex min-h-11 items-center font-medium text-accent-ink" onClick={() => setTargetDate(draftPace.healthyDate)}>
+                        Übernehmen
+                      </button>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
             <label className={labelClass}>
               Aktivität im Alltag
               <select

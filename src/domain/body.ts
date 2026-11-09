@@ -40,6 +40,19 @@ export type BodyInput = {
   neckCm: number | null
   waistCm: number | null
   hipsCm: number | null
+  /** Tage bis zum Wunschtermin fürs Zielgewicht. Ohne Termin gilt der feste Zuschlag bzw. Abzug je Ziel. */
+  daysToTarget?: number | null
+}
+
+/** Tempo bis zum Zielgewicht. kgPerWeek ist negativ beim Abnehmen. */
+export type WeightPace = {
+  kgPerWeek: number
+  /** too_fast: mehr als 1 % des Gewichts pro Woche abnehmen bzw. mehr als 0,5 % zunehmen. */
+  status: 'ok' | 'too_fast'
+  /** Wochen für ein gesundes Tempo (0,75 % abnehmen bzw. 0,25 % zunehmen pro Woche). */
+  recommendedWeeks: number
+  /** Das Kalorienziel wurde auf die Untergrenze angehoben. */
+  floored: boolean
 }
 
 export type Rating = 'good' | 'elevated' | 'high'
@@ -67,6 +80,30 @@ export type BodyAnalysis = {
   targetKcal: number | null
   proteinG: number | null
   diffToTargetKg: number | null
+  pace: WeightPace | null
+}
+
+/** Energie in etwa 1 kg Körpergewicht beim Ab- oder Zunehmen. */
+const KCAL_PER_KG = 7700
+const MAX_LOSS_PCT_PER_WEEK = 1
+const MAX_GAIN_PCT_PER_WEEK = 0.5
+const HEALTHY_LOSS_PCT_PER_WEEK = 0.75
+const HEALTHY_GAIN_PCT_PER_WEEK = 0.25
+/** Unter diese Tageszufuhr geht das Kalorienziel ohne ärztliche Begleitung nicht. */
+const MIN_KCAL: Record<Sex, number> = { male: 1500, female: 1200 }
+
+/** Wie schnell das Zielgewicht bis zum Termin erreicht wird, und ob das gesund ist. */
+export function weightPace(weightKg: number, targetWeightKg: number, days: number): Omit<WeightPace, 'floored'> {
+  const diff = targetWeightKg - weightKg
+  const kgPerWeek = round((diff / days) * 7, 2)
+  const pctPerWeek = (Math.abs(kgPerWeek) / weightKg) * 100
+  const losing = diff < 0
+  const healthyKgPerWeek = (weightKg * (losing ? HEALTHY_LOSS_PCT_PER_WEEK : HEALTHY_GAIN_PCT_PER_WEEK)) / 100
+  return {
+    kgPerWeek,
+    status: pctPerWeek > (losing ? MAX_LOSS_PCT_PER_WEEK : MAX_GAIN_PCT_PER_WEEK) ? 'too_fast' : 'ok',
+    recommendedWeeks: Math.ceil(Math.abs(diff) / healthyKgPerWeek),
+  }
 }
 
 function round(value: number, digits: number): number {
@@ -171,11 +208,23 @@ export function analyzeBody(input: BodyInput): BodyAnalysis {
   let bmrKcal: number | null = null
   let tdeeKcal: number | null = null
   let targetKcal: number | null = null
+  // Mit Termin richtet sich das Tempo nach dem Zielgewicht, ab 1 kg Unterschied wie beim Ziel.
+  const days = input.daysToTarget ?? null
+  const paceBase = weight !== null && validWeight(targetWeightKg) && days !== null && days > 0 &&
+    Math.abs(weight - targetWeightKg) >= 1 ? weightPace(weight, targetWeightKg, days) : null
+  let floored = false
   if (weight !== null && height !== null && sex !== null && age !== null && age >= 10 && age <= 120) {
     bmrKcal = mifflinBmr(sex, weight, height, age)
     if (activity !== null) {
       tdeeKcal = Math.round(bmrKcal * ACTIVITY_FACTORS[activity])
-      targetKcal = tdeeKcal + GOAL_CALORIE_OFFSET[goal]
+      targetKcal = paceBase === null
+        ? tdeeKcal + GOAL_CALORIE_OFFSET[goal]
+        : Math.round((tdeeKcal + (paceBase.kgPerWeek * KCAL_PER_KG) / 7) / 10) * 10
+      const floor = Math.max(bmrKcal, MIN_KCAL[sex])
+      if (targetKcal < floor) {
+        targetKcal = floor
+        floored = true
+      }
     }
   }
 
@@ -196,6 +245,7 @@ export function analyzeBody(input: BodyInput): BodyAnalysis {
     targetKcal,
     proteinG: weight === null ? null : Math.round(weight * GOAL_PROTEIN_PER_KG[goal]),
     diffToTargetKg: weight !== null && validWeight(targetWeightKg) ? round(weight - targetWeightKg, 1) : null,
+    pace: paceBase === null ? null : { ...paceBase, floored },
   }
 }
 
@@ -204,4 +254,37 @@ export function ageFromBirthYear(birthYear: number | null, today: string): numbe
   if (birthYear === null) return null
   const age = Number(today.slice(0, 4)) - birthYear
   return age >= 0 ? age : null
+}
+
+/** Datum in n Monaten als YYYY-MM-DD, z. B. für den Wunschtermin. Ende Januar + 1 Monat wird Ende Februar. */
+export function dateInMonths(today: string, months: number): string {
+  const [year, month, day] = today.split('-').map(Number)
+  const lastDay = new Date(Date.UTC(year, month - 1 + months + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(year, month - 1 + months, Math.min(day, lastDay))).toISOString().slice(0, 10)
+}
+
+/** Tage von heute bis zum Termin. Negativ, wenn der Termin vorbei ist. */
+export function daysUntil(today: string, date: string): number {
+  return Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000)
+}
+
+/** Datum in n Tagen als YYYY-MM-DD. */
+export function dateInDays(today: string, days: number): string {
+  return new Date(Date.parse(`${today}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+const SHORT_DATE = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+
+/** Kurze Texte zum Tempo fürs Profil: „−0,7 kg pro Woche“ und, wenn nötig, eine Warnung mit gesundem Termin. */
+export function describePace(pace: WeightPace, today: string): { rate: string; warning: string | null; healthyDate: string } {
+  const value = String(Math.abs(pace.kgPerWeek)).replace('.', ',')
+  const healthyDate = dateInDays(today, pace.recommendedWeeks * 7)
+  const losing = pace.kgPerWeek < 0
+  let warning: string | null = null
+  if (pace.status === 'too_fast') {
+    warning = `Zu schnell und ungesund. Gesund wäre bis ${SHORT_DATE.format(new Date(`${healthyDate}T00:00:00Z`))}.`
+  } else if (pace.floored) {
+    warning = 'Kalorienziel auf die gesunde Untergrenze angehoben.'
+  }
+  return { rate: `${losing ? '−' : '+'}${value} kg pro Woche`, warning, healthyDate }
 }
