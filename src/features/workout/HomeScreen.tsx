@@ -39,8 +39,8 @@ function TabButton(props: {
   const { label, active, variant, onClick, children } = props
   const layout =
     variant === 'bottom'
-      ? 'h-14 flex-1 flex-col justify-center gap-1 text-[11px] tracking-tight'
-      : `h-11 w-full gap-3 rounded-xl px-3.5 text-sm ${active ? 'bg-control' : 'hover:bg-surface'}`
+      ? 'h-16 flex-1 flex-col justify-center gap-1 text-xs font-medium tracking-tight [&_svg]:h-6 [&_svg]:w-6 [&_img]:h-6 [&_img]:w-6'
+      : `h-11 w-full gap-3 rounded-xl px-3.5 text-sm [&_svg]:h-5 [&_svg]:w-5 [&_img]:h-5 [&_img]:w-5 ${active ? 'bg-control' : 'hover:bg-surface'}`
   return (
     <button
       className={`flex items-center transition-colors active:opacity-75 ${layout} ${
@@ -206,11 +206,16 @@ export function HomeScreen({ session }: { session: Session }) {
   const planArea = tab === 'plan' || (tab === 'training' && planDays?.length === 0)
 
   const streak = weekStreak(trainedDates, today)
-  const profileIcon = <span className="relative">
-    {avatarUrl ? <Avatar src={avatarUrl} className="h-5 w-5 rounded-full ring-1 ring-line/20" /> : <UserIcon />}
-    <CountBadge count={requestCount} />
-    {requestCount > 0 && <span className="sr-only">{requestCount} offene Anfragen,</span>}
-  </span>
+  function renderProfileIcon(variant: 'bottom' | 'side') {
+    const size = variant === 'bottom' ? 'h-6 w-6' : 'h-5 w-5'
+    return (
+      <span className="relative inline-flex items-center justify-center">
+        {avatarUrl ? <Avatar src={avatarUrl} className={`${size} rounded-full ring-1 ring-line/20`} /> : <UserIcon className={size} />}
+        <CountBadge count={requestCount} />
+        {requestCount > 0 && <span className="sr-only">{requestCount} offene Anfragen,</span>}
+      </span>
+    )
+  }
   const streakChip = streak > 0 && (
     <span
       className="inline-flex shrink-0 items-center gap-1 rounded-full bg-neon/15 px-2.5 py-1 font-display text-base font-extrabold uppercase tracking-wide text-neon"
@@ -257,7 +262,7 @@ export function HomeScreen({ session }: { session: Session }) {
               <StatsIcon />
             </TabButton>
             <TabButton label="Profil" variant="side" active={tab === 'profile'} onClick={() => setTab('profile')}>
-              {profileIcon}
+              {renderProfileIcon('side')}
             </TabButton>
           </nav>
         )}
@@ -266,7 +271,7 @@ export function HomeScreen({ session }: { session: Session }) {
         </div>
       </aside>
 
-      <main className="page-shell mx-auto min-h-dvh max-w-xl px-4 pb-[calc(11rem+env(safe-area-inset-bottom))] pt-6 md:max-w-4xl md:px-6 lg:max-w-7xl lg:px-8 lg:pb-10 lg:pt-8">
+      <main className="page-shell mx-auto min-h-dvh max-w-xl px-4 pb-[calc(11.5rem+env(safe-area-inset-bottom))] pt-6 md:max-w-4xl md:px-6 lg:max-w-7xl lg:px-8 lg:pb-10 lg:pt-8">
         <header className={tab === 'profile' ? 'flex items-center justify-between gap-3 lg:has-[button]:mt-5 lg:justify-end' : 'flex items-center justify-between lg:hidden'}>
           <div className={`min-w-0 ${tab === 'profile' ? 'flex-1 lg:hidden' : ''}`}>
             <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted">
@@ -372,7 +377,7 @@ export function HomeScreen({ session }: { session: Session }) {
                   <TabButton label="Training" variant="bottom" active={tab === 'training' && !planArea} onClick={() => setTab('training')}>
                     <TrainingIcon />
                   </TabButton>
-                  <TabButton label="Trainingsplan" variant="bottom" active={planArea} onClick={() => setTab('plan')}>
+                  <TabButton label="Plan" variant="bottom" active={planArea} onClick={() => setTab('plan')}>
                     <PlanIcon />
                   </TabButton>
                   <TabButton label="Ernährung" variant="bottom" active={tab === 'nutrition'} onClick={() => setTab('nutrition')}>
@@ -382,7 +387,7 @@ export function HomeScreen({ session }: { session: Session }) {
                     <StatsIcon />
                   </TabButton>
                   <TabButton label="Profil" variant="bottom" active={tab === 'profile'} onClick={() => setTab('profile')}>
-                    {profileIcon}
+                    {renderProfileIcon('bottom')}
                   </TabButton>
                 </div>
               </nav>
