@@ -650,7 +650,7 @@ export function ExerciseCard(props: Props) {
   const openStyle =
     layout === 'summary'
       ? 'border-neon/60 bg-surface-raised'
-      : 'border-line/[0.12] bg-surface shadow-md'
+      : 'border-neon/50 bg-surface-raised shadow-lg shadow-neon/5'
   return (
     <li
       ref={cardRef}
