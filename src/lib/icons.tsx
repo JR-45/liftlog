@@ -164,3 +164,21 @@ export function StopwatchIcon({ className }: IconProps) {
     </SvgIcon>
   )
 }
+
+export function PlayIcon({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <polygon points="6 3 20 12 6 21 6 3" />
+    </SvgIcon>
+  )
+}
+
+export function PauseIcon({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </SvgIcon>
+  )
+}
+
