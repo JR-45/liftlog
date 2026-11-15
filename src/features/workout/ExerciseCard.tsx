@@ -25,11 +25,13 @@ import {
   updateExercise,
   updateNextWeights,
 } from './api'
-import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../lib/icons'
+import { CheckIcon, ChevronRightIcon, PlayIcon, SettingsIcon } from '../../lib/icons'
 import { readDraft, removeDraft } from './drafts'
 import { DoneStamp } from '../../components/DoneStamp'
 import { SetRow } from './SetRow'
 import { circuitSteps, circuitTarget, formatRounds, formatStepTarget, roundReps } from '../../domain/circuit'
+import { findExerciseGuide } from '../../domain/exerciseGuides'
+import { ExerciseGuideView } from './ExerciseGuideView'
 
 const fieldClass =
   'h-11 rounded-xl border border-transparent bg-control px-3 text-base text-foreground outline-none transition-colors focus:border-neon focus:bg-control-hover disabled:opacity-50'
@@ -96,6 +98,7 @@ export function ExerciseCard(props: Props) {
   const [stepText, setStepText] = useState<string | null>(null)
   const [showSteps, setShowSteps] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [resetRequest, setResetRequest] = useState(0)
   const [confirmingReset, setConfirmingReset] = useState(false)
   // Ein neuer Wert baut die Satzzeilen neu auf, damit auch ihre Eingaben verschwinden.
@@ -117,6 +120,7 @@ export function ExerciseCard(props: Props) {
   }, [scrollRequest])
 
   const exercise = exercises[activeId]
+  const guide = findExerciseGuide(exercise.name)
   // Bewegungen gehören zur geplanten Übung, nicht zur Alternative.
   const steps = activeId === entry.exercise.id ? circuitSteps(entry.steps, entry.step_reps, entry.step_weights, entry.reps_max) : []
   const isCircuit = steps.length > 0 && exercise.tracking_type !== 'duration'
@@ -537,6 +541,22 @@ export function ExerciseCard(props: Props) {
         {logged.length > 0 && <span className="mr-2 text-muted/75">Vorgabe {target} ·</span>}
         {last.length > 0 ? `Letztes Mal: ${isCircuit ? formatRounds(last) : formatPerformance(last, unit, exercise.name === 'Laufband' ? 'speed' : 'pace')}` : 'Noch kein letztes Training'}
       </p>
+
+      {guide && (
+        <div className="mt-1">
+          <button
+            className="flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent-ink"
+            type="button"
+            aria-expanded={showGuide}
+            onClick={() => setShowGuide((current) => !current)}
+          >
+            <PlayIcon className="h-4 w-4" />
+            {showGuide ? 'Ausführung & Muskeln ausblenden' : 'Ausführung & Muskeln'}
+            <ChevronRightIcon className={`h-4 w-4 transition-transform ${showGuide ? 'rotate-90' : ''}`} />
+          </button>
+          {showGuide && <ExerciseGuideView guide={guide} />}
+        </div>
+      )}
 
       {hint && !done && (
         <p className="mt-2.5 rounded-xl bg-neon/12 px-3 py-2 text-sm font-medium text-accent-ink ring-1 ring-neon/25">
