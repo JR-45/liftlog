@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { formatRange } from '../../domain/sets'
 import { circuitTarget } from '../../domain/circuit'
 import { isCardioExercise } from '../../domain/cardio'
+import { findExerciseGuide } from '../../domain/exerciseGuides'
+import { ChevronRightIcon, PlayIcon } from '../../lib/icons'
 import { loadDay, type PlanEntry } from './api'
+import { ExerciseGuideView } from './ExerciseGuideView'
 
 function target(entry: PlanEntry): string {
   if (entry.exercise.tracking_type === 'duration' && isCardioExercise(entry.exercise.name)) {
@@ -25,6 +28,7 @@ export function DayPreview({ planDayId, today, dayName, dayLabel, resume, onTake
 }) {
   const [entries, setEntries] = useState<PlanEntry[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [openGuideId, setOpenGuideId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -44,10 +48,37 @@ export function DayPreview({ planDayId, today, dayName, dayLabel, resume, onTake
     <p className="text-xs font-semibold uppercase tracking-wider text-muted">{dayLabel} · Vorschau</p>
     <h2 className="mt-1 text-2xl text-foreground">{dayName}</h2>
     <ul className="mt-3 divide-y divide-line/[0.06] rounded-2xl border border-line/[0.08] bg-surface px-4">
-      {entries.map((entry) => <li key={entry.id} className="py-3">
-        <span className="block font-medium text-foreground">{entry.exercise.name}</span>
-        <span className="block text-sm tabular-nums text-muted">{target(entry)}</span>
-      </li>)}
+      {entries.map((entry) => {
+        const guide = findExerciseGuide(entry.exercise.name)
+        const isGuideOpen = openGuideId === entry.id
+        return (
+          <li key={entry.id} className="py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="block font-medium text-foreground">{entry.exercise.name}</span>
+                <span className="block text-sm tabular-nums text-muted">{target(entry)}</span>
+              </div>
+              {guide && (
+                <button
+                  type="button"
+                  aria-expanded={isGuideOpen}
+                  onClick={() => setOpenGuideId(isGuideOpen ? null : entry.id)}
+                  className="flex min-h-11 shrink-0 items-center gap-1 text-xs font-medium text-accent-ink"
+                >
+                  <PlayIcon className="h-3.5 w-3.5" />
+                  <span>Ausführung</span>
+                  <ChevronRightIcon className={`h-4 w-4 transition-transform ${isGuideOpen ? 'rotate-90' : ''}`} />
+                </button>
+              )}
+            </div>
+            {guide && isGuideOpen && (
+              <div className="mt-2.5">
+                <ExerciseGuideView guide={guide} />
+              </div>
+            )}
+          </li>
+        )
+      })}
     </ul>
     <p className="mt-4 text-sm text-muted">Trainieren und abhaken geht nur für heute.</p>
     <button type="button" className="mt-2 min-h-11 text-sm font-medium text-neon" onClick={() => onTakeOver(planDayId)}>Stattdessen heute trainieren</button>
