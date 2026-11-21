@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatRange } from '../../domain/sets'
-import { circuitTarget } from '../../domain/circuit'
+import { circuitSteps, circuitTarget, formatStepTarget } from '../../domain/circuit'
 import { isCardioExercise } from '../../domain/cardio'
 import { findExerciseGuide } from '../../domain/exerciseGuides'
 import { ChevronRightIcon, PlayIcon } from '../../lib/icons'
@@ -49,7 +49,9 @@ export function DayPreview({ planDayId, today, dayName, dayLabel, resume, onTake
     <h2 className="mt-1 text-2xl text-foreground">{dayName}</h2>
     <ul className="mt-3 divide-y divide-line/[0.06] rounded-2xl border border-line/[0.08] bg-surface px-4">
       {entries.map((entry) => {
-        const guide = findExerciseGuide(entry.exercise.name)
+        const steps = circuitSteps(entry.steps, entry.step_reps, entry.step_weights, entry.reps_max)
+        // Bei Zirkeln zählt der eigene Ablauf, nicht die allgemeine Ausführung.
+        const guide = steps.length > 0 ? null : findExerciseGuide(entry.exercise.name)
         const isGuideOpen = openGuideId === entry.id
         return (
           <li key={entry.id} className="py-3">
@@ -71,6 +73,16 @@ export function DayPreview({ planDayId, today, dayName, dayLabel, resume, onTake
                 </button>
               )}
             </div>
+            {steps.length > 0 && (
+              <ul className="mt-1.5 divide-y divide-line/[0.06]" aria-label="Bewegungen pro Runde">
+                {steps.map((step, index) => (
+                  <li key={index} className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
+                    <span className="min-w-0 text-foreground">{step.name}</span>
+                    <span className="shrink-0 tabular-nums text-muted">{formatStepTarget(step)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {guide && isGuideOpen && (
               <div className="mt-2.5">
                 <ExerciseGuideView guide={guide} />
