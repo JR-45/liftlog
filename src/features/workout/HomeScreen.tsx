@@ -143,10 +143,10 @@ export function HomeScreen({ session }: { session: Session }) {
     }
   }, [userId, today])
 
-  /** Startet die Pause und zählt den heutigen Tag sofort für die Streak mit. */
-  function handleSetLogged() {
+  /** Startet die Pause und zählt den Trainingstag sofort für die Streak mit. */
+  function handleSetLogged(date: string) {
     restTimer.start()
-    setTrainedDates((current) => (current.has(today) ? current : new Set([...current, today])))
+    setTrainedDates((current) => (current.has(date) ? current : new Set([...current, date])))
   }
 
   useEffect(() => {

@@ -137,6 +137,21 @@ export async function loadDay(planDayId: string, today: string): Promise<DayData
 }
 
 /** Holt das heutige Workout oder legt es an. Die Unique-Regel verhindert Duplikate. */
+/** Das offene Training eines Tages (gestartet, nicht beendet), falls es eins gibt. */
+export async function loadOpenWorkout(date: string): Promise<{ plan_day_id: string | null; started_at: string | null; finished_at: string | null } | null> {
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('plan_day_id, started_at, finished_at')
+    .eq('performed_on', date)
+    .not('started_at', 'is', null)
+    .is('finished_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export async function ensureWorkout(planDayId: string, today: string): Promise<{ id: string; startedAt: string | null }> {
   const { data, error } = await supabase
     .from('workouts')

@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { planForDate, shiftDate, type ScheduledDay } from '../../domain/week'
-import type { PlanDay } from './api'
+import { continuesOvernight } from '../../domain/overnight'
+import { loadOpenWorkout, type PlanDay } from './api'
 import { DayPreview } from './DayPreview'
 import { DayView } from './DayView'
 
@@ -12,8 +13,24 @@ const WEEKDAY_NAMES = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag'
  * sonst aus der Vorlage. schedule null: Wochenplanung lädt noch.
  */
 export function TrainingDays({ today, userId, planDays, schedule, restSeconds, onSetLogged }: {
-  today: string; userId: string; planDays: PlanDay[]; schedule: ScheduledDay[] | null; restSeconds: number; onSetLogged: () => void
+  today: string; userId: string; planDays: PlanDay[]; schedule: ScheduledDay[] | null; restSeconds: number; onSetLogged: (date: string) => void
 }) {
+  // Ein am Abend gestartetes Training läuft nach Mitternacht als „heute“ weiter.
+  const yesterday = shiftDate(today, -1)
+  const [overnight, setOvernight] = useState<{ today: string; planDayId: string | null; dismissed: boolean } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    loadOpenWorkout(yesterday)
+      .then((workout) => {
+        if (cancelled) return
+        const planDayId = workout && continuesOvernight(workout) ? workout.plan_day_id : null
+        setOvernight({ today, planDayId, dismissed: false })
+      })
+      .catch(() => { if (!cancelled) setOvernight({ today, planDayId: null, dismissed: false }) })
+    return () => { cancelled = true }
+  }, [today, yesterday])
+  const overnightChecked = overnight?.today === today
+  const overnightPlan = overnightChecked && !overnight.dismissed ? planDays.find((day) => day.id === overnight.planDayId) : undefined
   const [picked, setPicked] = useState<{ today: string; date: string } | null>(null)
   const dates = Array.from({ length: 7 }, (_, offset) => shiftDate(today, offset))
   const selectedDate = picked?.today === today ? picked.date : today
@@ -27,6 +44,7 @@ export function TrainingDays({ today, userId, planDays, schedule, restSeconds, o
   const takeOver = useCallback((planDayId: string) => setChoice({ key: `${planDayId}:${today}`, train: true }), [today])
   const canTrain = plan && (isToday || (choice?.key === key && choice.train))
   const restText = dayPlan.kind === 'unplanned' ? 'nichts geplant' : 'Ruhetag'
+  const showOvernight = overnightPlan && isToday
 
   return <>
     <nav className="mt-4 flex gap-1 rounded-2xl border border-line/[0.06] bg-surface p-1 lg:mt-0 lg:max-w-xl" aria-label="Trainingstag">
@@ -42,7 +60,14 @@ export function TrainingDays({ today, userId, planDays, schedule, restSeconds, o
       })}
     </nav>
     {/* Erst wenn die Wochenplanung da ist, sonst stünde kurz der falsche Tag aus der Vorlage da. */}
-    {schedule === null ? <p className="mt-6 text-sm text-muted">Wird geladen …</p> : <>
+    {schedule === null || !overnightChecked ? <p className="mt-6 text-sm text-muted">Wird geladen …</p> : showOvernight ? <>
+      <button type="button" className="mt-3 min-h-11 text-sm font-medium text-accent-ink"
+        onClick={() => setOvernight({ today, planDayId: overnightPlan.id, dismissed: true })}>
+        Zum heutigen Tag ›
+      </button>
+      <DayView key={`${overnightPlan.id}:${yesterday}`} planDayId={overnightPlan.id} userId={userId} today={yesterday} dayName={overnightPlan.name}
+        dayLabel="Seit gestern" restSeconds={restSeconds} onSetLogged={onSetLogged} />
+    </> : <>
       {plan && !canTrain && <DayPreview key={key} planDayId={plan.id} today={today} dayName={plan.name}
         dayLabel={WEEKDAY_NAMES[weekday]} resume={choice?.key !== key} onTakeOver={takeOver} />}
       {plan && canTrain && <>

@@ -96,7 +96,6 @@ export function ExerciseCard(props: Props) {
   const [error, setError] = useState<string | null>(null)
   // null: Das Feld zeigt den gespeicherten Wert, sonst die laufende Eingabe.
   const [stepText, setStepText] = useState<string | null>(null)
-  const [showSteps, setShowSteps] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const [resetRequest, setResetRequest] = useState(0)
@@ -519,14 +518,8 @@ export function ExerciseCard(props: Props) {
         </div>
       )}
 
+      {/* Der eigene Ablauf steht bei Zirkeln immer offen da, er ist die eigentliche Vorgabe. */}
       {isCircuit && (
-        <button className="mb-1 flex min-h-11 items-center gap-1 text-sm font-medium text-accent-ink" type="button"
-          aria-expanded={showSteps} onClick={() => setShowSteps((current) => !current)}>
-          {showSteps ? 'Bewegungen ausblenden' : 'Bewegungen anzeigen'}
-          <ChevronRightIcon className={`h-4 w-4 transition-transform ${showSteps ? 'rotate-90' : ''}`} />
-        </button>
-      )}
-      {isCircuit && showSteps && (
         <ul className="mb-2 divide-y divide-line/[0.06]" aria-label="Bewegungen pro Runde">
           {steps.map((step, index) => (
             <li key={index} className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
@@ -542,7 +535,7 @@ export function ExerciseCard(props: Props) {
         {last.length > 0 ? `Letztes Mal: ${isCircuit ? formatRounds(last) : formatPerformance(last, unit, exercise.name === 'Laufband' ? 'speed' : 'pace')}` : 'Noch kein letztes Training'}
       </p>
 
-      {guide && (
+      {guide && !isCircuit && (
         <div className="mt-1">
           <button
             className="flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent-ink"
