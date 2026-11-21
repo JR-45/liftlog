@@ -31,7 +31,8 @@ type Props = {
   /** Ob der gezeigte Tag heute ist. Sonst steht der Wochentag in der Karte. */
   dayLabel: string
   restSeconds: number
-  onSetLogged: () => void
+  /** Bekommt das Datum des Trainings, das kann nach Mitternacht gestern sein. */
+  onSetLogged: (date: string) => void
 }
 
 function entryIds(entry: PlanEntry): string[] {
@@ -233,7 +234,7 @@ export function DayView({ planDayId, userId, today, dayName, dayLabel, restSecon
 
     // Nur ein neuer Satz startet die Pause, nicht das Korrigieren eines alten. Nach der letzten Übung braucht es keine.
     const trainingDone = day.entries.every((current) => isDone(current, next) || nowSkipped.has(current.id))
-    if (!(key in previous) && !trainingDone) onSetLogged()
+    if (!(key in previous) && !trainingDone) onSetLogged(today)
     if (trainingDone) stopIfDone(next, nowSkipped)
   }
 
