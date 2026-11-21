@@ -1,3 +1,5 @@
+import { shiftDate } from './week'
+
 // Supplemente: Menge mit Einheit und an welchen Wochentagen sie dran sind.
 
 /** Tabletten und Kapseln zählen gleich, beides ist „Stück“. */
@@ -46,4 +48,27 @@ const SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 export function scheduleLabel(weekdays: number[] | null): string | null {
   if (weekdays === null) return null
   return [...weekdays].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((day) => SHORT[day]).join(', ')
+}
+
+/**
+ * Tage am Stück, an denen alle fälligen Supplemente genommen wurden.
+ * Tage ohne Fälliges zählen nicht und brechen nichts. Ein noch offenes Heute bricht auch nichts.
+ * startDate: ab wann ein Supplement in der Liste steht (YYYY-MM-DD), davor ist es nicht fällig.
+ */
+export function supplementStreak(
+  list: { id: string; weekdays: number[] | null; startDate: string }[],
+  takenByDate: Map<string, Set<string>>,
+  today: string,
+): number {
+  if (list.length === 0) return 0
+  const firstDate = list.reduce((first, item) => (item.startDate < first ? item.startDate : first), list[0].startDate)
+  let streak = 0
+  for (let date = today; date >= firstDate; date = shiftDate(date, -1)) {
+    const due = list.filter((item) => item.startDate <= date && supplementDue(item.weekdays, date))
+    if (due.length === 0) continue
+    const taken = takenByDate.get(date)
+    if (due.every((item) => taken?.has(item.id))) streak += 1
+    else if (date !== today) break
+  }
+  return streak
 }

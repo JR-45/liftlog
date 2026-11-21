@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { DoneStamp } from '../../components/DoneStamp'
-import { DOSE_UNITS, type DoseUnit, formatDose, normalizeWeekdays, parseDose, QUICK_SUPPLEMENTS, scheduleLabel, supplementDue } from '../../domain/supplements'
-import { CheckIcon, TrashIcon } from '../../lib/icons'
-import { addSupplement, loadSupplements, removeSupplement, setSupplementTaken, updateSupplement, type Supplement } from './api'
+import { DOSE_UNITS, type DoseUnit, formatDose, normalizeWeekdays, parseDose, QUICK_SUPPLEMENTS, scheduleLabel, supplementDue, supplementStreak } from '../../domain/supplements'
+import { localDateString } from '../../domain/sets'
+import { shiftDate } from '../../domain/week'
+import { CheckIcon, FlameIcon, TrashIcon } from '../../lib/icons'
+import { addSupplement, loadIntakeHistory, loadSupplements, removeSupplement, setSupplementTaken, updateSupplement, type Supplement } from './api'
 
 // Ohne w-full, sonst nimmt ein Feld die ganze Breite und schiebt den Rest aus dem Bild.
 const INPUT = 'h-11 rounded-xl border border-line/15 bg-control px-3 text-base text-foreground outline-none focus:border-neon'
@@ -46,7 +48,7 @@ function SupplementForm({ initial, withName, name, onName, busy, submitLabel, on
 }
 
 /** Supplemente und Vitamine zum Abhaken, nur an ihren Tagen. Sind alle des Tages genommen, kommt der DONE-Stempel. */
-export function SupplementsCard({ date }: { date: string }) {
+export function SupplementsCard({ date, today }: { date: string; today: string }) {
   const [list, setList] = useState<Supplement[] | null>(null)
   const [taken, setTaken] = useState<Set<string>>(new Set())
   const [editing, setEditing] = useState(false)
@@ -58,6 +60,16 @@ export function SupplementsCard({ date }: { date: string }) {
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const amountInput = useRef<HTMLInputElement>(null)
+  const [history, setHistory] = useState<Map<string, Set<string>> | null>(null)
+
+  // Ein Jahr reicht für die Streak. Der angezeigte Tag kommt live aus den Haken dazu.
+  useEffect(() => {
+    let cancelled = false
+    loadIntakeHistory(shiftDate(today, -365))
+      .then((days) => { if (!cancelled) setHistory(days) })
+      .catch(() => { if (!cancelled) setHistory(null) })
+    return () => { cancelled = true }
+  }, [today, attempt])
 
   useEffect(() => {
     let cancelled = false
@@ -72,6 +84,13 @@ export function SupplementsCard({ date }: { date: string }) {
 
   const due = list?.filter((item) => supplementDue(item.weekdays, date)) ?? []
   const allTaken = due.length > 0 && due.every((item) => taken.has(item.id))
+  const streak = list && history
+    ? supplementStreak(
+      list.map((item) => ({ id: item.id, weekdays: item.weekdays, startDate: localDateString(new Date(item.created_at)) })),
+      new Map([...history, [date, taken]]),
+      today,
+    )
+    : 0
   // Stempel nur, wenn du selbst den letzten Haken setzt, nicht beim Öffnen eines fertigen Tages.
   const [stampKey, setStampKey] = useState(0)
 
@@ -134,7 +153,14 @@ export function SupplementsCard({ date }: { date: string }) {
   return <section className="relative rounded-2xl border border-line/[0.08] bg-surface p-4" aria-labelledby="supplements-heading">
     {stampKey > 0 && allTaken && <DoneStamp key={stampKey} />}
     <div className="flex items-center justify-between gap-3">
-      <h2 id="supplements-heading" className="text-xl">Supplemente</h2>
+      <div className="flex min-w-0 items-center gap-2">
+        <h2 id="supplements-heading" className="text-xl">Supplemente</h2>
+        {streak > 0 && <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-neon/15 px-2 py-0.5 font-display text-sm font-extrabold uppercase tracking-wide text-neon"
+          aria-label={`${streak} ${streak === 1 ? 'Tag' : 'Tage'} am Stück genommen`}>
+          <FlameIcon className="h-3.5 w-3.5" />
+          {streak} {streak === 1 ? 'Tag' : 'Tage'}
+        </span>}
+      </div>
       {list && list.length > 0 && <button className="min-h-11 px-1 text-sm font-medium text-accent-ink" type="button" onClick={() => { setEditing((value) => !value); setChanging(null) }}>
         {editing ? 'Fertig' : 'Bearbeiten'}
       </button>}
