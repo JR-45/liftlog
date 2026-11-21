@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDose, normalizeWeekdays, parseDose, scheduleLabel, supplementDue } from './supplements'
+import { formatDose, normalizeWeekdays, parseDose, scheduleLabel, supplementDue, supplementStreak } from './supplements'
 
 describe('formatDose', () => {
   it('setzt Zahl und Einheit zusammen', () => {
@@ -49,5 +49,39 @@ describe('Wochentage', () => {
   it('beschriftet die Tage ab Montag', () => {
     expect(scheduleLabel(null)).toBeNull()
     expect(scheduleLabel([0, 1, 4])).toBe('Mo, Do, So')
+  })
+})
+
+describe('supplementStreak', () => {
+  const today = '2026-11-21' // Samstag
+  const daily = { id: 'k', weekdays: null, startDate: '2026-11-01' }
+  const taken = (entries: Record<string, string[]>) => new Map(Object.entries(entries).map(([date, ids]) => [date, new Set(ids)]))
+
+  it('zählt Tage am Stück mit allem genommen', () => {
+    expect(supplementStreak([daily], taken({ '2026-11-21': ['k'], '2026-11-20': ['k'], '2026-11-19': ['k'], '2026-11-17': ['k'] }), today)).toBe(3)
+  })
+
+  it('bricht nicht, solange heute noch offen ist', () => {
+    expect(supplementStreak([daily], taken({ '2026-11-20': ['k'], '2026-11-19': ['k'] }), today)).toBe(2)
+  })
+
+  it('braucht alle fälligen Supplemente eines Tages', () => {
+    const iron = { id: 'e', weekdays: null, startDate: '2026-11-01' }
+    expect(supplementStreak([daily, iron], taken({ '2026-11-21': ['k', 'e'], '2026-11-20': ['k'] }), today)).toBe(1)
+  })
+
+  it('überspringt Tage, an denen nichts dran ist', () => {
+    const mondayThursday = { id: 'o', weekdays: [1, 4], startDate: '2026-11-01' }
+    // Do 19.11. und Mo 16.11. genommen, dazwischen nichts fällig.
+    expect(supplementStreak([mondayThursday], taken({ '2026-11-19': ['o'], '2026-11-16': ['o'] }), today)).toBe(2)
+  })
+
+  it('zählt ein neues Supplement erst ab seinem Start', () => {
+    const fresh = { id: 'n', weekdays: null, startDate: '2026-11-20' }
+    expect(supplementStreak([daily, fresh], taken({ '2026-11-20': ['k', 'n'], '2026-11-19': ['k'] }), today)).toBe(2)
+  })
+
+  it('ist 0 ohne Supplemente', () => {
+    expect(supplementStreak([], new Map(), today)).toBe(0)
   })
 })

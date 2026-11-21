@@ -110,7 +110,7 @@ export function NutritionScreen({ user, today, onOpenProfile }: { user: User; to
           <NutritionGoals totals={totals} targets={targets} appleHealth={data.appleHealth} source={useProfile ? 'profile' : 'own'} profileAvailable={fromProfile !== null}
             missing={suggestion?.missing ?? []} onOpenProfile={onOpenProfile} onUseProfile={() => void switchToProfile()}
             onSaved={(saved) => setData((current) => current ? { ...current, settings: { ...current.settings, targets: saved, fromProfile: false } } : current)} />
-          <SupplementsCard key={date} date={date} />
+          <SupplementsCard key={date} date={date} today={today} />
           <FoodScanner consent={data.settings.consent} date={date} targets={targets}
             onConsent={(consent) => setData((current) => current ? { ...current, settings: { ...current.settings, consent } } : current)}
             onSaved={saved} />

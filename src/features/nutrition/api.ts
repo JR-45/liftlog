@@ -116,12 +116,12 @@ export async function loadNutritionProfile(user: User) {
 
 
 /** weekdays: an welchen Tagen (0 = Sonntag), null heißt täglich. */
-export type Supplement = { id: string; name: string; dose: string | null; weekdays: number[] | null }
+export type Supplement = { id: string; name: string; dose: string | null; weekdays: number[] | null; created_at: string }
 
 /** Liste der Supplemente und welche davon am Tag schon abgehakt sind. */
 export async function loadSupplements(date: string): Promise<{ list: Supplement[]; taken: Set<string> }> {
   const [list, intakes] = await Promise.all([
-    supabase.from('supplements').select('id, name, dose, weekdays').order('created_at'),
+    supabase.from('supplements').select('id, name, dose, weekdays, created_at').order('created_at'),
     supabase.from('supplement_intakes').select('supplement_id').eq('taken_on', date),
   ])
   if (list.error) throw list.error
@@ -130,13 +130,30 @@ export async function loadSupplements(date: string): Promise<{ list: Supplement[
 }
 
 /** Menge und Tage ändern. */
+/** Abgehakte Supplemente ab from (YYYY-MM-DD) für die Streak, je Tag eine Menge. Seitenweise, weil die API höchstens 1000 Zeilen liefert. */
+export async function loadIntakeHistory(from: string): Promise<Map<string, Set<string>>> {
+  const days = new Map<string, Set<string>>()
+  const pageSize = 1000
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from('supplement_intakes').select('supplement_id, taken_on')
+      .gte('taken_on', from).order('taken_on').order('supplement_id').range(offset, offset + pageSize - 1)
+    if (error) throw error
+    for (const row of data) {
+      const day = days.get(row.taken_on) ?? new Set<string>()
+      day.add(row.supplement_id)
+      days.set(row.taken_on, day)
+    }
+    if (data.length < pageSize) return days
+  }
+}
+
 export async function updateSupplement(id: string, changes: { dose: string | null; weekdays: number[] | null }): Promise<void> {
   const { error } = await supabase.from('supplements').update(changes).eq('id', id)
   if (error) throw error
 }
 
 export async function addSupplement(name: string, dose: string | null, weekdays: number[] | null): Promise<Supplement> {
-  const { data, error } = await supabase.from('supplements').insert({ name, dose, weekdays }).select('id, name, dose, weekdays').single()
+  const { data, error } = await supabase.from('supplements').insert({ name, dose, weekdays }).select('id, name, dose, weekdays, created_at').single()
   if (error) throw error
   return data
 }
